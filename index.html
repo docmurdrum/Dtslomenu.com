@@ -1,20 +1,136 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> DT SLO MENU </title>
+    <title>DTSLO Menu</title>
     <style>
-        :root { --primary: #28a745; --secondary: #007bff; --bg: #fdfdfd; }
-        body { font-family: -apple-system, sans-serif; padding: 20px; background: var(--bg); color: #333; margin: 0; }
-        h1 { text-align: center; margin-top: 60px; font-weight: 800; }
-        #checkout-btn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: var(--primary); color: white; border: none; border-radius: 30px; cursor: pointer; z-index: 1000; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        body { font-family: sans-serif; padding: 20px; background: #fdfdfd; color: #333; margin: 0; }
+        h1 { text-align: center; margin-top: 60px; }
+        #checkout-btn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: #28a745; color: white; border: none; border-radius: 30px; cursor: pointer; z-index: 1000; font-weight: bold; }
         .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; max-width: 800px; margin: 20px auto; }
-        .card { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; border: 1px solid #eee; display: flex; flex-direction: column; justify-content: space-between; }
-        .price { color: #d9534f; font-weight: 700; margin: 10px 0; font-size: 1.1rem; }
+        .card { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; border: 1px solid #eee; }
+        .price { color: #d9534f; font-weight: bold; margin: 10px 0; }
         .qty-controls { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; background: #f8f9fa; padding: 5px; border-radius: 10px; }
-        .qty-btn { background: white; border: 1px solid #ddd; width: 32px; height: 32px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.2rem; }
-        .qty-amount { font-weight: bold; min-width: 20px; }
-        button.add-btn { background: var(--secondary); color: white; border: none; padding: 10px; width: 100%; border-radius: 10px; font-weight: 600; cursor: pointer; }
-        #checkout-
-        
+        .qty-btn { background: white; border: 1px solid #ddd; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; }
+        button.add-btn { background: #007bff; color: white; border: none; padding: 10px; width: 100%; border-radius: 10px; cursor: pointer; }
+        #checkout-page { display: none; max-width: 450px; margin: 80px auto; padding: 20px; }
+        input { width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 12px; margin-bottom: 15px; box-sizing: border-box; }
+        .submit-order { background: #28a745; color: white; padding: 18px; width: 100%; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <button id="checkout-btn" onclick="toggleCheckout()">🛒 Cart (<span id="cart-count">0</span>)</button>
+
+    <div id="store-page">
+        <h1>DTSLO Menu</h1>
+        <div id="product-grid" class="product-grid"></div>
+    </div>
+
+    <div id="checkout-page">
+        <h2>Checkout</h2>
+        <div id="order-summary" style="margin-bottom:20px; border:1px solid #eee; padding:15px; border-radius:10px;"></div>
+        <input type="text" id="fname" placeholder="First Name">
+        <input type="text" id="lname" placeholder="Last Initial">
+        <input type="tel" id="phone" placeholder="Phone Number">
+        <button onclick="submitOrder()" class="submit-order">Place Order via SMS</button>
+        <button onclick="toggleCheckout()" style="background:none; border:none; color:blue; text-decoration:underline; width:100%; margin-top:15px; cursor:pointer;">Back to Menu</button>
+    </div>
+
+    <script>
+        var products = [
+            { name: "Mini water", size: "8oz", price: 0.99, available: true },
+            { name: "Waterloo", size: "12oz", price: 1.49, available: true },
+            { name: "Mini soda", size: "8oz", price: 1.99, available: true },
+            { name: "Milk", size: "16oz", price: 1.99, available: true },
+            { name: "Coffee", size: "12oz", price: 2.99, available: true },
+            { name: "Redbull", size: "8.4oz", price: 3.99, available: true },
+            { name: "Protein drink", size: "14oz", price: 2.99, available: true },
+            { name: "Coconut water", size: "11oz", price: 2.99, available: true },
+            { name: "Mints or gum", size: "1 pack", price: 2.99, available: true },
+            { name: "Welches fruit snacks", size: "2.25oz", price: 0.99, available: true },
+            { name: "Pistachios", size: "1.5oz", price: 1.99, available: true },
+            { name: "Chips", size: "1 bag", price: 1.99, available: true },
+            { name: "A dozen oreos", size: "12 count", price: 2.99, available: true },
+            { name: "Liquid IV", size: "1 stick", price: 2.99, available: true },
+            { name: "Rose", size: "1 stem", price: 3.99, available: true },
+            { name: "Charger", size: "1 unit", price: 9.99, available: true }
+        ];
+
+        var cart = {};
+
+        function renderProducts() {
+            var grid = document.getElementById('product-grid');
+            if (!grid) return;
+            grid.innerHTML = "";
+            for (var i = 0; i < products.length; i++) {
+                var p = products[i];
+                if (p.available) {
+                    var safeId = p.name.replace(/[^a-zA-Z]/g, '');
+                    grid.innerHTML += '<div class="card">' +
+                        '<h3>' + p.name + '</h3><p>' + p.size + '</p>' +
+                        '<p class="price">$' + p.price.toFixed(2) + '</p>' +
+                        '<div class="qty-controls">' +
+                        '<button class="qty-btn" onclick="changeQty(\'' + safeId + '\', -1)">-</button>' +
+                        '<span id="qty-' + safeId + '" style="font-weight:bold">1</span>' +
+                        '<button class="qty-btn" onclick="changeQty(\'' + safeId + '\', 1)">+</button>' +
+                        '</div>' +
+                        '<button class="add-btn" onclick="addToCart(\'' + p.name + '\', \'' + safeId + '\')">Add to Cart</button>' +
+                        '</div>';
+                }
+            }
+        }
+
+        function changeQty(id, change) {
+            var el = document.getElementById('qty-' + id);
+            var val = parseInt(el.innerText) + change;
+            if (val < 1) val = 1;
+            el.innerText = val;
+        }
+
+        function addToCart(name, id) {
+            var qty = parseInt(document.getElementById('qty-' + id).innerText);
+            cart[name] = (cart[name] || 0) + qty;
+            var totalItems = 0;
+            for (var key in cart) { totalItems += cart[key]; }
+            document.getElementById('cart-count').innerText = totalItems;
+            document.getElementById('qty-' + id).innerText = "1";
+            alert("Added " + qty + " " + name);
+        }
+
+        function toggleCheckout() {
+            var s = document.getElementById('store-page');
+            var c = document.getElementById('checkout-page');
+            if (s.style.display === "none") {
+                s.style.display = "block"; c.style.display = "none";
+            } else {
+                if (Object.keys(cart).length === 0) { alert("Cart is empty"); return; }
+                s.style.display = "none"; c.style.display = "block";
+                var summ = document.getElementById('order-summary');
+                var html = "<ul>"; var total = 0;
+                for (var name in cart) {
+                    var prod = products.find(function(x){ return x.name === name; });
+                    html += "<li>" + name + " (x" + cart[name] + ") - $" + (prod.price * cart[name]).toFixed(2) + "</li>";
+                    total += prod.price * cart[name];
+                }
+                summ.innerHTML = html + "</ul><b>Total: $" + total.toFixed(2) + "</b>";
+            }
+        }
+
+        function submitOrder() {
+            var fn = document.getElementById('fname').value;
+            var ph = document.getElementById('phone').value;
+            if (!fn || !ph) { alert("Enter Name and Phone"); return; }
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                var loc = "https://www.google.com/maps?q=" + pos.coords.latitude + "," + pos.coords.longitude;
+                var items = ""; for (var key in cart) { items += key + "(" + cart[key] + ") "; }
+                var body = "Order: " + fn + ". Phone: " + ph + ". Items: " + items + " Loc: " + loc;
+                window.location.href = "sms:+18052506655?&body=" + encodeURIComponent(body);
+            }, function() { alert("GPS needed!"); });
+        }
+
+        window.onload = renderProducts;
+    </script>
+</body>
+</html>
