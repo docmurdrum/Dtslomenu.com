@@ -19,19 +19,28 @@
 
 let cart = {};
 
-// Load products
-const grid = document.getElementById('product-grid');
-products.forEach(p => {
-    grid.innerHTML += `
-        <div class="card">
-            <h3>${p.name}</h3>
-            <p>${p.size}</p>
-            <p class="price">$${p.price.toFixed(2)}</p>
-            <input type="number" id="qty-${p.name}" value="1" min="1" style="width: 50px">
-            <button onclick="addToCart('${p.name}', ${p.price})">Add to Cart</button>
-        </div>
-    `;
+// This tells the browser: "Wait until the page is ready!"
+window.addEventListener('DOMContentLoaded', () => {
+    const grid = document.getElementById('product-grid');
+    
+    // Check if the grid exists before trying to fill it
+    if (grid) {
+        products.forEach(p => {
+            grid.innerHTML += `
+                <div class="card">
+                    <h3>${p.name}</h3>
+                    <p>${p.size}</p>
+                    <p class="price">$${p.price.toFixed(2)}</p>
+                    <input type="number" id="qty-${p.name}" value="1" min="1" style="width: 50px">
+                    <button onclick="addToCart('${p.name}', ${p.price})">Add to Cart</button>
+                </div>
+            `;
+        });
+    } else {
+        console.error("Could not find the 'product-grid' element!");
+    }
 });
+
 
 function addToCart(name, price) {
     const qty = parseInt(document.getElementById(`qty-${name}`).value);
