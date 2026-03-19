@@ -1,34 +1,112 @@
-<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuickShop</title>
-    <link rel="stylesheet" href="style.css">
+    <title>DTSLO Menu</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        h1 { text-align: center; }
+        #checkout-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 20px; cursor: pointer; z-index: 1000; font-weight: bold; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 70px; }
+        .card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; }
+        .price { color: #d9534f; font-weight: bold; margin: 10px 0; }
+        input { width: 40px; margin-bottom: 10px; }
+        button.add { background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        #checkout-page { display: none; background: white; padding: 20px; border-radius: 10px; margin-top: 70px; }
+        .hidden { display: none !important; }
+    </style>
 </head>
 <body>
 
-    <button id="checkout-btn" onclick="toggleCheckout()">🛒 Checkout (<span id="cart-count">0</span>)</button>
+    <button id="checkout-btn" onclick="toggleCheckout()">🛒 Cart (<span id="cart-count">0</span>)</button>
 
     <div id="store-page">
-        <h1>Our Products</h1>
-        <div class="product-grid" id="product-grid"></div>
+        <h1>DTSLO Menu</h1>
+        <div id="product-grid" class="product-grid"></div>
     </div>
 
-    <div id="checkout-page" style="display:none;">
-        <h1>Checkout</h1>
+    <div id="checkout-page">
+        <h2>Checkout</h2>
         <div id="order-summary"></div>
-        <hr>
-        <form id="order-form">
-            <input type="text" id="fname" placeholder="First Name" required>
-            <input type="text" id="lname" placeholder="Last Initial" maxlength="1" required>
-            <input type="tel" id="phone" placeholder="Your Phone Number" required>
-            <p><small>*Location access will be requested to complete order.</small></p>
-            <button type="button" onclick="submitOrder()">Send Order via SMS</button>
-            <button type="button" onclick="toggleCheckout()" class="back-btn">Back to Store</button>
-        </form>
+        <input type="text" id="fname" placeholder="First Name"><br>
+        <input type="text" id="lname" placeholder="Last Initial" maxlength="1"><br>
+        <input type="tel" id="phone" placeholder="Phone Number"><br>
+        <button onclick="submitOrder()" style="background:#28a745; color:white; padding:15px; width:100%; border:none; border-radius:5px; font-weight:bold;">Send Order via SMS</button>
+        <button onclick="toggleCheckout()" style="background:none; border:none; color:blue; text-decoration:underline; width:100%; margin-top:10px;">Back to Menu</button>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        const products = [
+            { name: "Mini water", size: "8oz", price: 0.99 }, { name: "Waterloo", size: "12oz", price: 1.49 },
+            { name: "Mini soda", size: "8oz", price: 1.99 }, { name: "Milk", size: "16oz", price: 1.99 },
+            { name: "Coffee", size: "12oz", price: 2.99 }, { name: "Redbull", size: "8.4oz", price: 3.99 },
+            { name: "Protein drink", size: "14oz", price: 2.99 }, { name: "Coconut water", size: "11oz", price: 2.99 },
+            { name: "Mints or gum", size: "1 pack", price: 2.99 }, { name: "Welches fruit snacks", size: "2.25oz", price: 0.99 },
+            { name: "Pistachios", size: "1.5oz", price: 1.99 }, { name: "Chips", size: "1 bag", price: 1.99 },
+            { name: "A dozen oreos", size: "12 count", price: 2.99 }, { name: "Liquid IV", size: "1 stick", price: 2.99 },
+            { name: "Rose", size: "1 stem", price: 3.99 }, { name: "Charger", size: "1 unit", price: 9.99 }
+        ];
+
+        let cart = {};
+
+        function renderProducts() {
+            const grid = document.getElementById('product-grid');
+            if(!grid) return;
+            grid.innerHTML = "";
+            products.forEach(p => {
+                grid.innerHTML += `
+                    <div class="card">
+                        <h3>${p.name}</h3>
+                        <p>${p.size}</p>
+                        <p class="price">$${p.price.toFixed(2)}</p>
+                        <input type="number" id="qty-${p.name}" value="1" min="1">
+                        <button class="add" onclick="addToCart('${p.name}', ${p.price})">Add</button>
+                    </div>`;
+            });
+        }
+
+        function addToCart(name, price) {
+            const qty = parseInt(document.getElementById(`qty-${name}`).value);
+            cart[name] = (cart[name] || 0) + qty;
+            document.getElementById('cart-count').innerText = Object.values(cart).reduce((a,b)=>a+b,0);
+            alert("Added!");
+        }
+
+        function toggleCheckout() {
+            const s = document.getElementById('store-page');
+            const c = document.getElementById('checkout-page');
+            if(s.style.display === "none") {
+                s.style.display = "block"; c.style.display = "none";
+            } else {
+                s.style.display = "none"; c.style.display = "block";
+                const summ = document.getElementById('order-summary');
+                let h = "<ul>"; let t = 0;
+                for(let i in cart) { 
+                    const p = products.find(x=>x.name===i);
+                    h += `<li>${i} x${cart[i]} - $${(p.price*cart[i]).toFixed(2)}</li>`;
+                    t += p.price*cart[i];
+                }
+                summ.innerHTML = h + "</ul><b>Total: $" + t.toFixed(2) + "</b><br><br>";
+            }
+        }
+
+        function submitOrder() {
+            const fn = document.getElementById('fname').value;
+            const ln = document.getElementById('lname').value;
+            const ph = document.getElementById('phone').value;
+            if(!fn || !ph) return alert("Fill in your name and phone!");
+
+            navigator.geolocation.getCurrentPosition(pos => {
+                const map = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+                let items = ""; for(let i in cart) { items += `${i}(${cart[i]}) `; }
+                const msg = `Order: ${fn} ${ln}. Phone: ${ph}. Items: ${items} Loc: ${map}`;
+                window.location.href = `sms:+18052506655?&body=${encodeURIComponent(msg)}`;
+            }, () => alert("GPS required to deliver!"));
+        }
+
+        // Run immediately
+        renderProducts();
+    </script>
 </body>
 </html>
