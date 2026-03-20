@@ -1,279 +1,284 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DTSLO Menu</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DTSLO Menu</title>
 
-<style>
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    margin: 0;
-    background: #f5f7fa;
-}
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 0;
+            background: #f5f7fa;
+            color: #222;
+            margin: 0;
+        }
 
-/* HEADER */
-.header-container {
-    text-align: center;
-    padding: 80px 20px 30px;
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-}
+        /* HEADER */
+        .header-container {
+            text-align: center;
+            padding: 80px 20px 30px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border-bottom-left-radius: 25px;
+            border-bottom-right-radius: 25px;
+        }
 
-/* BUTTONS */
-#checkout-btn {
-    position: fixed;
-    top: 15px;
-    right: 15px;
-    padding: 12px 18px;
-    background: #111;
-    color: white;
-    border: none;
-    border-radius: 30px;
-    z-index: 1000;
-}
+        .slogan {
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
 
-#admin-btn {
-    position: fixed;
-    top: 60px;
-    right: 15px;
-    padding: 10px;
-    background: white;
-    border-radius: 10px;
-    border: none;
-    z-index: 1000;
-}
+        h1 {
+            margin: 10px 0;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
 
-/* PRODUCTS */
-.product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 18px;
-    padding: 20px;
-}
+        .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
 
-.card {
-    background: white;
-    padding: 15px;
-    border-radius: 15px;
-    text-align: center;
-}
+        /* CART BUTTON */
+        #checkout-btn {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            padding: 12px 18px;
+            background: #111;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            z-index: 1000;
+            font-weight: 600;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
 
-.price {
-    color: #28a745;
-    font-weight: bold;
-}
+        /* PRODUCTS */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            gap: 18px;
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 15px;
+        }
 
-/* ADMIN PANEL */
-#admin-panel {
-    position: fixed;
-    top: 0;
-    right: -100%;
-    width: 100%;
-    max-width: 400px;
-    height: 100%;
-    background: white;
-    z-index: 2000;
-    padding: 20px;
-    transition: 0.3s;
-    overflow-y: auto;
-}
+        .card {
+            background: white;
+            padding: 18px;
+            border-radius: 18px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+            text-align: center;
+            transition: all 0.2s ease;
+        }
 
-#admin-panel.active {
-    right: 0;
-}
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+        }
 
-.admin-item {
-    border-bottom: 1px solid #eee;
-    padding: 10px 0;
-}
+        .card h3 {
+            margin: 5px 0;
+            font-size: 1rem;
+        }
 
-input {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 10px;
-}
+        .card p {
+            margin: 4px 0;
+            font-size: 0.85rem;
+            color: #666;
+        }
 
-button {
-    padding: 10px;
-    border: none;
-    border-radius: 8px;
-}
+        .price {
+            color: #28a745;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin: 10px 0;
+        }
 
-.add-btn {
-    background: #007bff;
-    color: white;
-    width: 100%;
-}
+        /* BUTTONS */
+        button.add-btn {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
 
-.delete-btn {
-    background: red;
-    color: white;
-    margin-top: 5px;
-}
+        button.add-btn:hover {
+            opacity: 0.9;
+        }
 
-/* CHECKOUT */
-#checkout-page {
-    display: none;
-    padding: 20px;
-}
+        /* CHECKOUT */
+        #checkout-page {
+            display: none;
+            max-width: 450px;
+            margin: 60px auto;
+            padding: 20px;
+        }
 
-</style>
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 1.5px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+
+        .submit-order {
+            background: linear-gradient(135deg, #28a745, #1e7e34);
+            color: white;
+            padding: 16px;
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* MODAL */
+        #thankyou-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-box {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 320px;
+            text-align: center;
+            animation: pop 0.3s ease;
+        }
+
+        @keyframes pop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-box h3 {
+            color: #28a745;
+        }
+
+        .modal-btn {
+            margin-top: 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
 </head>
-
 <body>
 
-<button id="checkout-btn" onclick="toggleCheckout()">🛒 (<span id="cart-count">0</span>)</button>
-<button id="admin-btn" onclick="toggleAdmin()">⚙️</button>
+<button id="checkout-btn" onclick="toggleCheckout()">🛒 Cart (<span id="cart-count">0</span>)</button>
 
 <div id="store-page">
     <div class="header-container">
-        <h2>DTSLO</h2>
-        <p>Items updated regularly</p>
+        <span class="slogan">Line and entry delivery service. Save your place save your time.</span>
+        <h1>Available 9PM-3AM Thursday-Saturday</h1>
+        <p class="subtitle">Items are updated regularly.<br>Check back soon for new arrivals.</p>
     </div>
     <div id="product-grid" class="product-grid"></div>
 </div>
 
 <div id="checkout-page">
-    <h2>Checkout</h2>
-    <input id="fname" placeholder="First Name">
-    <input id="phone" placeholder="Phone">
-    <button onclick="submitOrder()">Place Order</button>
+    <h2>Payment upon delivery</h2>
+    <p style="font-size: 0.9rem; color: #666;">Allow location when prompted</p>
+    <input type="text" id="fname" placeholder="First Name">
+    <input type="tel" id="phone" placeholder="Phone Number">
+    <button onclick="submitOrder()" class="submit-order">Place Order via SMS</button>
 </div>
 
-<!-- ADMIN PANEL -->
-<div id="admin-panel">
-    <h2>Admin Panel</h2>
-
-    <h3>Add Product</h3>
-    <input id="new-name" placeholder="Name">
-    <input id="new-size" placeholder="Size">
-    <input id="new-price" placeholder="Price">
-    <button class="add-btn" onclick="addProduct()">Add Product</button>
-
-    <h3>Products</h3>
-    <div id="admin-list"></div>
-
-    <button onclick="toggleAdmin()">Close</button>
+<!-- MODAL -->
+<div id="thankyou-modal">
+    <div class="modal-box">
+        <h3>Thank You!</h3>
+        <p>Your order has been submitted and the driver will be there shortly.<br><br>Please keep your phone ringer and notifications on.</p>
+        <button class="modal-btn" onclick="closeModal()">Got it</button>
+    </div>
 </div>
 
 <script>
-let products = JSON.parse(localStorage.getItem("products")) || [
-    { name: "Redbull", size: "12oz", price: 3.99, available: true }
+var products = [
+    { name: "Redbull", size: "12oz", price: 3.99, available: true },
+    { name: "Charger", size: "1 unit", price: 14.99, available: true }
 ];
 
-let cart = {};
+var cart = {};
 
-/* SAVE */
-function saveProducts() {
-    localStorage.setItem("products", JSON.stringify(products));
-}
-
-/* RENDER STORE */
 function renderProducts() {
-    let grid = document.getElementById("product-grid");
+    var grid = document.getElementById('product-grid');
     grid.innerHTML = "";
-
-    products.forEach(p => {
-        if (!p.available) return;
-
-        grid.innerHTML += `
-        <div class="card">
-            <h3>${p.name}</h3>
-            <p>${p.size}</p>
-            <p class="price">$${p.price}</p>
-            <button onclick="addToCart('${p.name}')">Add</button>
-        </div>`;
-    });
+    for (var i = 0; i < products.length; i++) {
+        var p = products[i];
+        if (p.available) {
+            grid.innerHTML += `
+            <div class="card">
+                <h3>${p.name}</h3>
+                <p>${p.size}</p>
+                <p class="price">$${p.price}</p>
+                <button class="add-btn" onclick="addToCart('${p.name}')">Add to Cart</button>
+            </div>`;
+        }
+    }
 }
 
-/* ADMIN LIST */
-function renderAdmin() {
-    let list = document.getElementById("admin-list");
-    list.innerHTML = "";
-
-    products.forEach((p, i) => {
-        list.innerHTML += `
-        <div class="admin-item">
-            <b>${p.name}</b> ($${p.price})
-            <br>
-            <label>
-                Available 
-                <input type="checkbox" ${p.available ? "checked" : ""} 
-                onchange="toggleAvailable(${i})">
-            </label>
-            <button class="delete-btn" onclick="deleteProduct(${i})">Delete</button>
-        </div>`;
-    });
-}
-
-/* ADD PRODUCT */
-function addProduct() {
-    let name = document.getElementById("new-name").value;
-    let size = document.getElementById("new-size").value;
-    let price = parseFloat(document.getElementById("new-price").value);
-
-    if (!name || !price) return alert("Fill fields");
-
-    products.push({ name, size, price, available: true });
-    saveProducts();
-    renderProducts();
-    renderAdmin();
-
-    document.getElementById("new-name").value = "";
-    document.getElementById("new-size").value = "";
-    document.getElementById("new-price").value = "";
-}
-
-/* DELETE */
-function deleteProduct(i) {
-    products.splice(i, 1);
-    saveProducts();
-    renderProducts();
-    renderAdmin();
-}
-
-/* TOGGLE AVAILABLE */
-function toggleAvailable(i) {
-    products[i].available = !products[i].available;
-    saveProducts();
-    renderProducts();
-    renderAdmin();
-}
-
-/* CART */
 function addToCart(name) {
     cart[name] = (cart[name] || 0) + 1;
-    document.getElementById("cart-count").innerText =
-        Object.values(cart).reduce((a,b)=>a+b,0);
+    var total = 0;
+    for (var key in cart) total += cart[key];
+    document.getElementById('cart-count').innerText = total;
 }
 
-/* NAV */
 function toggleCheckout() {
-    document.getElementById("store-page").style.display = "none";
-    document.getElementById("checkout-page").style.display = "block";
+    document.getElementById('store-page').style.display = "none";
+    document.getElementById('checkout-page').style.display = "block";
 }
 
-/* ADMIN TOGGLE */
-function toggleAdmin() {
-    document.getElementById("admin-panel").classList.toggle("active");
-    renderAdmin();
-}
-
-/* ORDER */
 function submitOrder() {
-    let fn = document.getElementById("fname").value;
-    let ph = document.getElementById("phone").value;
+    var fn = document.getElementById('fname').value;
+    var ph = document.getElementById('phone').value;
+    if (!fn || !ph) return alert("Enter Name and Phone");
 
-    let items = "";
-    for (let k in cart) items += k + "(" + cart[k] + ") ";
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        var loc = "https://maps.google.com?q=" + pos.coords.latitude + "," + pos.coords.longitude;
+        var items = "";
+        for (var key in cart) items += key + "(" + cart[key] + ") ";
 
-    let body = "Order: " + fn + " | " + ph + " | " + items;
-    window.location.href = "sms:+18052506655?body=" + encodeURIComponent(body);
+        var body = "Order: " + fn + " | " + ph + " | " + items + " | " + loc;
+        window.location.href = "sms:+18052506655?&body=" + encodeURIComponent(body);
+
+        document.getElementById('thankyou-modal').style.display = "flex";
+
+        cart = {};
+        document.getElementById('cart-count').innerText = "0";
+    });
 }
 
-/* INIT */
-renderProducts();
+function closeModal() {
+    document.getElementById('thankyou-modal').style.display = "none";
+    document.getElementById('checkout-page').style.display = "none";
+    document.getElementById('store-page').style.display = "block";
+}
+
+window.onload = renderProducts;
 </script>
 
 </body>
