@@ -6,15 +6,19 @@
     <title>DTSLO Menu</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background: #fdfdfd; color: #333; margin: 0; }
-        h1 { text-align: center; margin-top: 60px; font-size: 1.4rem; margin-bottom: 5px; }
-        .subtitle { text-align: center; color: #666; font-size: 0.95rem; margin-top: 0; line-height: 1.4; margin-bottom: 20px; }
-        #checkout-btn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: #28a745; color: white; border: none; border-radius: 30px; cursor: pointer; z-index: 1000; font-weight: bold; }
+        .header-container { text-align: center; margin-top: 60px; padding: 0 10px; }
+        .slogan { font-size: 1rem; color: #28a745; font-weight: bold; margin-bottom: 5px; display: block; }
+        h1 { margin: 0; font-size: 1.3rem; line-height: 1.2; }
+        .subtitle { color: #666; font-size: 0.95rem; margin-top: 8px; line-height: 1.4; margin-bottom: 20px; }
+        
+        #checkout-btn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: #28a745; color: white; border: none; border-radius: 30px; cursor: pointer; z-index: 1000; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; max-width: 800px; margin: 20px auto; }
         .card { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; border: 1px solid #eee; }
         .price { color: #d9534f; font-weight: bold; margin: 10px 0; }
         .qty-controls { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; background: #f8f9fa; padding: 5px; border-radius: 10px; }
         .qty-btn { background: white; border: 1px solid #ddd; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; }
         button.add-btn { background: #007bff; color: white; border: none; padding: 10px; width: 100%; border-radius: 10px; cursor: pointer; }
+        
         #checkout-page { display: none; max-width: 450px; margin: 80px auto; padding: 20px; }
         input { width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 12px; margin-bottom: 15px; box-sizing: border-box; }
         .submit-order { background: #28a745; color: white; padding: 18px; width: 100%; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
@@ -25,14 +29,17 @@
     <button id="checkout-btn" onclick="toggleCheckout()">🛒 Cart (<span id="cart-count">0</span>)</button>
 
     <div id="store-page">
-        <h1>Available 9PM-3AM Thursday-Saturday</h1>
-        <p class="subtitle">Items are updated regularly.<br>Check back soon for new arrivals.</p>
+        <div class="header-container">
+            <span class="slogan">Delivered so you don't have to leave</span>
+            <h1>Available 9PM-3AM Thursday-Saturday</h1>
+            <p class="subtitle">Items are updated regularly.<br>Check back soon for new arrivals.</p>
+        </div>
         <div id="product-grid" class="product-grid"></div>
     </div>
 
     <div id="checkout-page">
         <h2>Payment upon delivery</h2>
-        <p style="font-size: 0.9rem; color: #666;">Allow location when prompted (it's a one-time ping)</p>
+        <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Allow location when prompted (it's a one-time ping)</p>
         <div id="order-summary" style="margin-bottom:20px; border:1px solid #eee; padding:15px; border-radius:10px;"></div>
         <input type="text" id="fname" placeholder="First Name">
         <input type="text" id="lname" placeholder="Last Initial">
@@ -43,12 +50,12 @@
 
     <script>
         var products = [
-            { name: "Mini water", size: "8oz", price: 0.99, available: false },
+            { name: "Mini water", size: "8oz", price: 0.99, available: true },
             { name: "Waterloo", size: "12oz", price: 1.49, available: false},
             { name: "Mini soda", size: "8oz", price: 1.99, available: false },
             { name: "Milk", size: "16oz", price: 1.99, available: false },
             { name: "Coffee", size: "12oz", price: 2.99, available: false },
-            { name: "Redbull", size: "12oz", price: 3.99, available: true },
+            { name: "Redbull", size: "8.4oz", price: 3.99, available: true },
             { name: "Protein drink", size: "14oz", price: 2.99, available: false },
             { name: "Coconut water", size: "11oz", price: 2.99, available: false },
             { name: "Mints or gum", size: "1 pack", price: 2.99, available: false },
@@ -56,12 +63,22 @@
             { name: "Pistachios", size: "1.5oz", price: 1.99, available: false },
             { name: "Chips", size: "1 bag", price: 1.99, available: false },
             { name: "A dozen oreos", size: "12 count", price: 2.99, available: false },
-            { name: "Liquid IV", size: "1 stick", price: 2.99, available: false },
+            { name: "Liquid IV", size: "1 stick", price: 2.99, available: true },
             { name: "Rose", size: "1 stem", price: 3.99, available: false },
-            { name: "Charger $10back upon return", size: "4000 mah", price: 14.99, available: true }
+            { name: "Charger", size: "1 unit", price: 9.99, available: false }
         ];
 
         var cart = {};
+
+        function isStoreOpen() {
+            var now = new Date();
+            var day = now.getDay(); 
+            var hour = now.getHours(); 
+            var isOpen = false;
+            if ((day === 4 || day === 5 || day === 6) && hour >= 21) isOpen = true;
+            if ((day === 5 || day === 6 || day === 0) && hour < 3) isOpen = true;
+            return isOpen;
+        }
 
         function renderProducts() {
             var grid = document.getElementById('product-grid');
@@ -105,9 +122,11 @@
         function toggleCheckout() {
             var s = document.getElementById('store-page');
             var c = document.getElementById('checkout-page');
-            if (s.style.display === "none") {
-                s.style.display = "block"; c.style.display = "none";
-            } else {
+            if (s.style.display !== "none") {
+                if (!isStoreOpen()) {
+                    alert("Delivery only available 9PM-3AM Thur - Sat");
+                    return;
+                }
                 if (Object.keys(cart).length === 0) { alert("Cart is empty"); return; }
                 s.style.display = "none"; c.style.display = "block";
                 var summ = document.getElementById('order-summary');
@@ -118,10 +137,17 @@
                     total += prod.price * cart[name];
                 }
                 summ.innerHTML = html + "</ul><b>Total: $" + total.toFixed(2) + "</b>";
+            } else {
+                s.style.display = "block"; c.style.display = "none";
             }
+            window.scrollTo(0,0);
         }
 
         function submitOrder() {
+            if (!isStoreOpen()) {
+                alert("Sorry! The delivery window has closed.");
+                return;
+            }
             var fn = document.getElementById('fname').value;
             var ph = document.getElementById('phone').value;
             if (!fn || !ph) { alert("Enter Name and Phone"); return; }
@@ -137,3 +163,4 @@
     </script>
 </body>
 </html>
+
