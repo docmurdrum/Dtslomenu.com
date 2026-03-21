@@ -1,221 +1,238 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DTSLO Menu</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DTSLO App</title>
 
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            padding: 0;
-            background: #f5f7fa;
-            color: #222;
-            margin: 0;
-        }
+<style>
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    background: #f5f7fa;
+}
 
-        /* HEADER */
-        .header-container {
-            text-align: center;
-            padding: 80px 20px 30px;
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: white;
-            border-bottom-left-radius: 25px;
-            border-bottom-right-radius: 25px;
-        }
+/* MENU BUTTON */
+#menu-btn {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    background: #111;
+    color: white;
+    border: none;
+    padding: 12px 15px;
+    border-radius: 10px;
+    z-index: 2000;
+    font-size: 18px;
+}
 
-        .slogan {
-            font-size: 0.95rem;
-            opacity: 0.9;
-        }
+/* DROPDOWN */
+#menu-dropdown {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 15px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    overflow: hidden;
+    z-index: 2000;
+}
 
-        h1 {
-            margin: 10px 0;
-            font-size: 1.4rem;
-            font-weight: 600;
-        }
+.menu-item {
+    padding: 12px 18px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
 
-        .subtitle {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
+.menu-item:hover {
+    background: #f0f0f0;
+}
 
-        /* CART BUTTON */
-        #checkout-btn {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            padding: 12px 18px;
-            background: #111;
-            color: white;
-            border: none;
-            border-radius: 30px;
-            cursor: pointer;
-            z-index: 1000;
-            font-weight: 600;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-        }
+/* CART BUTTON */
+#checkout-btn {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    padding: 12px 18px;
+    background: #111;
+    color: white;
+    border-radius: 30px;
+    z-index: 1000;
+}
 
-        /* PRODUCTS */
-        .product-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-            gap: 18px;
-            max-width: 900px;
-            margin: 30px auto;
-            padding: 0 15px;
-        }
+/* SECTIONS */
+.section {
+    display: none;
+}
 
-        .card {
-            background: white;
-            padding: 18px;
-            border-radius: 18px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.06);
-            text-align: center;
-            transition: all 0.2s ease;
-        }
+/* ACTIVE SECTION */
+.active {
+    display: block;
+}
 
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 30px rgba(0,0,0,0.12);
-        }
+/* HEADER */
+.header-container {
+    text-align: center;
+    padding: 80px 20px 30px;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border-bottom-left-radius: 25px;
+    border-bottom-right-radius: 25px;
+}
 
-        .card h3 {
-            margin: 5px 0;
-            font-size: 1rem;
-        }
+/* PRODUCT GRID */
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 18px;
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 0 15px;
+}
 
-        .card p {
-            margin: 4px 0;
-            font-size: 0.85rem;
-            color: #666;
-        }
+.card {
+    background: white;
+    padding: 18px;
+    border-radius: 18px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+    text-align: center;
+}
 
-        .price {
-            color: #28a745;
-            font-weight: bold;
-            font-size: 1.1rem;
-            margin: 10px 0;
-        }
+.price {
+    color: #28a745;
+    font-weight: bold;
+}
 
-        /* BUTTONS */
-        button.add-btn {
-            background: linear-gradient(135deg, #007bff, #0056b3);
-            color: white;
-            border: none;
-            padding: 12px;
-            width: 100%;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: 0.2s;
-        }
+button {
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
 
-        button.add-btn:hover {
-            opacity: 0.9;
-        }
+/* CHECKOUT */
+#checkout-page {
+    display: none;
+    max-width: 450px;
+    margin: 60px auto;
+    padding: 20px;
+}
 
-        /* CHECKOUT */
-        #checkout-page {
-            display: none;
-            max-width: 450px;
-            margin: 60px auto;
-            padding: 20px;
-        }
+/* MODAL */
+#thankyou-modal {
+    display: none;
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.5);
+    justify-content:center;
+    align-items:center;
+}
 
-        input {
-            width: 100%;
-            padding: 14px;
-            border: 1.5px solid #ddd;
-            border-radius: 10px;
-            margin-bottom: 12px;
-        }
-
-        .submit-order {
-            background: linear-gradient(135deg, #28a745, #1e7e34);
-            color: white;
-            padding: 16px;
-            width: 100%;
-            border: none;
-            border-radius: 12px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        /* MODAL */
-        #thankyou-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-        }
-
-        .modal-box {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            max-width: 320px;
-            text-align: center;
-            animation: pop 0.3s ease;
-        }
-
-        @keyframes pop {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-
-        .modal-box h3 {
-            color: #28a745;
-        }
-
-        .modal-btn {
-            margin-top: 20px;
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 12px;
-            width: 100%;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-    </style>
+.modal-box {
+    background:white;
+    padding:25px;
+    border-radius:15px;
+    text-align:center;
+}
+</style>
 </head>
+
 <body>
 
-<button id="checkout-btn" onclick="toggleCheckout()">🛒 Cart (<span id="cart-count">0</span>)</button>
+<!-- MENU -->
+<button id="menu-btn" onclick="toggleMenu()">☰</button>
 
-<div id="store-page">
+<div id="menu-dropdown">
+    <div class="menu-item" onclick="showSection('linecheck')">Line Check</div>
+    <div class="menu-item" onclick="showSection('delivery')">Line & Entry Delivery</div>
+    <div class="menu-item" onclick="showSection('food')">Food Recommendations</div>
+    <div class="menu-item" onclick="showSection('events')">Concerts & Events</div>
+</div>
+
+<!-- CART -->
+<button id="checkout-btn" onclick="toggleCheckout()">🛒 (<span id="cart-count">0</span>)</button>
+
+<!-- ================= SECTIONS ================= -->
+
+<!-- LINE CHECK -->
+<div id="linecheck" class="section active">
     <div class="header-container">
-        <span class="slogan">Line and entry delivery service. Save your place save your time.</span>
-        <h1>Available 9PM-3AM Thursday-Saturday</h1>
-        <p class="subtitle">Items are updated regularly.<br>Check back soon for new arrivals.</p>
+        <h1>Line Check</h1>
+        <p>See how busy bars are in real time</p>
     </div>
+
+    <div style="padding:20px;text-align:center;">
+        🚧 Coming next step (this is your crowd-sourced feature)
+    </div>
+</div>
+
+<!-- DELIVERY (YOUR CURRENT APP) -->
+<div id="delivery" class="section">
+    <div class="header-container">
+        <h1>Line & Entry Delivery</h1>
+        <p>Skip the line. We deliver your spot.</p>
+    </div>
+
     <div id="product-grid" class="product-grid"></div>
 </div>
 
+<!-- FOOD -->
+<div id="food" class="section">
+    <div class="header-container">
+        <h1>Food Recommendations</h1>
+    </div>
+
+    <div style="padding:20px;">
+        🍔 Best late night food coming soon
+    </div>
+</div>
+
+<!-- EVENTS -->
+<div id="events" class="section">
+    <div class="header-container">
+        <h1>Concerts & Events</h1>
+    </div>
+
+    <div style="padding:20px;">
+        🎵 Events feed coming soon
+    </div>
+</div>
+
+<!-- CHECKOUT -->
 <div id="checkout-page">
-    <h2>Payment upon delivery</h2>
-    <p style="font-size: 0.9rem; color: #666;">Allow location when prompted</p>
     <input type="text" id="fname" placeholder="First Name">
     <input type="tel" id="phone" placeholder="Phone Number">
-    <button onclick="submitOrder()" class="submit-order">Place Order via SMS</button>
+    <button onclick="submitOrder()">Place Order</button>
 </div>
 
 <!-- MODAL -->
 <div id="thankyou-modal">
     <div class="modal-box">
         <h3>Thank You!</h3>
-        <p>Your order has been submitted and the driver will be there shortly.<br><br>Please keep your phone ringer and notifications on.</p>
-        <button class="modal-btn" onclick="closeModal()">Got it</button>
+        <button onclick="closeModal()">Close</button>
     </div>
 </div>
 
 <script>
+
+/* MENU */
+function toggleMenu() {
+    var menu = document.getElementById('menu-dropdown');
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+function showSection(id) {
+    var sections = document.getElementsByClassName('section');
+    for (var i = 0; i < sections.length; i++) {
+        sections[i].classList.remove('active');
+    }
+    document.getElementById(id).classList.add('active');
+    document.getElementById('menu-dropdown').style.display = "none";
+}
+
+/* PRODUCTS */
 var products = [
     { name: "Redbull", size: "12oz", price: 3.99, available: true },
     { name: "Charger", size: "1 unit", price: 14.99, available: true }
@@ -234,7 +251,7 @@ function renderProducts() {
                 <h3>${p.name}</h3>
                 <p>${p.size}</p>
                 <p class="price">$${p.price}</p>
-                <button class="add-btn" onclick="addToCart('${p.name}')">Add to Cart</button>
+                <button onclick="addToCart('${p.name}')">Add</button>
             </div>`;
         }
     }
@@ -248,21 +265,21 @@ function addToCart(name) {
 }
 
 function toggleCheckout() {
-    document.getElementById('store-page').style.display = "none";
     document.getElementById('checkout-page').style.display = "block";
 }
 
 function submitOrder() {
     var fn = document.getElementById('fname').value;
     var ph = document.getElementById('phone').value;
-    if (!fn || !ph) return alert("Enter Name and Phone");
 
     navigator.geolocation.getCurrentPosition(function(pos) {
-        var loc = "https://maps.google.com?q=" + pos.coords.latitude + "," + pos.coords.longitude;
+        var loc = pos.coords.latitude + "," + pos.coords.longitude;
         var items = "";
+
         for (var key in cart) items += key + "(" + cart[key] + ") ";
 
         var body = "Order: " + fn + " | " + ph + " | " + items + " | " + loc;
+
         window.location.href = "sms:+18052506655?&body=" + encodeURIComponent(body);
 
         document.getElementById('thankyou-modal').style.display = "flex";
@@ -274,11 +291,10 @@ function submitOrder() {
 
 function closeModal() {
     document.getElementById('thankyou-modal').style.display = "none";
-    document.getElementById('checkout-page').style.display = "none";
-    document.getElementById('store-page').style.display = "block";
 }
 
 window.onload = renderProducts;
+
 </script>
 
 </body>
