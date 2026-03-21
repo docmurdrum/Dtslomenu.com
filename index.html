@@ -8,23 +8,24 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; margin:0; background:#f5f7fa; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto; margin:0; background:#f5f7fa; }
 
 .navbar {
     position:fixed; top:0; left:0; right:0;
     height:60px; background:#111; color:white;
     display:flex; align-items:center;
-    padding:0 15px; z-index:2000;
+    padding:0 15px;
 }
 
-.menu-btn { font-size:22px; }
 #player-info { margin-left:10px; font-size:14px; }
 #leaderboard { margin-left:auto; font-size:12px; }
 
 .page { padding-top:80px; }
 
 .bar {
-    background:white; margin:15px; padding:15px;
+    background:white;
+    margin:15px;
+    padding:15px;
     border-radius:15px;
     box-shadow:0 5px 15px rgba(0,0,0,0.05);
 }
@@ -33,17 +34,17 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
 
 .buttons button {
     margin:4px;
-    padding:8px 10px;
+    padding:8px;
     border:none;
     border-radius:10px;
-    font-size:12px;
 }
 
 .confirm-btn { background:#eee; }
 
 #xp-bar {
     position:fixed;
-    bottom:0; left:0;
+    bottom:0;
+    left:0;
     height:6px;
     background:#28a745;
     width:0%;
@@ -59,6 +60,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
     font-weight:bold;
     animation:floatUp 1s forwards;
 }
+
 @keyframes floatUp {
     0%{opacity:1;}
     100%{opacity:0; transform:translate(-50%,-40px);}
@@ -69,7 +71,6 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
 <body>
 
 <div class="navbar">
-    <div class="menu-btn">☰</div>
     <div id="player-info">Lv 1 • Rookie</div>
     <div id="leaderboard">🏆 0 reports</div>
 </div>
@@ -78,7 +79,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
 <div id="xp-bar"></div>
 
 <script>
-/* 🔑 SUPABASE KEY (Line ~65) */
+/* 🔑 SUPABASE (LINE ~60) */
 const supabaseClient = window.supabase.createClient(
 "https://jwgwufggptpdmgcmmqes.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18"
@@ -91,9 +92,11 @@ var bars = [
     {name:"Frog & Peach", reports:[]}
 ];
 
+/* USER DATA */
 var xp = 0;
 var level = 1;
 var totalReports = parseInt(localStorage.getItem("reports")) || 0;
+var myBarReports = JSON.parse(localStorage.getItem("myBarReports")) || {};
 
 /* CHECK-IN */
 var lastCheckInDate = localStorage.getItem("checkinDate") || "";
@@ -105,9 +108,10 @@ function getTitle(){
     if(level < 3) return "Rookie";
     if(level < 6) return "Local";
     if(level < 10) return "Regular";
-    return "Nightlife Legend";
+    return "Legend";
 }
 
+/* UI */
 function updatePlayerUI(){
     document.getElementById("player-info").innerText =
         `Lv ${level} • ${getTitle()}`;
@@ -137,7 +141,63 @@ function checkLevelUp(){
     }
 }
 
-/* 📍 CHECK-IN */
+/* UPDATE BAR */
+function updateBar(){
+    document.getElementById("xp-bar").style.width = (xp % 100) + "%";
+    checkLevelUp();
+    updatePlayerUI();
+}
+
+/* TIME AGO */
+function timeAgo(timestamp){
+    let seconds = Math.floor((Date.now() - timestamp)/1000);
+    if(seconds < 10) return "just now";
+    if(seconds < 60) return seconds + " sec ago";
+    let min = Math.floor(seconds/60);
+    if(min < 60) return min + " min ago";
+    return Math.floor(min/60) + " hr ago";
+}
+
+function getLastUpdated(bar){
+    if(bar.reports.length===0) return "No data";
+    return timeAgo(bar.reports[0].time);
+}
+
+/* STATUS */
+function getStatus(bar){
+    if(bar.reports.length===0) return "No Data";
+    let recent = bar.reports.slice(0,5);
+    let counts={};
+    recent.forEach(r=>counts[r.status]=(counts[r.status]||0)+1);
+    return Object.keys(counts).reduce((a,b)=>counts[a]>counts[b]?a:b);
+}
+
+/* 👑 OWNERSHIP */
+function getOwner(bar){
+    let myCount = myBarReports[bar.name] || 0;
+    let total = bar.reports.length;
+
+    if(total === 0) return "No owner";
+
+    if(myCount >= Math.ceil(total/2)){
+        return `👑 You (${myCount})`;
+    }
+    return `Top reporter (${total})`;
+}
+
+/* BONUS */
+function getFirstReportBonus(bar){
+    if(bar.reports.length===0){
+        return {xp:50,label:"🔥 First Report!"};
+    }
+    let minutes=(Date.now()-bar.reports[0].time)/60000;
+    if(minutes>10){
+        return {xp:25,label:"⚡ Revived!"};
+    }
+    return {xp:0,label:""};
+}
+
+/* CHECK-IN */
 function checkIn(){
     let bonus = firstCheckInDone ? 15 : 25;
     xp += bonus;
@@ -151,85 +211,65 @@ function checkIn(){
     updateBar();
 }
 
-/* ✅ CONFIRM */
+/* CONFIRM */
 function confirmStatus(){
     xp += 5;
-    showXP(`+5 XP ✔️`);
+    showXP("+5 XP ✔️");
     updateBar();
 }
 
 /* REPORT */
 async function report(i,status){
-    try {
-        await supabaseClient.from("reports").insert([
-            {bar: bars[i].name, status: status}
-        ]);
-    } catch(e){ console.log(e); }
+    let bar = bars[i];
+    let bonus = getFirstReportBonus(bar);
 
-    xp += 10;
+    try{
+        await supabaseClient.from("reports").insert([
+            {bar: bar.name, status: status}
+        ]);
+    }catch(e){console.log(e);}
+
+    let gained = 10 + bonus.xp;
+    xp += gained;
+
+    /* ownership tracking */
+    myBarReports[bar.name]=(myBarReports[bar.name]||0)+1;
+    localStorage.setItem("myBarReports", JSON.stringify(myBarReports));
 
     totalReports++;
     localStorage.setItem("reports", totalReports);
     updateLeaderboardUI();
 
-    showXP("+10 XP");
+    showXP(`+${gained} XP ${bonus.label}`);
     updateBar();
 
     loadReports();
 }
 
-/* UPDATE UI */
-function updateBar(){
-    document.getElementById("xp-bar").style.width = (xp % 100) + "%";
-    checkLevelUp();
-    updatePlayerUI();
-}
-
-/* 🕒 TIME AGO */
-function timeAgo(timestamp){
-    let seconds = Math.floor((Date.now() - timestamp) / 1000);
-
-    if(seconds < 10) return "just now";
-    if(seconds < 60) return seconds + " sec ago";
-
-    let minutes = Math.floor(seconds / 60);
-    if(minutes < 60) return minutes + " min ago";
-
-    let hours = Math.floor(minutes / 60);
-    return hours + " hr ago";
-}
-
-function getLastUpdated(bar){
-    if(bar.reports.length === 0) return "No data";
-    return timeAgo(bar.reports[0].time);
-}
-
-/* STATUS */
-function getStatus(bar){
-    if(bar.reports.length===0) return "No Data";
-    let recent = bar.reports.slice(0,5);
-    let counts = {};
-    recent.forEach(r=>{
-        counts[r.status]=(counts[r.status]||0)+1;
-    });
-    return Object.keys(counts).reduce((a,b)=>counts[a]>counts[b]?a:b);
-}
-
 /* RENDER */
 function renderBars(){
-    let container=document.getElementById("line");
-    container.innerHTML="";
+    let c=document.getElementById("line");
+    c.innerHTML="";
 
     bars.forEach((bar,i)=>{
-        let status=getStatus(bar);
+        let last = bar.reports[0]?.time || 0;
 
-        container.innerHTML+=`
+        let nudge = "";
+        if(bar.reports.length===0){
+            nudge="🔥 Be first — big XP";
+        } else if(Date.now()-last > 600000){
+            nudge="⚠️ Needs update — bonus XP";
+        }
+
+        c.innerHTML+=`
         <div class="bar">
             <h3>${bar.name}</h3>
-            <div class="status">${status}</div>
+            <div style="font-size:12px;color:#444;">${getOwner(bar)}</div>
+            <div class="status">${getStatus(bar)}</div>
             <div style="font-size:12px;color:#777;">
                 Last updated: ${getLastUpdated(bar)}
             </div>
+            <div style="color:#ff5722;font-size:12px;">${nudge}</div>
 
             <div class="buttons">
                 <button onclick="report(${i},'Dead')">Dead</button>
@@ -249,11 +289,13 @@ function renderBars(){
 
 /* LOAD */
 async function loadReports(){
-    try {
-        const {data} = await supabaseClient
+    try{
+        const {data,error} = await supabaseClient
             .from("reports")
             .select("*")
             .order("created_at",{ascending:false});
+
+        if(error){console.log(error);return;}
 
         bars.forEach(b=>b.reports=[]);
 
@@ -267,7 +309,7 @@ async function loadReports(){
             }
         });
 
-    } catch(e){ console.log(e); }
+    }catch(e){console.log(e);}
 
     renderBars();
 }
