@@ -10,49 +10,61 @@
 <style>
 body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; margin:0; background:#f5f7fa; }
 
-.navbar { position:fixed; top:0; left:0; right:0; height:60px; background:#111; color:white; display:flex; align-items:center; padding:0 15px; z-index:2000; }
+.navbar {
+    position:fixed; top:0; left:0; right:0;
+    height:60px; background:#111; color:white;
+    display:flex; align-items:center;
+    padding:0 15px; z-index:2000;
+}
 
 .menu-btn { font-size:22px; cursor:pointer; }
 
-.dropdown { position:absolute; top:60px; left:0; background:white; width:220px; box-shadow:0 10px 30px rgba(0,0,0,0.2); display:none; }
+#player-info {
+    margin-left:10px;
+    font-size:14px;
+}
 
-.dropdown div { padding:15px; border-bottom:1px solid #eee; cursor:pointer; }
-
-.page { display:none; padding-top:70px; }
+.page { display:none; padding-top:80px; }
 .active { display:block; }
 
-.bar { background:white; margin:15px; padding:15px; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.05); transition: transform 0.2s ease; }
-.bar.bump { transform: scale(1.03); }
+.bar {
+    background:white; margin:15px; padding:15px;
+    border-radius:15px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.05);
+}
 
 .status { font-weight:bold; margin:10px 0; }
 .dead { color:#28a745; }
 .busy { color:#ffc107; }
 .packed { color:#dc3545; }
 
-@keyframes pulse {0%{opacity:1;}50%{opacity:0.5;}100%{opacity:1;}}
-.status.live { animation:pulse 1.5s infinite; }
+.buttons button {
+    margin:5px; padding:10px;
+    border:none; border-radius:10px;
+}
 
-.buttons button { margin:5px; padding:10px; border:none; border-radius:10px; cursor:pointer; }
-.buttons button:active { transform:scale(0.9); }
+#xp-bar {
+    position:fixed;
+    bottom:0; left:0;
+    height:6px;
+    background:#28a745;
+    width:0%;
+    transition:width 0.3s;
+}
 
-#xp-bar { position:fixed; bottom:0; left:0; height:6px; background:#28a745; width:0%; transition:width 0.4s; }
-
-.xp-float { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); color:#28a745; font-weight:bold; animation:floatUp 1s forwards; }
-@keyframes floatUp {0%{opacity:1;}100%{opacity:0; transform:translate(-50%,-40px);}}
-
-/* 🔥 TRENDING */
-#trending-banner{
-position:fixed;
-top:60px;
-left:0;
-right:0;
-background:#ff4757;
-color:white;
-text-align:center;
-padding:10px;
-font-weight:bold;
-z-index:1500;
-display:none;
+/* floating text */
+.xp-float {
+    position:fixed;
+    bottom:30px;
+    left:50%;
+    transform:translateX(-50%);
+    color:#28a745;
+    font-weight:bold;
+    animation:floatUp 1s forwards;
+}
+@keyframes floatUp {
+    0%{opacity:1;}
+    100%{opacity:0; transform:translate(-50%,-40px);}
 }
 </style>
 </head>
@@ -61,13 +73,7 @@ display:none;
 
 <div class="navbar">
     <div class="menu-btn" onclick="toggleMenu()">☰</div>
-</div>
-
-<!-- 🔥 TRENDING BANNER -->
-<div id="trending-banner">🔥 Loading...</div>
-
-<div id="menu" class="dropdown">
-    <div onclick="showPage('line')">Line Check</div>
+    <div id="player-info">Lv 1 • Rookie</div>
 </div>
 
 <div id="line" class="page active"></div>
@@ -75,11 +81,6 @@ display:none;
 <div id="xp-bar"></div>
 
 <script>
-/* DEBUG HELPER */
-window.onerror = function(msg){
-    alert("Error: " + msg);
-};
-
 /* SUPABASE */
 const supabaseClient = window.supabase.createClient(
 "https://jwgwufggptpdmgcmmqes.supabase.co",
@@ -87,14 +88,7 @@ const supabaseClient = window.supabase.createClient(
 );
 
 /* MENU */
-function toggleMenu(){
-    let m=document.getElementById("menu");
-    m.style.display = m.style.display==="block"?"none":"block";
-}
-function showPage(p){
-    document.querySelectorAll(".page").forEach(pg=>pg.classList.remove("active"));
-    document.getElementById(p).classList.add("active");
-}
+function toggleMenu(){}
 
 /* DATA */
 var bars = [
@@ -104,6 +98,70 @@ var bars = [
 ];
 
 var xp = 0;
+var level = 1;
+var streak = 0;
+var lastReportTime = 0;
+
+/* TITLE */
+function getTitle(){
+    if(level < 3) return "Rookie";
+    if(level < 6) return "Local";
+    if(level < 10) return "Regular";
+    return "Nightlife Legend";
+}
+
+/* UI UPDATE */
+function updatePlayerUI(){
+    let el = document.getElementById("player-info");
+    if(el){
+        el.innerText = `Lv ${level} • ${getTitle()}`;
+    }
+}
+
+/* LEVEL UP */
+function checkLevelUp(){
+    let required = level * 100;
+    if(xp >= required){
+        level++;
+        xp -= required;
+        showLevelUp();
+    }
+}
+
+/* POPUPS */
+function showLevelUp(){
+    let el = document.createElement("div");
+    el.innerText = "🎉 LEVEL UP!";
+    Object.assign(el.style,{
+        position:"fixed",top:"40%",left:"50%",
+        transform:"translate(-50%,-50%)",
+        background:"#111",color:"white",
+        padding:"20px",borderRadius:"15px",
+        zIndex:"3000"
+    });
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),1500);
+}
+
+function showStreak(){
+    let el = document.createElement("div");
+    el.className="xp-float";
+    el.innerText=`🔥 ${streak} streak`;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),1000);
+}
+
+/* STREAK */
+function updateStreak(){
+    let now = Date.now();
+    if(now - lastReportTime < 60000){
+        streak++;
+    } else {
+        streak = 1;
+    }
+    lastReportTime = now;
+    if(streak > 1) showStreak();
+}
 
 /* STATUS */
 function getStatus(bar){
@@ -131,9 +189,9 @@ function renderBars(){
     bars.forEach((bar,i)=>{
         let status=getStatus(bar);
         container.innerHTML+=`
-        <div class="bar" id="bar-${i}">
+        <div class="bar">
             <h3>${bar.name}</h3>
-            <div class="status live ${getStatusClass(status)}">${status}</div>
+            <div class="status ${getStatusClass(status)}">${status}</div>
             <div class="buttons">
                 <button onclick="report(${i},'Dead')">Dead</button>
                 <button onclick="report(${i},'Busy')">Busy</button>
@@ -151,8 +209,9 @@ async function report(i,status){
         ]);
     } catch(e){ console.log(e); }
 
-    xp+=10;
-    document.getElementById("xp-bar").style.width=(xp%100)+"%";
+    xp += 10;
+
+    document.getElementById("xp-bar").style.width = (xp % 100) + "%";
 
     let el=document.createElement("div");
     el.className="xp-float";
@@ -160,38 +219,11 @@ async function report(i,status){
     document.body.appendChild(el);
     setTimeout(()=>el.remove(),1000);
 
+    updateStreak();
+    checkLevelUp();
+    updatePlayerUI();
+
     loadReports();
-}
-
-/* 🔥 TRENDING FUNCTION (SAFE) */
-function updateTrending(){
-    let now = Date.now();
-    let counts = {};
-
-    bars.forEach(bar=>{
-        let recent = bar.reports.filter(r => now - r.time < 1800000);
-        counts[bar.name] = recent.length;
-    });
-
-    let topBar=null;
-    let max=0;
-
-    for(let b in counts){
-        if(counts[b]>max){
-            max=counts[b];
-            topBar=b;
-        }
-    }
-
-    let banner=document.getElementById("trending-banner");
-    if(!banner) return;
-
-    if(max>0){
-        banner.style.display="block";
-        banner.innerText=`🔥 ${topBar} is HOT (${max} reports)`;
-    } else {
-        banner.style.display="none";
-    }
 }
 
 /* LOAD */
@@ -217,17 +249,10 @@ async function loadReports(){
         });
 
     } catch(e){
-        console.log("Load failed:", e);
+        console.log(e);
     }
 
     renderBars();
-
-    // ✅ SAFE CALL
-    try {
-        updateTrending();
-    } catch(e){
-        console.log("Trending error:", e);
-    }
 }
 
 /* INIT */
