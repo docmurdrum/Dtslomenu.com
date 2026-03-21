@@ -43,8 +43,18 @@ body {
     border-bottom: 1px solid #eee;
 }
 
-.menu-item:hover {
-    background: #f0f0f0;
+/* XP BAR */
+#xp-bar {
+    position: fixed;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    z-index: 2000;
 }
 
 /* CART */
@@ -59,310 +69,245 @@ body {
     z-index: 1000;
 }
 
-/* SECTIONS */
 .section { display: none; }
 .active { display: block; }
 
-/* HEADER */
 .header-container {
     text-align: center;
     padding: 80px 20px 30px;
     background: linear-gradient(135deg, #28a745, #20c997);
     color: white;
-    border-bottom-left-radius: 25px;
-    border-bottom-right-radius: 25px;
 }
 
-/* GRID */
+/* BAR CARDS */
+.bar-card {
+    background:white;
+    padding:15px;
+    margin:12px;
+    border-radius:12px;
+}
+
+/* LEADERBOARD */
+#leaderboard {
+    background:white;
+    margin:15px;
+    padding:15px;
+    border-radius:12px;
+}
+
+/* TOAST */
+.toast {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111;
+    color: white;
+    padding: 12px 18px;
+    border-radius: 20px;
+    z-index: 3000;
+}
+
+/* DELIVERY GRID */
 .product-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
     gap: 18px;
-    max-width: 900px;
-    margin: 30px auto;
-    padding: 0 15px;
+    margin: 30px;
 }
 
 .card {
     background: white;
     padding: 18px;
     border-radius: 18px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.06);
     text-align: center;
-}
-
-.price {
-    color: #28a745;
-    font-weight: bold;
-}
-
-button {
-    padding: 10px;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-}
-
-/* LINE CHECK CARDS */
-.bar-card {
-    background:white;
-    padding:15px;
-    margin-bottom:12px;
-    border-radius:12px;
-}
-
-/* CHECKOUT */
-#checkout-page {
-    display: none;
-    max-width: 450px;
-    margin: 60px auto;
-    padding: 20px;
-}
-
-/* MODAL */
-#thankyou-modal {
-    display: none;
-    position: fixed;
-    top:0; left:0;
-    width:100%; height:100%;
-    background: rgba(0,0,0,0.5);
-    justify-content:center;
-    align-items:center;
-}
-
-.modal-box {
-    background:white;
-    padding:25px;
-    border-radius:15px;
-    text-align:center;
 }
 </style>
 </head>
 
 <body>
 
-<!-- MENU -->
 <button id="menu-btn" onclick="toggleMenu()">☰</button>
 
 <div id="menu-dropdown">
     <div class="menu-item" onclick="showSection('linecheck')">Line Check</div>
-    <div class="menu-item" onclick="showSection('delivery')">Line & Entry Delivery</div>
-    <div class="menu-item" onclick="showSection('food')">Food Recommendations</div>
-    <div class="menu-item" onclick="showSection('events')">Concerts & Events</div>
+    <div class="menu-item" onclick="showSection('delivery')">Delivery</div>
 </div>
 
-<!-- CART -->
-<button id="checkout-btn" onclick="toggleCheckout()">🛒 (<span id="cart-count">0</span>)</button>
+<div id="xp-bar">🔥 0 pts</div>
+
+<button id="checkout-btn">🛒 (<span id="cart-count">0</span>)</button>
 
 <!-- LINE CHECK -->
 <div id="linecheck" class="section active">
     <div class="header-container">
         <h1>Line Check</h1>
-        <p>Live bar activity</p>
     </div>
 
     <div id="best-bar" style="padding:15px;font-weight:bold;"></div>
-    <div id="bars-list" style="padding:15px;"></div>
+
+    <div id="leaderboard"></div>
+
+    <div id="bars-list"></div>
 </div>
 
 <!-- DELIVERY -->
 <div id="delivery" class="section">
     <div class="header-container">
-        <h1>Line & Entry Delivery</h1>
+        <h1>Delivery</h1>
     </div>
     <div id="product-grid" class="product-grid"></div>
-</div>
-
-<!-- FOOD -->
-<div id="food" class="section">
-    <div class="header-container">
-        <h1>Food Recommendations</h1>
-    </div>
-    <div style="padding:20px;">Coming soon 🍔</div>
-</div>
-
-<!-- EVENTS -->
-<div id="events" class="section">
-    <div class="header-container">
-        <h1>Concerts & Events</h1>
-    </div>
-    <div style="padding:20px;">Coming soon 🎵</div>
-</div>
-
-<!-- CHECKOUT -->
-<div id="checkout-page">
-    <input type="text" id="fname" placeholder="First Name">
-    <input type="tel" id="phone" placeholder="Phone Number">
-    <button onclick="submitOrder()">Place Order</button>
-</div>
-
-<!-- MODAL -->
-<div id="thankyou-modal">
-    <div class="modal-box">
-        <h3>Thank You!</h3>
-        <button onclick="closeModal()">Close</button>
-    </div>
 </div>
 
 <script>
 
 /* MENU */
-function toggleMenu() {
-    var menu = document.getElementById('menu-dropdown');
-    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+function toggleMenu(){
+    var m = document.getElementById('menu-dropdown');
+    m.style.display = m.style.display === 'block' ? 'none' : 'block';
 }
-
-function showSection(id) {
-    var sections = document.getElementsByClassName('section');
-    for (var i = 0; i < sections.length; i++) {
-        sections[i].classList.remove('active');
-    }
+function showSection(id){
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    document.getElementById('menu-dropdown').style.display = "none";
 }
 
-/* LINE CHECK SYSTEM */
+/* XP + STREAK */
+var xp = 0;
+var streak = 0;
+var lastTap = 0;
+
+function addXP(){
+    xp++;
+    var now = Date.now();
+
+    if(now - lastTap < 60000){
+        streak++;
+    } else {
+        streak = 1;
+    }
+
+    lastTap = now;
+
+    document.getElementById("xp-bar").innerText =
+        "🔥 " + xp + " pts | Streak: " + streak;
+}
+
+/* TOAST */
+function toast(msg){
+    var t = document.createElement("div");
+    t.className = "toast";
+    t.innerText = msg;
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(),1500);
+}
+
+/* BARS */
 var bars = [
     { name: "The Library", reports: [] },
     { name: "Frog & Peach", reports: [] },
     { name: "Bull’s Tavern", reports: [] }
 ];
 
-function reportStatus(i, status) {
-    bars[i].reports.push({ status: status, time: Date.now() });
+function reportStatus(i,status){
+    bars[i].reports.push({status:status,time:Date.now()});
+    addXP();
+    toast("🔥 You helped!");
     updateBars();
 }
 
-function getStatus(reports) {
-    if (reports.length === 0) return "No Data";
-    var recent = reports.slice(-10);
-    var score = 0;
+function getScore(r){
+    if(r==="Not Busy") return 1;
+    if(r==="Moderate") return 2;
+    return 3;
+}
 
-    recent.forEach(r => {
-        if (r.status === "Not Busy") score += 1;
-        if (r.status === "Moderate") score += 2;
-        if (r.status === "Packed") score += 3;
-    });
-
-    var avg = score / recent.length;
-    if (avg < 1.7) return "🟢 Not Busy";
-    if (avg < 2.4) return "🟡 Moderate";
+function getStatus(reports){
+    if(!reports.length) return "No Data";
+    var avg = reports.slice(-10).reduce((a,b)=>a+getScore(b.status),0)/Math.min(10,reports.length);
+    if(avg<1.7) return "🟢 Not Busy";
+    if(avg<2.4) return "🟡 Moderate";
     return "🔴 Packed";
 }
 
-function getTrend(reports) {
-    if (reports.length < 6) return "";
+function getTrend(reports){
+    if(reports.length<6) return "";
     var last = reports.slice(-3);
-    var prev = reports.slice(-6, -3);
+    var prev = reports.slice(-6,-3);
+    var diff = last.reduce((a,b)=>a+getScore(b.status),0)/3 -
+               prev.reduce((a,b)=>a+getScore(b.status),0)/3;
 
-    function avg(arr) {
-        var s = 0;
-        arr.forEach(r => {
-            if (r.status === "Not Busy") s += 1;
-            if (r.status === "Moderate") s += 2;
-            if (r.status === "Packed") s += 3;
-        });
-        return s / arr.length;
-    }
-
-    var diff = avg(last) - avg(prev);
-    if (diff > 0.3) return "📈 Getting busier";
-    if (diff < -0.3) return "📉 Slowing down";
+    if(diff>0.3) return "📈 Busier";
+    if(diff<-0.3) return "📉 Slowing";
     return "➖ Stable";
 }
 
-function updateBars() {
-    var container = document.getElementById("bars-list");
-    container.innerHTML = "";
+function updateBars(){
+    var list = document.getElementById("bars-list");
+    list.innerHTML="";
 
-    var bestBar = null;
+    var best = null;
     var bestScore = 999;
 
-    bars.forEach((bar, i) => {
-        var status = getStatus(bar.reports);
-        var trend = getTrend(bar.reports);
+    bars.forEach((b,i)=>{
+        var status = getStatus(b.reports);
+        var trend = getTrend(b.reports);
 
-        var score = status.includes("🟢") ? 1 : status.includes("🟡") ? 2 : 3;
-        if (score < bestScore) {
-            bestScore = score;
-            bestBar = bar.name;
-        }
+        var score = status.includes("🟢")?1:status.includes("🟡")?2:3;
+        if(score<bestScore){ bestScore=score; best=b.name;}
 
-        container.innerHTML += `
+        list.innerHTML += `
         <div class="bar-card">
-            <strong>${bar.name}</strong><br>
+            <strong>${b.name}</strong><br>
             ${status}<br>
-            <small>${trend}</small><br><br>
-            <button onclick="reportStatus(${i}, 'Not Busy')">🟢</button>
-            <button onclick="reportStatus(${i}, 'Moderate')">🟡</button>
-            <button onclick="reportStatus(${i}, 'Packed')">🔴</button>
+            <small>${trend}</small><br>
+            <small>👥 ${b.reports.length} updates</small><br><br>
+            <button onclick="reportStatus(${i},'Not Busy')">🟢</button>
+            <button onclick="reportStatus(${i},'Moderate')">🟡</button>
+            <button onclick="reportStatus(${i},'Packed')">🔴</button>
         </div>`;
     });
 
     document.getElementById("best-bar").innerHTML =
-        bestBar ? "🔥 Best Right Now: " + bestBar : "";
+        best ? "🔥 HOT RIGHT NOW: " + best : "";
+
+    document.getElementById("leaderboard").innerHTML =
+        "<strong>🏆 You:</strong> " + xp + " pts<br>🔥 Streak: " + streak;
 }
 
-/* DELIVERY SYSTEM */
-var products = [
-    { name: "Redbull", size: "12oz", price: 3.99, available: true },
-    { name: "Charger", size: "1 unit", price: 14.99, available: true }
+/* DELIVERY */
+var products=[
+    {name:"Redbull",price:3.99},
+    {name:"Charger",price:14.99}
 ];
 
-var cart = {};
+var cart={};
 
-function renderProducts() {
-    var grid = document.getElementById('product-grid');
-    grid.innerHTML = "";
-    products.forEach(p => {
-        if (p.available) {
-            grid.innerHTML += `
-            <div class="card">
-                <h3>${p.name}</h3>
-                <p>${p.size}</p>
-                <p class="price">$${p.price}</p>
-                <button onclick="addToCart('${p.name}')">Add</button>
-            </div>`;
-        }
+function renderProducts(){
+    var g=document.getElementById("product-grid");
+    g.innerHTML="";
+    products.forEach(p=>{
+        g.innerHTML+=`
+        <div class="card">
+            <h3>${p.name}</h3>
+            <p>$${p.price}</p>
+            <button onclick="addToCart('${p.name}')">Add</button>
+        </div>`;
     });
 }
 
-function addToCart(name) {
-    cart[name] = (cart[name] || 0) + 1;
-    var total = 0;
-    for (var k in cart) total += cart[k];
-    document.getElementById('cart-count').innerText = total;
+function addToCart(n){
+    cart[n]=(cart[n]||0)+1;
+    document.getElementById("cart-count").innerText =
+        Object.values(cart).reduce((a,b)=>a+b,0);
 }
 
-function toggleCheckout() {
-    document.getElementById('checkout-page').style.display = "block";
-}
-
-function submitOrder() {
-    var fn = document.getElementById('fname').value;
-    var ph = document.getElementById('phone').value;
-
-    navigator.geolocation.getCurrentPosition(function(pos) {
-        var loc = pos.coords.latitude + "," + pos.coords.longitude;
-        var items = "";
-        for (var k in cart) items += k + "(" + cart[k] + ") ";
-
-        var body = "Order: " + fn + " | " + ph + " | " + items + " | " + loc;
-
-        window.location.href = "sms:+18052506655?&body=" + encodeURIComponent(body);
-
-        document.getElementById('thankyou-modal').style.display = "flex";
-        cart = {};
-        document.getElementById('cart-count').innerText = "0";
-    });
-}
-
-function closeModal() {
-    document.getElementById('thankyou-modal').style.display = "none";
-}
+/* AUTO PROMPT */
+setTimeout(()=>{
+    toast("How busy is it right now?");
+},5000);
 
 /* INIT */
-window.onload = function() {
+window.onload=function(){
     renderProducts();
     updateBars();
 };
