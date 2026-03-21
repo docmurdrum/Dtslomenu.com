@@ -39,9 +39,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
     font-size:12px;
 }
 
-.confirm-btn {
-    background:#eee;
-}
+.confirm-btn { background:#eee; }
 
 #xp-bar {
     position:fixed;
@@ -80,7 +78,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
 <div id="xp-bar"></div>
 
 <script>
-/* 📍 INSERT KEY (Line ~65) */
+/* 🔑 SUPABASE KEY (Line ~65) */
 const supabaseClient = window.supabase.createClient(
 "https://jwgwufggptpdmgcmmqes.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18"
@@ -154,7 +152,7 @@ function checkIn(){
 }
 
 /* ✅ CONFIRM */
-function confirmStatus(status){
+function confirmStatus(){
     xp += 5;
     showXP(`+5 XP ✔️`);
     updateBar();
@@ -175,6 +173,7 @@ async function report(i,status){
     updateLeaderboardUI();
 
     showXP("+10 XP");
+    updateBar();
 
     loadReports();
 }
@@ -184,6 +183,25 @@ function updateBar(){
     document.getElementById("xp-bar").style.width = (xp % 100) + "%";
     checkLevelUp();
     updatePlayerUI();
+}
+
+/* 🕒 TIME AGO */
+function timeAgo(timestamp){
+    let seconds = Math.floor((Date.now() - timestamp) / 1000);
+
+    if(seconds < 10) return "just now";
+    if(seconds < 60) return seconds + " sec ago";
+
+    let minutes = Math.floor(seconds / 60);
+    if(minutes < 60) return minutes + " min ago";
+
+    let hours = Math.floor(minutes / 60);
+    return hours + " hr ago";
+}
+
+function getLastUpdated(bar){
+    if(bar.reports.length === 0) return "No data";
+    return timeAgo(bar.reports[0].time);
 }
 
 /* STATUS */
@@ -209,6 +227,9 @@ function renderBars(){
         <div class="bar">
             <h3>${bar.name}</h3>
             <div class="status">${status}</div>
+            <div style="font-size:12px;color:#777;">
+                Last updated: ${getLastUpdated(bar)}
+            </div>
 
             <div class="buttons">
                 <button onclick="report(${i},'Dead')">Dead</button>
@@ -218,9 +239,9 @@ function renderBars(){
             </div>
 
             <div class="buttons">
-                <button class="confirm-btn" onclick="confirmStatus('Dead')">Still Dead</button>
-                <button class="confirm-btn" onclick="confirmStatus('Busy')">Still Busy</button>
-                <button class="confirm-btn" onclick="confirmStatus('Packed')">Still Packed</button>
+                <button class="confirm-btn" onclick="confirmStatus()">Still Dead</button>
+                <button class="confirm-btn" onclick="confirmStatus()">Still Busy</button>
+                <button class="confirm-btn" onclick="confirmStatus()">Still Packed</button>
             </div>
         </div>`;
     });
@@ -239,7 +260,10 @@ async function loadReports(){
         data.forEach(r=>{
             let b = bars.find(x=>x.name===r.bar);
             if(b){
-                b.reports.push({status:r.status});
+                b.reports.push({
+                    status:r.status,
+                    time:new Date(r.created_at).getTime()
+                });
             }
         });
 
