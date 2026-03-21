@@ -606,10 +606,12 @@ textarea.input { resize: vertical; min-height: 80px; }
         </span>
       </button>
       <button class="btn-primary" onclick="showAuthStep('phone')" style="margin-bottom:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border)">📱 Continue with Phone</button>
-      <button class="btn-ghost" onclick="var m=document.getElementById('auth-modal');m.classList.remove('open');m.style.display='none';">Continue as Guest</button>
-    </div>
-
-    <!-- Step 2a: Email login/register -->
-    <div id="auth-step-email-login" style="display:none">
-      <div class="modal-title">Sign In</div>
-      <input class="input" id="auth-email
+      <button class="btn-ghost" onclick="
+        var m=document.getElementById('auth-modal');
+        m.classList.remove('open');m.style.display='none';
+        currentUser=null;
+        userProfile={display_name:'Guest',xp:0,reports:0};
+        xp=0;
+        try{renderBarsPage();}catch(e){}
+        try{renderDeliveryPage();}catch(e){}
+        try{renderLostPa
