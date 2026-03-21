@@ -1,382 +1,631 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DTSLO</title>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
-body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto; margin:0; background:#f5f7fa; }
+:root {
+  --bg: #0a0a0f;
+  --surface: #13131a;
+  --surface2: #1c1c26;
+  --border: rgba(255,255,255,0.07);
+  --accent: #e8ff47;
+  --accent2: #ff6b35;
+  --text: #f0f0f0;
+  --muted: #666;
+  --dead: #4ade80;
+  --busy: #facc15;
+  --packed: #f87171;
+  --radius: 14px;
+}
 
-/* NAV */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* ─── NAV ─── */
 .navbar {
-    position:fixed; top:0; left:0; right:0;
-    height:60px; background:#111; color:white;
-    display:flex; align-items:center; padding:0 10px;
-    z-index:2000;
-}
-.navbar button {
-    margin-right:8px;
-    background:#333;
-    color:white;
-    border:none;
-    padding:6px 10px;
-    border-radius:8px;
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 58px;
+  background: rgba(10,10,15,0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 14px;
+  z-index: 2000;
+  gap: 6px;
 }
 
-/* PAGES */
-.page { display:none; padding-top:80px; }
-.active { display:block; }
-
-/* CARDS */
-.bar {
-    background:white;
-    margin:10px;
-    padding:12px;
-    border-radius:12px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.05);
+.nav-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-right: auto;
 }
 
-/* DELIVERY */
+.nav-btn {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  padding: 7px 13px;
+  border-radius: 30px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .2s;
+}
+.nav-btn:hover { color: var(--text); background: var(--surface); }
+.nav-btn.active { color: var(--bg); background: var(--accent); font-weight: 600; }
+
+.nav-xp {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all .2s;
+}
+.nav-xp:hover { background: var(--surface2); }
+
+/* ─── PAGES ─── */
+.page { display: none; padding: 74px 14px 100px; min-height: 100vh; }
+.page.active { display: block; }
+
+/* ─── SECTION TITLE ─── */
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
+/* ─── CARDS / BARS ─── */
+.bar-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 10px;
+  transition: border-color .2s;
+}
+.bar-card:hover { border-color: rgba(255,255,255,0.14); }
+
+.bar-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.bar-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 1px;
+}
+.bar-time { font-size: 12px; color: var(--muted); }
+
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+}
+.status-Dead   { background: rgba(74,222,128,.15); color: var(--dead); }
+.status-Busy   { background: rgba(250,204,21,.15);  color: var(--busy); }
+.status-Packed { background: rgba(248,113,113,.15); color: var(--packed); }
+.status-No-Data { background: var(--surface2); color: var(--muted); }
+
+.report-btns { display: flex; gap: 8px; margin-top: 12px; }
+.report-btn {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 9px 4px;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  transition: all .2s;
+}
+.report-btn:hover { background: rgba(255,255,255,0.08); }
+.btn-dead:hover   { border-color: var(--dead);   color: var(--dead); }
+.btn-busy:hover   { border-color: var(--busy);   color: var(--busy); }
+.btn-packed:hover { border-color: var(--packed); color: var(--packed); }
+
+/* Rating */
+.star-row { display: flex; gap: 4px; margin-top: 10px; }
+.star {
+  font-size: 20px; cursor: pointer;
+  color: var(--muted); transition: color .15s;
+}
+.star.on { color: var(--accent); }
+
+/* Activity mini-bars */
+.activity-row {
+  display: flex; gap: 3px; margin-top: 12px; align-items: flex-end; height: 30px;
+}
+.activity-bar {
+  flex: 1; border-radius: 3px; min-height: 4px;
+  background: var(--surface2);
+  transition: all .3s;
+}
+
+/* ─── DELIVERY ─── */
 .product-grid {
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
-    gap:10px;
-    padding:10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
 }
-.card {
-    background:white;
-    padding:10px;
-    border-radius:10px;
-    text-align:center;
+.product-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 12px;
+  text-align: center;
+  transition: all .2s;
+}
+.product-card:hover { border-color: rgba(255,255,255,0.14); transform: translateY(-2px); }
+.product-emoji { font-size: 32px; margin-bottom: 6px; }
+.product-name  { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+.product-price { color: var(--accent); font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+.add-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700; font-size: 13px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.add-btn:hover { transform: scale(1.05); }
+
+.cart-fab {
+  position: fixed;
+  bottom: 80px; right: 14px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 14px 22px;
+  border-radius: 30px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700; font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 8px 30px rgba(232,255,71,0.3);
+  transition: all .2s;
+  z-index: 1500;
+}
+.cart-fab:hover { transform: scale(1.05); box-shadow: 0 12px 40px rgba(232,255,71,0.4); }
+
+/* ─── LOST ─── */
+.lost-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 10px;
+}
+.lost-tag {
+  display: inline-block;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .5px;
+  margin-bottom: 8px;
+}
+.tag-lost  { background: rgba(248,113,113,.15); color: var(--packed); }
+.tag-found { background: rgba(74,222,128,.15);  color: var(--dead); }
+
+/* ─── LEADERBOARD ─── */
+.lb-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 8px;
+}
+.lb-rank {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; width: 32px; text-align: center;
+  color: var(--muted);
+}
+.lb-rank.gold   { color: #f59e0b; }
+.lb-rank.silver { color: #94a3b8; }
+.lb-rank.bronze { color: #a16207; }
+.lb-name { flex: 1; font-weight: 600; }
+.lb-xp {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px; color: var(--accent);
 }
 
-#checkout-btn {
-    position:fixed;
-    top:70px;
-    right:10px;
-    background:#111;
-    color:white;
-    padding:10px;
-    border-radius:20px;
+/* ─── PROFILE ─── */
+.profile-hero {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 14px;
 }
+.avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 30px; color: var(--bg);
+  margin: 0 auto 12px;
+}
+.xp-bar-bg {
+  background: var(--surface2);
+  border-radius: 10px; height: 8px;
+  margin: 10px 0;
+  overflow: hidden;
+}
+.xp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 10px;
+  transition: width .5s ease;
+}
+.badges-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
+.badge {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px; font-weight: 600;
+}
+.badge.earned { border-color: var(--accent); color: var(--accent); }
 
-/* MODALS */
+/* ─── BOTTOM NAV ─── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 64px;
+  background: rgba(10,10,15,0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-around;
+  z-index: 2000;
+}
+.bnav-btn {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3px; background: none; border: none;
+  color: var(--muted); cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px; font-weight: 500;
+  padding: 6px 16px;
+  border-radius: 12px;
+  transition: all .2s;
+}
+.bnav-btn .icon { font-size: 20px; }
+.bnav-btn:hover { color: var(--text); }
+.bnav-btn.active { color: var(--accent); }
+
+/* ─── MODALS ─── */
 .modal {
-    position:fixed;
-    top:0; left:0; right:0; bottom:0;
-    background:rgba(0,0,0,0.5);
-    display:none;
-    align-items:center;
-    justify-content:center;
-    z-index:3000;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  display: none; align-items: flex-end; justify-content: center;
+  z-index: 4000;
 }
+.modal.open { display: flex; }
 .modal-box {
-    background:white;
-    padding:20px;
-    border-radius:15px;
-    width:90%;
-    max-width:400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 500px;
+  padding: 24px;
+  animation: slideUp .25s ease;
 }
+@keyframes slideUp {
+  from { transform: translateY(60px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.modal-handle {
+  width: 36px; height: 4px;
+  background: var(--border);
+  border-radius: 4px;
+  margin: 0 auto 18px;
+}
+.modal-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; letter-spacing: 1px;
+  margin-bottom: 16px;
+}
+
+/* ─── FORM INPUTS ─── */
+.input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  margin-bottom: 10px;
+  transition: border-color .2s;
+  outline: none;
+}
+.input:focus { border-color: rgba(255,255,255,0.2); }
+.input::placeholder { color: var(--muted); }
+
+select.input { cursor: pointer; }
+textarea.input { resize: vertical; min-height: 80px; }
+
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700; font-size: 15px;
+  cursor: pointer;
+  transition: all .2s;
+  margin-top: 4px;
+}
+.btn-primary:hover { transform: scale(1.02); }
+
+.btn-ghost {
+  width: 100%;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: all .2s;
+}
+.btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+/* Cart item row */
+.cart-item-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.cart-item-controls { display: flex; align-items: center; gap: 10px; }
+.qty-btn {
+  width: 28px; height: 28px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text); border-radius: 50%;
+  font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Admin table */
+.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-table th {
+  text-align: left; padding: 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted); font-weight: 500;
+}
+.admin-table td { padding: 10px; border-bottom: 1px solid var(--border); }
+.order-status {
+  display: inline-block;
+  padding: 3px 8px; border-radius: 10px;
+  font-size: 11px; font-weight: 700;
+}
+.order-pending  { background: rgba(250,204,21,.15); color: var(--busy); }
+.order-complete { background: rgba(74,222,128,.15);  color: var(--dead); }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 12px 22px; border-radius: 30px;
+  font-size: 14px; font-weight: 500;
+  opacity: 0; pointer-events: none;
+  transition: all .3s; z-index: 5000;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Pulse dot */
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--dead);
+  display: inline-block; margin-right: 5px;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .5; transform: scale(1.4); }
+}
+
+/* Filter chips */
+.filter-chips { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.chip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .2s;
+}
+.chip.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+/* Auth tabs */
+.auth-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+.auth-tab {
+  flex: 1; padding: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all .2s;
+}
+.auth-tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+/* Stat grid */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--accent); }
+
+/* Shimmer skeleton */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px; height: 80px;
+  margin-bottom: 10px;
+}
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 </style>
 </head>
-
 <body>
 
-<!-- NAV -->
-<div class="navbar">
-    <button onclick="showPage('line')">Lines</button>
-    <button onclick="showPage('delivery')">Delivery</button>
-    <button onclick="showPage('lost')">Lost & Found</button>
+<!-- TOP NAV (desktop style) -->
+<div class="navbar" id="topnav" style="display:none">
+  <span class="nav-logo">DTSLO</span>
+  <button class="nav-btn" onclick="showPage('line')">Lines</button>
+  <button class="nav-btn" onclick="showPage('delivery')">Delivery</button>
+  <button class="nav-btn" onclick="showPage('lost')">Lost &amp; Found</button>
+  <button class="nav-btn" onclick="showPage('leaderboard')">Leaderboard</button>
+  <button class="nav-btn" onclick="showPage('admin')">Admin</button>
+  <div class="nav-xp" onclick="showPage('profile')">⚡ <span id="xp-top">0</span> XP</div>
 </div>
 
-<!-- LINE PAGE -->
-<div id="line" class="page active">
-    <div id="bars"></div>
+<!-- PAGES -->
+<div id="line"        class="page active"></div>
+<div id="delivery"    class="page"></div>
+<div id="lost"        class="page"></div>
+<div id="leaderboard" class="page"></div>
+<div id="profile"     class="page"></div>
+<div id="admin"       class="page"></div>
+
+<!-- CART FAB -->
+<button class="cart-fab" id="cart-fab" onclick="openCheckout()" style="display:none">
+  🛒 Cart · <span id="cart-count">0</span>
+</button>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="bnav-btn active" onclick="showPage('line')"        id="bnav-line">        <span class="icon">📍</span>Lines</button>
+  <button class="bnav-btn"        onclick="showPage('delivery')"    id="bnav-delivery">    <span class="icon">🛍</span>Delivery</button>
+  <button class="bnav-btn"        onclick="showPage('lost')"        id="bnav-lost">        <span class="icon">🔎</span>L&amp;F</button>
+  <button class="bnav-btn"        onclick="showPage('leaderboard')" id="bnav-leaderboard"> <span class="icon">🏆</span>Ranks</button>
+  <button class="bnav-btn"        onclick="showPage('profile')"     id="bnav-profile">     <span class="icon">👤</span>You</button>
 </div>
 
-<!-- DELIVERY PAGE -->
-<div id="delivery" class="page">
-    <button id="checkout-btn" onclick="openCheckout()">
-        Cart (<span id="cart-count">0</span>)
-    </button>
-    <div id="product-grid" class="product-grid"></div>
-</div>
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
 
-<!-- LOST PAGE -->
-<div id="lost" class="page">
+<!-- ═══════ MODALS ═══════ -->
 
-    <button onclick="openLostModal()" style="margin:10px;padding:10px;background:#111;color:white;border-radius:10px;">
-        + Post Item
-    </button>
-
-    <div id="lost-feed"></div>
-
+<!-- AUTH MODAL -->
+<div class="modal open" id="auth-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Welcome to DTSLO</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuth('login')"    id="tab-login">Login</button>
+      <button class="auth-tab"        onclick="switchAuth('register')" id="tab-register">Sign Up</button>
+    </div>
+    <div id="auth-login-form">
+      <input class="input" id="auth-email"    placeholder="Email" type="email">
+      <input class="input" id="auth-password" placeholder="Password" type="password">
+      <button class="btn-primary" onclick="login()">Login</button>
+    </div>
+    <div id="auth-register-form" style="display:none">
+      <input class="input" id="reg-name"     placeholder="Display Name">
+      <input class="input" id="reg-email"    placeholder="Email" type="email">
+      <input class="input" id="reg-password" placeholder="Password (6+ chars)" type="password">
+      <button class="btn-primary" onclick="register()">Create Account</button>
+    </div>
+    <button class="btn-ghost" onclick="guestMode()">Continue as Guest</button>
+  </div>
 </div>
 
 <!-- CHECKOUT MODAL -->
-<div id="checkout-modal" class="modal">
-    <div class="modal-box">
-        <h3>Checkout</h3>
-        <div id="order-summary"></div>
-
-        <input id="name" placeholder="Name" style="width:100%;margin:6px 0;padding:10px;">
-        <input id="phone" placeholder="Phone" style="width:100%;margin:6px 0;padding:10px;">
-
-        <button onclick="placeOrder()" style="width:100%;padding:10px;">Place Order</button>
-        <button onclick="closeCheckout()" style="width:100%;margin-top:5px;">Cancel</button>
+<div class="modal" id="checkout-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Your Order</div>
+    <div id="order-summary"></div>
+    <div style="display:flex;justify-content:space-between;padding:12px 0;font-weight:700;font-size:16px;">
+      <span>Total</span>
+      <span id="order-total" style="color:var(--accent)"></span>
     </div>
+    <input class="input" id="order-name"  placeholder="Name">
+    <input class="input" id="order-phone" placeholder="Phone / Pickup info">
+    <button class="btn-primary" onclick="placeOrder()">Place Order 🎉</button>
+    <button class="btn-ghost"   onclick="closeModal('checkout-modal')">Cancel</button>
+  </div>
 </div>
 
 <!-- LOST MODAL -->
-<div id="lost-modal" class="modal">
-    <div class="modal-box">
-        <h3>Post Item</h3>
-
-        <select id="lf-type" style="width:100%;margin:5px 0;padding:10px;">
-            <option value="lost">Lost</option>
-            <option value="found">Found</option>
-        </select>
-
-        <input id="lf-title" placeholder="Item" style="width:100%;margin:5px 0;padding:10px;">
-        <input id="lf-location" placeholder="Location" style="width:100%;margin:5px 0;padding:10px;">
-        <input id="lf-contact" placeholder="Contact" style="width:100%;margin:5px 0;padding:10px;">
-        <textarea id="lf-description" placeholder="Details" style="width:100%;margin:5px 0;padding:10px;"></textarea>
-
-        <button onclick="submitLostItem()" style="width:100%;padding:10px;">Submit</button>
-        <button onclick="closeLostModal()" style="width:100%;margin-top:5px;">Cancel</button>
-    </div>
+<div class="modal" id="lost-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Post an Item</div>
+    <select class="input" id="lf-type">
+      <option value="lost">🔴 Lost</option>
+      <option value="found">🟢 Found</option>
+    </select>
+    <input    class="input" id="lf-title"       placeholder="Item (e.g. Black iPhone 14)">
+    <input    class="input" id="lf-location"    placeholder="Location / Bar">
+    <input    class="input" id="lf-contact"     placeholder="Contact (phone or IG)">
+    <textarea class="input" id="lf-description" placeholder="Extra details..."></textarea>
+    <button class="btn-primary" onclick="submitLostItem()">Post Item</button>
+    <button class="btn-ghost"   onclick="closeModal('lost-modal')">Cancel</button>
+  </div>
 </div>
 
-<script>
-const supabaseClient = window.supabase.createClient(
-"https://jwgwufggptpdmgcmmqes.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18"
-);
+<!-- REPORT CONFIRM MODAL -->
+<div class="modal" id="report-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="report-modal-title">Report</div>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:16px;">Help the crew know what's up. You'll earn <strong style="color:var(--accent)">10 XP</strong> for reporting!</p>
 
-/* NAV */
-function showPage(p){
-    document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
-    document.getElementById(p).classList.add("active");
-}
+    <!-- rating -->
+    <div style="font-size:13px;color:var(--muted);margin-bottom:6px;">Rate the vibe (optional)</div>
+    <div class="star-row" id="rating-stars">
+      <span class="star" data-val="1" onclick="setRating(1)">★</span>
+      <span class="star" data-val="2" onclick="setRating(2)">★</span>
+      <span class="star" data-val="3" onclick="setRating(3)">★</span>
+      <span class="star" data-val="4" onclick="setRating(4)">★</span>
+      <span class="star" data-val="5" onclick="setRating(5)">★</span>
+    </div>
 
-/* BARS */
-var bars = [
-    {name:"Library", reports:[]},
-    {name:"Mothers Tavern", reports:[]},
-    {name:"Frog & Peach", reports:[]}
-];
-
-/* PRODUCTS */
-var products = [
-    {name:"Redbull",price:3.99},
-    {name:"Water",price:1.99},
-    {name:"Charger",price:14.99}
-];
-
-var cart = {};
-var xp = 0;
-
-/* TIME */
-function timeAgo(t){
-    let s=Math.floor((Date.now()-t)/1000);
-    if(s<60) return s+"s ago";
-    let m=Math.floor(s/60);
-    if(m<60) return m+"m ago";
-    return Math.floor(m/60)+"h ago";
-}
-
-/* ✅ STATUS SYSTEM */
-function getStatus(bar){
-    if(bar.reports.length===0) return "No Data";
-
-    let counts={};
-    bar.reports.slice(0,5).forEach(r=>{
-        counts[r.status]=(counts[r.status]||0)+1;
-    });
-
-    return Object.keys(counts).reduce((a,b)=>counts[a]>counts[b]?a:b);
-}
-
-/* ✅ RENDER BARS (FIXED) */
-function renderBars(){
-    let c=document.getElementById("bars");
-    c.innerHTML="";
-
-    bars.forEach((bar,i)=>{
-
-        let last = bar.reports[0]
-            ? timeAgo(bar.reports[0].time)
-            : "No data";
-
-        c.innerHTML+=`
-        <div class="bar">
-            <h3>${bar.name}</h3>
-
-            <div><strong>${getStatus(bar)}</strong></div>
-            <div style="font-size:12px;color:#777;">Updated ${last}</div>
-
-            <button onclick="report(${i},'Dead')">Dead</button>
-            <button onclick="report(${i},'Busy')">Busy</button>
-            <button onclick="report(${i},'Packed')">Packed</button>
-        </div>
-        `;
-    });
-}
-
-/* ✅ LOAD REPORTS */
-async function loadReports(){
-    try{
-        const { data, error } = await supabaseClient
-            .from("reports")
-            .select("*")
-            .order("created_at",{ascending:false});
-
-        if(error){ console.log(error); return; }
-
-        bars.forEach(b=>b.reports=[]);
-
-        data.forEach(r=>{
-            let bar = bars.find(b=>b.name===r.bar);
-            if(bar){
-                bar.reports.push({
-                    status:r.status,
-                    time:new Date(r.created_at).getTime()
-                });
-            }
-        });
-
-    }catch(e){ console.log(e); }
-
-    renderBars();
-}
-
-/* ✅ REPORT FIXED */
-async function report(i,status){
-    let bar=bars[i];
-
-    try{
-        await supabaseClient
-            .from("reports")
-            .insert([{bar:bar.name,status:status}]);
-
-        xp += 10;
-
-    }catch(e){ console.log(e); }
-
-    loadReports();
-}
-
-/* DELIVERY */
-function renderProducts(){
-    let g=document.getElementById("product-grid");
-    g.innerHTML="";
-    products.forEach(p=>{
-        g.innerHTML+=`
-        <div class="card">
-            <h3>${p.name}</h3>
-            <p>$${p.price}</p>
-            <button onclick="addToCart('${p.name}')">Add</button>
-        </div>`;
-    });
-}
-
-function addToCart(name){
-    cart[name]=(cart[name]||0)+1;
-    document.getElementById("cart-count").innerText =
-        Object.values(cart).reduce((a,b)=>a+b,0);
-}
-
-function openCheckout(){
-    document.getElementById("checkout-modal").style.display="flex";
-    let s=document.getElementById("order-summary");
-    s.innerHTML="";
-    for(let i in cart){
-        s.innerHTML+=`<div>${i} x${cart[i]}</div>`;
-    }
-}
-function closeCheckout(){
-    document.getElementById("checkout-modal").style.display="none";
-}
-
-async function placeOrder(){
-    let name=document.getElementById("name").value;
-    let phone=document.getElementById("phone").value;
-
-    if(!name||!phone){ alert("Enter info"); return; }
-
-    let items="";
-    for(let i in cart){ items+=`${i} x${cart[i]}, `; }
-
-    try{
-        await supabaseClient.from("orders").insert([{name,phone,items}]);
-        alert("Order placed!");
-        cart={};
-        document.getElementById("cart-count").innerText=0;
-        closeCheckout();
-    }catch(e){ console.log(e); alert("Error"); }
-}
-
-/* LOST */
-function openLostModal(){ document.getElementById("lost-modal").style.display="flex"; }
-function closeLostModal(){ document.getElementById("lost-modal").style.display="none"; }
-
-async function submitLostItem(){
-    let type=document.getElementById("lf-type").value;
-    let title=document.getElementById("lf-title").value;
-    let location=document.getElementById("lf-location").value;
-    let contact=document.getElementById("lf-contact").value;
-    let description=document.getElementById("lf-description").value;
-
-    if(!title){ alert("Enter item"); return; }
-
-    try{
-        await supabaseClient.from("lost_found")
-        .insert([{type,title,location,contact,description}]);
-
-        xp+=15;
-        closeLostModal();
-        loadLostItems();
-    }catch(e){ console.log(e); }
-}
-
-async function loadLostItems(){
-    let c=document.getElementById("lost-feed");
-    if(!c) return;
-
-    try{
-        const {data} = await supabaseClient
-            .from("lost_found")
-            .select("*")
-            .order("created_at",{ascending:false});
-
-        c.innerHTML="";
-
-        data.forEach(item=>{
-            let tag=item.type==="lost"?"🔴 Lost":"🟢 Found";
-
-            c.innerHTML+=`
-            <div class="bar">
-                <h3>${tag}: ${item.title}</h3>
-                <div>${item.location||""}</div>
-                <div>${timeAgo(new Date(item.created_at).getTime())}</div>
-                <p>${item.description||""}</p>
-                ${item.contact?`<div>${item.contact}</div>`:""}
-            </div>`;
-        });
-
-    }catch(e){ console.log(e); }
-}
-
-/* INIT */
-window.onload=function(){
-    renderProducts();
-    loadReports();   /* 🔥 FIXED */
-    loadLostItems();
-};
-</script>
-
-</body>
-</html>
+    <button class="btn-primary" id="report-confirm-btn" onclick="confirmReport()" style="margin-top:14px">Submit Report</button>
+    <button class="btn-ghost" onclick="closeModal('report-
