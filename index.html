@@ -151,10 +151,9 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto; margin:0;
 </div>
 
 <script>
-/* 🔑 PUT YOUR KEY HERE (LINE ~110) */
 const supabaseClient = window.supabase.createClient(
 "https://jwgwufggptpdmgcmmqes.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18"
+"YOUR_KEY_HERE"
 );
 
 /* NAV */
@@ -177,7 +176,6 @@ var products = [
     {name:"Charger",price:14.99}
 ];
 
-/* STATE */
 var cart = {};
 var xp = 0;
 
@@ -190,25 +188,85 @@ function timeAgo(t){
     return Math.floor(m/60)+"h ago";
 }
 
-/* BARS */
+/* ✅ STATUS SYSTEM */
+function getStatus(bar){
+    if(bar.reports.length===0) return "No Data";
+
+    let counts={};
+    bar.reports.slice(0,5).forEach(r=>{
+        counts[r.status]=(counts[r.status]||0)+1;
+    });
+
+    return Object.keys(counts).reduce((a,b)=>counts[a]>counts[b]?a:b);
+}
+
+/* ✅ RENDER BARS (FIXED) */
 function renderBars(){
     let c=document.getElementById("bars");
     c.innerHTML="";
+
     bars.forEach((bar,i)=>{
+
+        let last = bar.reports[0]
+            ? timeAgo(bar.reports[0].time)
+            : "No data";
+
         c.innerHTML+=`
         <div class="bar">
             <h3>${bar.name}</h3>
+
+            <div><strong>${getStatus(bar)}</strong></div>
+            <div style="font-size:12px;color:#777;">Updated ${last}</div>
+
+            <button onclick="report(${i},'Dead')">Dead</button>
             <button onclick="report(${i},'Busy')">Busy</button>
             <button onclick="report(${i},'Packed')">Packed</button>
-        </div>`;
+        </div>
+        `;
     });
 }
 
+/* ✅ LOAD REPORTS */
+async function loadReports(){
+    try{
+        const { data, error } = await supabaseClient
+            .from("reports")
+            .select("*")
+            .order("created_at",{ascending:false});
+
+        if(error){ console.log(error); return; }
+
+        bars.forEach(b=>b.reports=[]);
+
+        data.forEach(r=>{
+            let bar = bars.find(b=>b.name===r.bar);
+            if(bar){
+                bar.reports.push({
+                    status:r.status,
+                    time:new Date(r.created_at).getTime()
+                });
+            }
+        });
+
+    }catch(e){ console.log(e); }
+
+    renderBars();
+}
+
+/* ✅ REPORT FIXED */
 async function report(i,status){
     let bar=bars[i];
+
     try{
-        await supabaseClient.from("reports").insert([{bar:bar.name,status}]);
-    }catch(e){console.log(e);}
+        await supabaseClient
+            .from("reports")
+            .insert([{bar:bar.name,status:status}]);
+
+        xp += 10;
+
+    }catch(e){ console.log(e); }
+
+    loadReports();
 }
 
 /* DELIVERY */
@@ -261,13 +319,9 @@ async function placeOrder(){
     }catch(e){ console.log(e); alert("Error"); }
 }
 
-/* LOST & FOUND */
-function openLostModal(){
-    document.getElementById("lost-modal").style.display="flex";
-}
-function closeLostModal(){
-    document.getElementById("lost-modal").style.display="none";
-}
+/* LOST */
+function openLostModal(){ document.getElementById("lost-modal").style.display="flex"; }
+function closeLostModal(){ document.getElementById("lost-modal").style.display="none"; }
 
 async function submitLostItem(){
     let type=document.getElementById("lf-type").value;
@@ -282,10 +336,10 @@ async function submitLostItem(){
         await supabaseClient.from("lost_found")
         .insert([{type,title,location,contact,description}]);
 
-        xp += 15;
+        xp+=15;
         closeLostModal();
         loadLostItems();
-    }catch(e){ console.log(e); alert("Error"); }
+    }catch(e){ console.log(e); }
 }
 
 async function loadLostItems(){
@@ -318,8 +372,8 @@ async function loadLostItems(){
 
 /* INIT */
 window.onload=function(){
-    renderBars();
     renderProducts();
+    loadReports();   /* 🔥 FIXED */
     loadLostItems();
 };
 </script>
