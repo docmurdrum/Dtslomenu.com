@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>DTSLO</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root[data-theme="dark"] {
+    --bg: #0f0f13;
+    --surface: #1a1a22;
+    --surface2: #22222e;
+    --border: #2e2e3e;
+    --text: #f0f0f5;
+    --text2: #8888a0;
+    --accent: #7c6af7;
+    --accent2: #5b4fcc;
+    --green: #22c55e;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --nav-h: 64px;
+  }
+  :root[data-theme="light"] {
+    --bg: #f5f5fa;
+    --surface: #ffffff;
+    --surface2: #f0f0f8;
+    --border: #e0e0ec;
+    --text: #111118;
+    --text2: #666680;
+    --accent: #7c6af7;
+    --accent2: #5b4fcc;
+    --green: #16a34a;
+    --yellow: #d97706;
+    --red: #dc2626;
+    --nav-h: 64px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ── AUTH SCREEN ── */
+  #auth-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 40px 32px;
+    width: 100%;
+    max-width: 380px;
+    animation: fadeIn 0.35s ease;
+  }
+
+  .auth-logo {
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: -1px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .auth-tagline {
+    font-size: 14px;
+    color: var(--text2);
+    margin-bottom: 28px;
+  }
+
+  .auth-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 24px;
+  }
+
+  .auth-tab {
+    flex: 1;
+    padding: 9px;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text2);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .auth-tab.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+
+  .auth-form { display: flex; flex-direction: column; gap: 10px; }
+
+  .input-group { display: flex; flex-direction: column; gap: 5px; }
+  .input-label { font-size: 12px; font-weight: 700; color: var(--text2); letter-spacing: 0.3px; text-transform: uppercase; }
+
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 13px 14px;
+    border-radius: 12px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: inherit;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,106,247,0.15);
+  }
+  .form-textarea { resize: vertical; min-height: 80px; }
+
+  .auth-error {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.25);
+    color: var(--red);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    display: none;
+  }
+
+  /* ── NAV ── */
+  .navbar {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: var(--nav-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 16px;
+    z-index: 2000;
+    gap: 4px;
+    backdrop-filter: blur(12px);
+  }
+
+  .nav-logo {
+    font-weight: 900;
+    font-size: 18px;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+    margin-right: auto;
+  }
+
+  .nav-btn {
+    background: transparent;
+    color: var(--text2);
+    border: none;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 5px;
+    white-space: nowrap;
+  }
+  .nav-btn:hover { background: var(--surface2); color: var(--text); }
+  .nav-btn.active { background: var(--accent); color: white; }
+  .nav-btn .icon { font-size: 15px; }
+
+  .avatar-btn {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--accent);
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    margin-left: 4px;
+    flex-shrink: 0;
+  }
+  .avatar-btn:hover { border-color: var(--accent); transform: scale(1.07); }
+
+  .theme-toggle {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .theme-toggle:hover { background: var(--border); }
+
+  /* ── PAGES ── */
+  #app { display: none; }
+
+  .page {
+    display: none;
+    padding: calc(var(--nav-h) + 16px) 16px 32px;
+    max-width: 640px;
+    margin: 0 auto;
+    animation: fadeIn 0.25s ease;
+  }
+  .page.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    margin-bottom: 14px;
+  }
+
+  /* ── BAR CARDS ── */
+  .bar-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 12px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .bar-card:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+
+  .bar-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .bar-name { font-size: 17px; font-weight: 700; }
+  .bar-time { font-size: 12px; color: var(--text2); }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 20px;
+    font-size: 13px; font-weight: 600; margin-bottom: 12px;
+  }
+  .status-Dead   { background: rgba(34,197,94,0.15);  color: var(--green); }
+  .status-Busy   { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .status-Packed { background: rgba(239,68,68,0.15);  color: var(--red); }
+  .status-NoData { background: var(--surface2); color: var(--text2); }
+
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  .vote-row { display: flex; gap: 8px; }
+  .vote-btn {
+    flex: 1; padding: 9px 0;
+    border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text);
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.18s;
+  }
+  .vote-btn:active { transform: scale(0.96); }
+  .vote-btn.dead:hover   { border-color: var(--green);  color: var(--green);  background: rgba(34,197,94,0.08); }
+  .vote-btn.busy:hover   { border-color: var(--yellow); color: var(--yellow); background: rgba(245,158,11,0.08); }
+  .vote-btn.packed:hover { border-color: var(--red);    color: var(--red);    background: rgba(239,68,68,0.08); }
+
+  /* ── PRODUCTS ── */
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px; margin-bottom: 80px;
+  }
+  .product-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 16px; text-align: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .product-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+  .product-emoji { font-size: 32px; margin-bottom: 8px; }
+  .product-name  { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .product-price { font-size: 13px; color: var(--text2); margin-bottom: 12px; }
+
+  .add-btn {
+    width: 100%; padding: 8px;
+    background: var(--accent); color: white;
+    border: none; border-radius: 10px;
+    font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all 0.18s;
+  }
+  .add-btn:hover { background: var(--accent2); }
+  .add-btn:active { transform: scale(0.96); }
+
+  /* ── CART FAB ── */
+  .cart-fab {
+    position: fixed; bottom: 24px; right: 16px;
+    background: var(--accent); color: white;
+    border: none; padding: 14px 22px;
+    border-radius: 50px; font-size: 15px; font-weight: 700;
+    cursor: pointer; box-shadow: 0 8px 24px rgba(124,106,247,0.4);
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px; z-index: 1500;
+  }
+  .cart-fab:hover { background: var(--accent2); transform: translateY(-2px); }
+  .cart-fab:active { transform: scale(0.96); }
+  .cart-badge {
+    background: white; color: var(--accent);
+    border-radius: 12px; padding: 1px 8px;
+    font-size: 13px; font-weight: 800;
+  }
+
+  /* ── LOST & FOUND ── */
+  .lf-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .post-btn {
+    background: var(--accent); color: white;
+    border: none; padding: 10px 18px;
+    border-radius: 12px; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: all 0.18s; font-family: inherit;
+  }
+  .post-btn:hover { background: var(--accent2); }
+  .lf-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 16px; margin-bottom: 10px;
+    transition: transform 0.15s;
+  }
+  .lf-card:hover { transform: translateY(-1px); }
+  .lf-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; margin-bottom: 8px;
+  }
+  .lf-lost  { background: rgba(239,68,68,0.15); color: var(--red); }
+  .lf-found { background: rgba(34,197,94,0.15);  color: var(--green); }
+  .lf-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .lf-meta  { font-size: 13px; color: var(--text2); }
+  .lf-desc  { font-size: 14px; margin-top: 8px; line-height: 1.5; }
+  .lf-contact {
+    margin-top: 10px; padding: 8px 12px;
+    background: var(--surface2); border-radius: 10px;
+    font-size: 13px; color: var(--text2);
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* ── PROFILE PAGE ── */
+  .profile-hero {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 18px;
+  }
+
+  .profile-avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 800; color: white;
+    flex-shrink: 0; border: 3px solid var(--border);
+  }
+
+  .profile-info { flex: 1; min-width: 0; }
+  .profile-username {
+    font-size: 20px; font-weight: 800; letter-spacing: -0.4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 3px;
+  }
+  .profile-email  { font-size: 13px; color: var(--text2); margin-bottom: 5px; }
+  .profile-joined { font-size: 12px; color: var(--text2); }
+
+  .xp-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 18px 20px; margin-bottom: 12px;
+  }
+  .xp-top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .xp-title { font-size: 14px; font-weight: 700; }
+  .xp-level {
+    font-size: 12px; font-weight: 700; color: white;
+    background: var(--accent); padding: 2px 10px; border-radius: 20px;
+  }
+  .xp-track {
+    height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden;
+  }
+  .xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 4px;
+    transition: width 0.7s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .xp-sub { font-size: 12px; color: var(--text2); margin-top: 7px; }
+
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; margin-bottom: 12px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px 10px; text-align: center;
+  }
+  .stat-num { font-size: 26px; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; }
+  .stat-lbl { font-size: 11px; color: var(--text2); margin-top: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+
+  .profile-section-label {
+    font-size: 11px; font-weight: 700; color: var(--text2);
+    letter-spacing: 0.8px; text-transform: uppercase;
+    margin: 18px 0 8px 4px;
+  }
+
+  .profile-action {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 15px 18px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 14px;
+    cursor: pointer; transition: all 0.18s;
+    width: 100%; text-align: left;
+    color: var(--text); font-family: inherit; font-size: 15px;
+  }
+  .profile-action:hover { background: var(--surface2); }
+  .profile-action .pa-icon { font-size: 18px; }
+  .profile-action .pa-label { font-size: 15px; font-weight: 600; flex: 1; }
+  .profile-action .pa-arrow { color: var(--text2); font-size: 16px; }
+  .profile-action.danger { color: var(--red); }
+  .profile-action.danger .pa-arrow { color: rgba(239,68,68,0.5); }
+
+  /* ── CHANGE PW INLINE ── */
+  .change-pw-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px;
+    margin-bottom: 8px; display: none;
+    animation: fadeIn 0.2s ease;
+  }
+  .change-pw-box.open { display: block; }
+  .change-pw-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--text2); }
+
+  /* ── MODALS ── */
+  .modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none; align-items: flex-end; justify-content: center;
+    z-index: 3000; backdrop-filter: blur(4px);
+  }
+  .modal.open { display: flex; }
+
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 24px; border-radius: 24px 24px 0 0;
+    width: 100%; max-width: 520px;
+    animation: slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    max-height: 90vh; overflow-y: auto;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  .modal-handle {
+    width: 36px; height: 4px; background: var(--border);
+    border-radius: 2px; margin: 0 auto 20px;
+  }
+  .modal-title { font-size: 20px; font-weight: 800; margin-bottom: 18px; letter-spacing: -0.4px; }
+
+  .modal-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+
+  .btn-primary {
+    width: 100%; padding: 14px;
+    background: var(--accent); color: white;
+    border: none; border-radius: 14px;
+    font-size: 16px; font-weight: 700;
+    cursor: pointer; transition: all 0.18s; font-family: inherit;
+  }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-secondary {
+    width: 100%; padding: 13px;
+    background: var(--surface2); color: var(--text2);
+    border: 1px solid var(--border); border-radius: 14px;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all 0.18s; font-family: inherit;
+  }
+  .btn-secondary:hover { color: var(--text); background: var(--border); }
+
+  .order-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 15px;
+  }
+  .order-item:last-child { border-bottom: none; }
+  .order-total {
+    display: flex; justify-content: space-between;
+    padding: 12px 0 4px; font-weight: 800; font-size: 16px;
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    padding: 12px 20px; border-radius: 50px;
+    font-size: 14px; font-weight: 600; z-index: 9999;
+    opacity: 0; transition: all 0.3s;
+    white-space: nowrap; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── MISC ── */
+  .empty { text-align: center; padding: 48px 24px; color: var(--text2); }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-msg  { font-size: 15px; }
+  .loader { display: flex; justify-content: center; padding: 32px; }
+  .spinner {
+    width: 28px; height: 28px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+
+  /* ── CHARACTER CARD ── */
+  .char-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .char-img-wrap {
+    position: relative;
+    width: 160px; height: 160px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid var(--accent);
+    background: var(--surface2);
+  }
+  .char-img-wrap img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+  .char-img-placeholder {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-size: 48px; color: var(--text2);
+    gap: 4px;
+  }
+  .char-img-placeholder span {
+    font-size: 11px; color: var(--text2); font-weight: 600;
+  }
+  .char-generating {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px;
+  }
+  .char-name {
+    font-size: 20px; font-weight: 800;
+    letter-spacing: -0.4px; margin-bottom: 4px;
+  }
+  .char-archetype {
+    font-size: 13px; color: var(--text2);
+    margin-bottom: 14px; font-style: italic;
+  }
+  .char-tier-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    color: white; padding: 4px 14px;
+    border-radius: 20px; font-size: 12px; font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .char-traits {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    justify-content: center; margin-bottom: 16px;
+  }
+  .char-trait {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 3px 10px;
+    font-size: 11px; color: var(--text2); font-weight: 600;
+  }
+  .char-actions {
+    display: flex; gap: 8px; justify-content: center;
+  }
+  .char-btn {
+    flex: 1; max-width: 160px;
+    padding: 10px; border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text);
+    font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all 0.18s; font-family: inherit;
+  }
+  .char-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .char-btn.primary {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+  .char-btn.primary:hover { background: var(--accent2); }
+  .char-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .hf-key-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px; margin-bottom: 12px;
+  }
+  .hf-key-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--text2); }
+  .hf-key-row { display: flex; gap: 8px; }
+  .hf-key-row input { flex: 1; }
+  .hf-key-row button {
+    padding: 10px 14px; border-radius: 10px;
+    background: var(--accent); color: white; border: none;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    font-family: inherit; white-space: nowrap;
+  }
+
+  @media (max-width: 480px) {
+    .nav-btn span.label { display: none; }
+    .nav-logo { font-size: 16px; }
+    .product-grid { grid-template-columns: repeat(2, 1fr); }
+    .auth-card { padding: 28px 20px; }
+    .profile-hero { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ AUTH SCREEN ══════════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">DTSLO</div>
+    <div class="auth-tagline">Downtown SLO — your night out, sorted.</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-form" class="auth-form">
+      <div class="input-group">
+        <label class="input-label">Email</label>
+        <input id="login-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Password</label>
+        <input id="login-password" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div id="login-error" class="auth-error"></div>
+      <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign In</button>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="signup-form" class="auth-form" style="display:none">
+      <div class="input-group">
+        <label class="input-label">Username</label>
+        <input id="signup-username" class="form-input" type="text" placeholder="nightowl42" autocomplete="username">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Email</label>
+        <input id="signup-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Password</label>
+        <input id="signup-password" class="form-input" type="password" placeholder="Min 6 characters" autocomplete="new-password">
+      </div>
+      <div id="signup-error" class="auth-error"></div>
+      <button class="btn-primary" id="signup-btn" onclick="doSignup()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MAIN APP ══════════════════ -->
+<div id="app">
+
+  <nav class="navbar">
+    <div class="nav-logo">DTSLO</div>
+    <button class="nav-btn active" id="nav-line" onclick="showPage('line')">
+      <span class="icon">📍</span><span class="label">Lines</span>
+    </button>
+    <button class="nav-btn" id="nav-delivery" onclick="showPage('delivery')">
+      <span class="icon">🛒</span><span class="label">Delivery</span>
+    </button>
+    <button class="nav-btn" id="nav-lost" onclick="showPage('lost')">
+      <span class="icon">🔍</span><span class="label">Lost</span>
+    </button>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="avatar-btn" id="avatar-btn" onclick="showPage('profile')">?</button>
+  </nav>
+
+  <!-- LINES -->
+  <div id="line" class="page active">
+    <div class="section-title">Bar Lines</div>
+    <div id="bars"></div>
+  </div>
+
+  <!-- DELIVERY -->
+  <div id="delivery" class="page">
+    <div class="section-title">Quick Delivery</div>
+    <div id="product-grid" class="product-grid"></div>
+    <button class="cart-fab" id="cart-fab" onclick="openCheckout()" style="display:none">
+      🛒 Cart <span class="cart-badge" id="cart-count">0</span>
+    </button>
+  </div>
+
+  <!-- LOST & FOUND -->
+  <div id="lost" class="page">
+    <div class="lf-header">
+      <div class="section-title" style="margin:0">Lost & Found</div>
+      <button class="post-btn" onclick="openLostModal()">+ Post Item</button>
+    </div>
+    <div id="lost-feed"></div>
+  </div>
+
+  <!-- PROFILE -->
+  <div id="profile" class="page">
+    <div class="section-title">Profile</div>
+
+    <div class="profile-hero">
+      <div class="profile-avatar" id="profile-avatar">?</div>
+      <div class="profile-info">
+        <div class="profile-username" id="profile-username">—</div>
+        <div class="profile-email" id="profile-email">—</div>
+        <div class="profile-joined" id="profile-joined">Joined —</div>
+      </div>
+    </div>
+
+    <!-- CHARACTER CARD -->
+    <div class="char-card" id="char-card">
+      <div class="char-img-wrap">
+        <div class="char-img-placeholder" id="char-placeholder">
+          <div>🎭</div>
+          <span>No character yet</span>
+        </div>
+        <img id="char-img" style="display:none" src="" alt="Your character">
+      </div>
+      <div class="char-tier-badge" id="char-tier-badge">Tier 1 · Level 1</div>
+      <div class="char-name" id="char-name">???</div>
+      <div class="char-archetype" id="char-archetype">Earn XP to unlock your character</div>
+      <div class="char-traits" id="char-traits"></div>
+      <div class="char-actions">
+        <button class="char-btn primary" id="char-gen-btn" onclick="generateCharacter()">✨ Generate</button>
+        <button class="char-btn" id="char-share-btn" onclick="shareCharacter()" style="display:none">📤 Share</button>
+      </div>
+    </div>
+
+    <!-- HF API KEY -->
+    <div class="hf-key-box" id="hf-key-box">
+      <div class="hf-key-title">🔑 Hugging Face API Key needed for image generation</div>
+      <div class="hf-key-row">
+        <input id="hf-key-input" class="form-input" type="password" placeholder="hf_..." style="margin:0">
+        <button onclick="saveHFKey()">Save</button>
+      </div>
+    </div>
+
+    <div class="xp-card">
+      <div class="xp-top">
+        <div class="xp-title">🏆 Experience Points</div>
+        <div class="xp-level" id="xp-level-badge">Level 0</div>
+      </div>
+      <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+      <div class="xp-sub" id="xp-sub">0 XP · 100 XP to next level</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-xp">0</div>
+        <div class="stat-lbl">Total XP</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-reports">0</div>
+        <div class="stat-lbl">Reports</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-posts">0</div>
+        <div class="stat-lbl">L&F Posts</div>
+      </div>
+    </div>
+
+    <div class="profile-section-label">Account</div>
+
+    <button class="profile-action" onclick="toggleChangePw()">
+      <span class="pa-icon">🔑</span>
+      <span class="pa-label">Change Password</span>
+      <span class="pa-arrow">›</span>
+    </button>
+
+    <div class="change-pw-box" id="change-pw-box">
+      <div class="change-pw-title">Set a new password</div>
+      <input id="new-pw" class="form-input" type="password" placeholder="New password (min 6 chars)" style="margin-bottom:8px">
+      <input id="new-pw2" class="form-input" type="password" placeholder="Confirm new password" style="margin-bottom:12px">
+      <button class="btn-primary" onclick="doChangePassword()" style="font-size:14px;padding:11px">Update Password</button>
+    </div>
+
+    <button class="profile-action danger" onclick="doSignout()">
+      <span class="pa-icon">🚪</span>
+      <span class="pa-label">Sign Out</span>
+      <span class="pa-arrow">›</span>
+    </button>
+  </div>
+
+</div><!-- /#app -->
+
+<!-- CHECKOUT MODAL -->
+<div id="checkout-modal" class="modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Your Order</div>
+    <div id="order-summary"></div>
+    <div class="order-total"><span>Total</span><span id="order-total">$0.00</span></div>
+    <br>
+    <input id="checkout-name"  class="form-input" placeholder="Your name" style="margin-bottom:10px">
+    <input id="checkout-phone" class="form-input" placeholder="Phone number" type="tel">
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="placeOrder()">Place Order</button>
+      <button class="btn-secondary" onclick="closeCheckout()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOST MODAL -->
+<div id="lost-modal" class="modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Post an Item</div>
+    <select id="lf-type" class="form-select" style="margin-bottom:10px">
+      <option value="lost">🔴 Lost something</option>
+      <option value="found">🟢 Found something</option>
+    </select>
+    <input id="lf-title"    class="form-input" placeholder="Item name"  style="margin-bottom:10px">
+    <input id="lf-location" class="form-input" placeholder="Location"   style="margin-bottom:10px">
+    <input id="lf-contact"  class="form-input" placeholder="Contact info" style="margin-bottom:10px">
+    <textarea id="lf-description" class="form-textarea" placeholder="Additional details..."></textarea>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="submitLostItem()">Post Item</button>
+      <button class="btn-secondary" onclick="closeLostModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── SUPABASE ──
+const supabaseClient = window.supabase.createClient(
+  "https://jwgwufggptpdmgcmmqes.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18"
+);
+
+// ── STATE ──
+let currentUser  = null;
+let userXP       = 0;
+let reportCount  = 0;
+let postCount    = 0;
+
+// ── THEME ──
+function toggleTheme() {
+  const html = document.documentElement;
+  const dark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', dark ? 'light' : 'dark');
+  document.querySelector('.theme-toggle').textContent = dark ? '🌙' : '☀️';
+}
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── AUTH TABS ──
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((b, i) =>
+    b.classList.toggle('active', (tab === 'login' ? i === 0 : i === 1))
+  );
+  document.getElementById('login-form').style.display  = tab === 'login'  ? 'flex' : 'none';
+  document.getElementById('signup-form').style.display = tab === 'signup' ? 'flex' : 'none';
+  document.getElementById('login-error').style.display  = 'none';
+  document.getElementById('signup-error').style.display = 'none';
+}
+
+function showAuthError(form, msg) {
+  const el = document.getElementById(form + '-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ── LOGIN ──
+async function doLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn      = document.getElementById('login-btn');
+  document.getElementById('login-error').style.display = 'none';
+  if (!email || !password) { showAuthError('login', 'Please fill in all fields.'); return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    await onLogin(data.user);
+  } catch (e) {
+    showAuthError('login', e.message || 'Login failed. Check your credentials.');
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+
+// ── SIGNUP ──
+async function doSignup() {
+  const username = document.getElementById('signup-username').value.trim();
+  const email    = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const btn      = document.getElementById('signup-btn');
+  document.getElementById('signup-error').style.display = 'none';
+
+  if (!username || !email || !password) { showAuthError('signup', 'Please fill in all fields.'); return; }
+  if (username.length < 3) { showAuthError('signup', 'Username must be at least 3 characters.'); return; }
+  if (password.length < 6) { showAuthError('signup', 'Password must be at least 6 characters.'); return; }
+
+  btn.disabled = true; btn.textContent = 'Creating account…';
+
+  try {
+    const { data, error } = await supabaseClient.auth.signUp({
+      email, password, options: { data: { username } }
+    });
+
+    if (error) throw error;
+
+    // Session present = email confirmation disabled, log straight in
+    if (data.session) {
+      await onLogin(data.user);
+      return;
+    }
+
+    // No session = Supabase requires email confirmation
+    const errEl = document.getElementById('signup-error');
+    errEl.style.background  = 'rgba(34,197,94,0.1)';
+    errEl.style.borderColor = 'rgba(34,197,94,0.3)';
+    errEl.style.color       = 'var(--green)';
+    errEl.textContent = '✅ Account created! Check your email for a confirmation link, then sign in.';
+    errEl.style.display = 'block';
+
+  } catch (e) {
+    const msg = e.message || 'Signup failed.';
+    showAuthError('signup', msg.toLowerCase().includes('already') 
+      ? '⚠️ An account with that email already exists. Try signing in.' 
+      : msg);
+  }
+
+  btn.disabled = false; btn.textContent = 'Create Account';
+}
+
+// ── ON LOGIN ──
+async function onLogin(user) {
+  currentUser = user;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  renderAvatar();
+  await loadUserStats();
+  renderProducts();
+  loadReports();
+  loadLostItems();
+}
+
+// ── SIGN OUT ──
+async function doSignout() {
+  await supabaseClient.auth.signOut();
+  currentUser = null; userXP = 0; reportCount = 0; postCount = 0;
+  cart = {};
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  showPage('line');
+  showToast('👋 Signed out');
+}
+
+// ── CHANGE PASSWORD ──
+function toggleChangePw() {
+  document.getElementById('change-pw-box').classList.toggle('open');
+}
+
+async function doChangePassword() {
+  const pw  = document.getElementById('new-pw').value;
+  const pw2 = document.getElementById('new-pw2').value;
+  if (!pw || pw.length < 6) { showToast('⚠️ Password must be 6+ characters'); return; }
+  if (pw !== pw2) { showToast('⚠️ Passwords do not match'); return; }
+  try {
+    const { error } = await supabaseClient.auth.updateUser({ password: pw });
+    if (error) throw error;
+    showToast('✅ Password updated!');
+    document.getElementById('change-pw-box').classList.remove('open');
+    document.getElementById('new-pw').value = '';
+    document.getElementById('new-pw2').value = '';
+  } catch (e) {
+    showToast('❌ ' + (e.message || 'Update failed'));
+  }
+}
+
+// ── HELPERS ──
+function getUsername() {
+  if (!currentUser) return '?';
+  return currentUser.user_metadata?.username
+      || currentUser.email?.split('@')[0]
+      || 'User';
+}
+
+function renderAvatar() {
+  const initial = getUsername()[0]?.toUpperCase() || '?';
+  document.getElementById('avatar-btn').textContent = initial;
+}
+
+// ── LOAD USER STATS ──
+async function loadUserStats() {
+  if (!currentUser) return;
+  try {
+    const [rr, pr] = await Promise.all([
+      supabaseClient.from('reports').select('id',   { count: 'exact', head: true }).eq('user_id', currentUser.id),
+      supabaseClient.from('lost_found').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id)
+    ]);
+    reportCount = rr.count  || 0;
+    postCount   = pr.count  || 0;
+    userXP      = (reportCount * 10) + (postCount * 15);
+  } catch (e) {
+    console.log('Stats skipped:', e.message);
+  }
+}
+
+// ── RENDER PROFILE ──
+function renderProfile() {
+  const username = getUsername();
+  const email    = currentUser?.email || '—';
+  const joined   = currentUser?.created_at
+    ? 'Joined ' + new Date(currentUser.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : 'Joined recently';
+
+  document.getElementById('profile-avatar').textContent   = username[0]?.toUpperCase() || '?';
+  document.getElementById('profile-username').textContent = username;
+  document.getElementById('profile-email').textContent    = email;
+  document.getElementById('profile-joined').textContent   = joined;
+
+  const level    = Math.floor(userXP / 100);
+  const progress = userXP % 100;
+  const toNext   = 100 - progress;
+
+  document.getElementById('stat-xp').textContent       = userXP;
+  document.getElementById('stat-reports').textContent  = reportCount;
+  document.getElementById('stat-posts').textContent    = postCount;
+  document.getElementById('xp-level-badge').textContent = 'Level ' + level;
+  document.getElementById('xp-sub').textContent         = `${userXP} XP · ${toNext} XP to next level`;
+  setTimeout(() => { document.getElementById('xp-fill').style.width = progress + '%'; }, 60);
+}
+
+// ── NAV ──
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+  document.getElementById(p).classList.add('active');
+  const nb = document.getElementById('nav-' + p);
+  if (nb) nb.classList.add('active');
+  if (p === 'profile') { renderProfile(); renderCharacterCard(); }
+}
+
+// ── DATA ──
+const bars = [
+  { name: 'Library',         emoji: '📚', reports: [] },
+  { name: "Mother's Tavern", emoji: '🍺', reports: [] },
+  { name: 'Frog & Peach',    emoji: '🐸', reports: [] }
+];
+
+const products = [
+  { name: 'Red Bull', emoji: '⚡', price: 3.99 },
+  { name: 'Water',    emoji: '💧', price: 1.99 },
+  { name: 'Charger',  emoji: '🔋', price: 14.99 },
+  { name: 'Snack',    emoji: '🍫', price: 2.49 }
+];
+
+let cart = {};
+
+function timeAgo(t) {
+  const s = Math.floor((Date.now() - t) / 1000);
+  if (s < 60) return s + 's ago';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + 'm ago';
+  return Math.floor(m / 60) + 'h ago';
+}
+
+function getStatus(bar) {
+  if (!bar.reports.length) return 'No Data';
+  const c = {};
+  bar.reports.slice(0, 5).forEach(r => { c[r.status] = (c[r.status] || 0) + 1; });
+  return Object.keys(c).reduce((a, b) => c[a] > c[b] ? a : b);
+}
+
+function statusLabel(s) {
+  if (s === 'Dead')   return { text: '🟢 Dead (Empty)',  cls: 'status-Dead' };
+  if (s === 'Busy')   return { text: '🟡 Getting Busy',  cls: 'status-Busy' };
+  if (s === 'Packed') return { text: '🔴 Packed',        cls: 'status-Packed' };
+  return { text: '⚪ No Data', cls: 'status-NoData' };
+}
+
+function renderBars() {
+  const c = document.getElementById('bars');
+  c.innerHTML = '';
+  bars.forEach((bar, i) => {
+    const last = bar.reports[0] ? timeAgo(bar.reports[0].time) : 'No data yet';
+    const { text, cls } = statusLabel(getStatus(bar));
+    const el = document.createElement('div');
+    el.className = 'bar-card';
+    el.innerHTML = `
+      <div class="bar-header">
+        <div class="bar-name">${bar.emoji} ${bar.name}</div>
+        <div class="bar-time">Updated ${last}</div>
+      </div>
+      <div class="status-pill ${cls}"><div class="dot"></div>${text}</div>
+      <div class="vote-row">
+        <button class="vote-btn dead"   onclick="report(${i},'Dead')">🟢 Dead</button>
+        <button class="vote-btn busy"   onclick="report(${i},'Busy')">🟡 Busy</button>
+        <button class="vote-btn packed" onclick="report(${i},'Packed')">🔴 Packed</button>
+      </div>`;
+    c.appendChild(el);
+  });
+}
+
+async function loadReports() {
+  document.getElementById('bars').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  try {
+    const { data, error } = await supabaseClient
+      .from('reports').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    bars.forEach(b => b.reports = []);
+    data.forEach(r => {
+      const bar = bars.find(b => b.name === r.bar);
+      if (bar) bar.reports.push({ status: r.status, time: new Date(r.created_at).getTime() });
+    });
+  } catch (e) { console.error(e); }
+  renderBars();
+}
+
+async function report(i, status) {
+  const bar = bars[i];
+  bar.reports.unshift({ status, time: Date.now() });
+  renderBars();
+  try {
+    await supabaseClient.from('reports').insert([{ bar: bar.name, status, user_id: currentUser?.id }]);
+    userXP += 10; reportCount++;
+    showToast('✅ Reported — +10 XP');
+  } catch (e) { showToast('❌ Failed to submit'); }
+}
+
+function renderProducts() {
+  const g = document.getElementById('product-grid');
+  g.innerHTML = '';
+  products.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'product-card';
+    el.innerHTML = `
+      <div class="product-emoji">${p.emoji}</div>
+      <div class="product-name">${p.name}</div>
+      <div class="product-price">$${p.price.toFixed(2)}</div>
+      <button class="add-btn" onclick="addToCart('${p.name}')">Add to Cart</button>`;
+    g.appendChild(el);
+  });
+}
+
+function updateCartUI() {
+  const total = Object.values(cart).reduce((a, b) => a + b, 0);
+  document.getElementById('cart-count').textContent = total;
+  document.getElementById('cart-fab').style.display = total > 0 ? 'flex' : 'none';
+}
+
+function addToCart(name) {
+  cart[name] = (cart[name] || 0) + 1;
+  updateCartUI();
+  showToast(`✅ ${name} added`);
+}
+
+function openCheckout() {
+  const s = document.getElementById('order-summary');
+  s.innerHTML = '';
+  let total = 0;
+  for (const name in cart) {
+    const p = products.find(x => x.name === name);
+    const lt = p ? p.price * cart[name] : 0;
+    total += lt;
+    s.innerHTML += `<div class="order-item"><span>${name} × ${cart[name]}</span><span>$${lt.toFixed(2)}</span></div>`;
+  }
+  document.getElementById('order-total').textContent = '$' + total.toFixed(2);
+  document.getElementById('checkout-name').value = getUsername();
+  document.getElementById('checkout-modal').classList.add('open');
+}
+
+function closeCheckout() { document.getElementById('checkout-modal').classList.remove('open'); }
+
+async function placeOrder() {
+  const name  = document.getElementById('checkout-name').value.trim();
+  const phone = document.getElementById('checkout-phone').value.trim();
+  if (!name || !phone) { showToast('⚠️ Please fill in your details'); return; }
+  const items = Object.entries(cart).map(([k, v]) => `${k} x${v}`).join(', ');
+  try {
+    await supabaseClient.from('orders').insert([{ name, phone, items, user_id: currentUser?.id }]);
+    showToast('🎉 Order placed!');
+    cart = {}; updateCartUI(); closeCheckout();
+  } catch (e) { showToast('❌ Order failed'); }
+}
+
+function openLostModal()  { document.getElementById('lost-modal').classList.add('open'); }
+function closeLostModal() { document.getElementById('lost-modal').classList.remove('open'); }
+
+async function submitLostItem() {
+  const type        = document.getElementById('lf-type').value;
+  const title       = document.getElementById('lf-title').value.trim();
+  const location    = document.getElementById('lf-location').value.trim();
+  const contact     = document.getElementById('lf-contact').value.trim();
+  const description = document.getElementById('lf-description').value.trim();
+  if (!title) { showToast('⚠️ Please enter item name'); return; }
+  try {
+    await supabaseClient.from('lost_found').insert([{
+      type, title, location, contact, description, user_id: currentUser?.id
+    }]);
+    userXP += 15; postCount++;
+    showToast('✅ Item posted — +15 XP');
+    closeLostModal();
+    ['lf-title','lf-location','lf-contact','lf-description'].forEach(id => document.getElementById(id).value = '');
+    loadLostItems();
+  } catch (e) { showToast('❌ Failed to post'); }
+}
+
+async function loadLostItems() {
+  const c = document.getElementById('lost-feed');
+  c.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  try {
+    const { data } = await supabaseClient
+      .from('lost_found').select('*').order('created_at', { ascending: false });
+    c.innerHTML = '';
+    if (!data?.length) {
+      c.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-msg">No items posted yet</div></div>`;
+      return;
+    }
+    data.forEach(item => {
+      const isLost = item.type === 'lost';
+      const el = document.createElement('div');
+      el.className = 'lf-card';
+      el.innerHTML = `
+        <div class="lf-tag ${isLost ? 'lf-lost' : 'lf-found'}">${isLost ? '🔴 Lost' : '🟢 Found'}</div>
+        <div class="lf-title">${item.title}</div>
+        <div class="lf-meta">📍 ${item.location || 'Location not specified'} · ${timeAgo(new Date(item.created_at).getTime())}</div>
+        ${item.description ? `<div class="lf-desc">${item.description}</div>` : ''}
+        ${item.contact ? `<div class="lf-contact">📞 ${item.contact}</div>` : ''}`;
+      c.appendChild(el);
+    });
+  } catch (e) {
+    c.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-msg">Could not load items</div></div>`;
+  }
+}
+
+
+
+// ══════════════════════════════════════════════
+// CHARACTER SYSTEM
+// ══════════════════════════════════════════════
+
+// 100 characters across 10 tiers (10 per tier, levels 1-100)
+const CHARACTERS = [
+  // TIER 1: levels 1-10
+  { tier:1, name:"The Freshman",        archetype:"Wide-eyed and ready, clutching a solo cup for the first time" },
+  { tier:1, name:"The Newbie",          archetype:"Still checking the dress code at the door" },
+  { tier:1, name:"The Pre-Gamer",       archetype:"Three drinks deep before even leaving the dorm" },
+  { tier:1, name:"The Fake ID Kid",     archetype:"Nervously checking their pocket every five minutes" },
+  { tier:1, name:"The Campus Map",      archetype:"Still figuring out which bars are worth it" },
+  { tier:1, name:"The Orientation Owl", archetype:"Met everyone at orientation, remembers no one now" },
+  { tier:1, name:"The Dorm Crawler",    archetype:"Thought a dorm party counted as going out" },
+  { tier:1, name:"The First Thursday",  archetype:"Discovered Thursday is the real Friday in SLO" },
+  { tier:1, name:"The Sober Driver",    archetype:"Heroically sacrificing tonight for the squad" },
+  { tier:1, name:"The Group Chat",      archetype:"Coordinating 12 people to meet at the same spot" },
+
+  // TIER 2: levels 11-20
+  { tier:2, name:"The Regular",         archetype:"Knows the bartender's name, gets the nod at the door" },
+  { tier:2, name:"The Hype Man",        archetype:"Convinces everyone to go out even on a Tuesday" },
+  { tier:2, name:"The Bar Hopper",      archetype:"Never stays anywhere more than 45 minutes" },
+  { tier:2, name:"The Locals Drink",    archetype:"Only orders whatever's on draft" },
+  { tier:2, name:"The Yelp Checker",    archetype:"Reviews every bar in real time" },
+  { tier:2, name:"The Instagram Story", archetype:"Documenting the entire night for 24-hour fame" },
+  { tier:2, name:"The Shots Caller",    archetype:"Appears with a tray at the worst possible moment" },
+  { tier:2, name:"The Line Skipper",    archetype:"Somehow always knows someone at the door" },
+  { tier:2, name:"The Designated Eater",archetype:"Planning the post-bar food run before the bar even opens" },
+  { tier:2, name:"The Reunion Kid",     archetype:"Runs into their high school class every single night" },
+
+  // TIER 3: levels 21-30
+  { tier:3, name:"The Social Butterfly",archetype:"Has a friend group in every corner of every bar" },
+  { tier:3, name:"The DJ Critic",       archetype:"Could do better — and will tell you so" },
+  { tier:3, name:"The VIP Wannabe",     archetype:"Stands near the roped section hoping to absorb status" },
+  { tier:3, name:"The Tab Opener",      archetype:"Opens a tab and immediately regrets the responsibility" },
+  { tier:3, name:"The Closer",          archetype:"Still there when the lights come on" },
+  { tier:3, name:"The Cal Poly Crew",   archetype:"Twelve engineers celebrating finishing a project" },
+  { tier:3, name:"The Patio Person",    archetype:"Only goes out to stand outside bars and talk" },
+  { tier:3, name:"The Drink Spiller",   archetype:"A walking insurance claim on any dance floor" },
+  { tier:3, name:"The Karaoke Hero",    archetype:"Waiting all night to sing their one song perfectly" },
+  { tier:3, name:"The Bachelorette",    archetype:"Bringing SLO energy to a very specific life event" },
+
+  // TIER 4: levels 31-40
+  { tier:4, name:"The Scene Veteran",   archetype:"Remembers when this place had a different name" },
+  { tier:4, name:"The Bouncer Buddy",   archetype:"Gets the handshake, skips the ID check" },
+  { tier:4, name:"The Craft Beer Nerd", archetype:"Judges you for ordering a Coors Light" },
+  { tier:4, name:"The Trivia Captain",  archetype:"Dominates pub quiz, terrible at everything else" },
+  { tier:4, name:"The Night Mayor",     archetype:"Runs into someone they know every single block" },
+  { tier:4, name:"The Thursday Legend", archetype:"Thursday nights are sacred. Non-negotiable." },
+  { tier:4, name:"The Wine Walk Vet",   archetype:"Has a strategy for SLO's monthly wine walk" },
+  { tier:4, name:"The Rooftop Chaser",  archetype:"Always looking for a better view of the night" },
+  { tier:4, name:"The Whiskey Snob",    archetype:"Neat. No ice. Long explanation about the distillery." },
+  { tier:4, name:"The Power Hour Pro",  archetype:"Has survived more power hours than they can count" },
+
+  // TIER 5: levels 41-50
+  { tier:5, name:"The Nightlife Analyst",archetype:"Mentally tracking crowd flow and bar efficiency" },
+  { tier:5, name:"The Bartender Whisperer",archetype:"Gets their drink made first, every time, always" },
+  { tier:5, name:"The Dance Floor General",archetype:"Carves out space and defends it all night" },
+  { tier:5, name:"The After Party Host", archetype:"The night doesn't end — it just relocates" },
+  { tier:5, name:"The Local Legend",    archetype:"A story that starts with their name ends in chaos" },
+  { tier:5, name:"The Comeback King",   archetype:"Left at midnight. Back by 1. Don't ask." },
+  { tier:5, name:"The Establishment",   archetype:"Part of the furniture at their favorite spot" },
+  { tier:5, name:"The Night Philosopher",archetype:"Deep conversations with strangers at 1am" },
+  { tier:5, name:"The Honorary Staff",  archetype:"Helps bus tables when it gets really busy" },
+  { tier:5, name:"The Streak Keeper",   archetype:"Hasn't missed a Thursday in eleven months" },
+
+  // TIER 6: levels 51-60
+  { tier:6, name:"The Nightlife Icon",  archetype:"People point them out to friends visiting SLO" },
+  { tier:6, name:"The Scene Architect", archetype:"Introduced half these people to each other" },
+  { tier:6, name:"The Cocktail Curator",archetype:"Knows the seasonal menu before it drops" },
+  { tier:6, name:"The Floor Manager",   archetype:"Keeps the energy up without being on the clock" },
+  { tier:6, name:"The Bar Historian",   archetype:"Could write a book about every spot in DTSLO" },
+  { tier:6, name:"The Weekend Warrior", archetype:"Treats Friday like an Olympic opening ceremony" },
+  { tier:6, name:"The Smooth Operator", archetype:"Has never waited in a line in living memory" },
+  { tier:6, name:"The Hype Generator",  archetype:"Entire bars change mood when they walk in" },
+  { tier:6, name:"The Network Node",    archetype:"Six degrees of separation runs through them" },
+  { tier:6, name:"The Unwritten Rule",  archetype:"Everyone knows the code — they wrote it" },
+
+  // TIER 7: levels 61-70
+  { tier:7, name:"The Night Sovereign", archetype:"The room shifts when they arrive" },
+  { tier:7, name:"The Lore Keeper",     archetype:"Every bar story eventually traces back to them" },
+  { tier:7, name:"The Tab Legend",      archetype:"Their bar tab has its own mythology" },
+  { tier:7, name:"The Crowd Reader",    archetype:"Knows where the night is going before it goes there" },
+  { tier:7, name:"The Vibe Architect",  archetype:"Responsible for at least three great nights this month" },
+  { tier:7, name:"The Ghost of SLO",    archetype:"Appears, changes everything, vanishes by 2am" },
+  { tier:7, name:"The Certified Regular",archetype:"Their usual order is already being poured" },
+  { tier:7, name:"The Midnight Mentor", archetype:"Giving life advice to strangers who really need it" },
+  { tier:7, name:"The Thursday Prophet",archetype:"Predicted this exact night three weeks ago" },
+  { tier:7, name:"The Scene Elder",     archetype:"Younger regulars ask them for guidance" },
+
+  // TIER 8: levels 71-80
+  { tier:8, name:"The Nightlife Deity", archetype:"Achieved a status that cannot be explained, only witnessed" },
+  { tier:8, name:"The Eternal Regular", archetype:"Has outlasted three owners at their favorite bar" },
+  { tier:8, name:"The Floor Legend",    archetype:"Has danced at every venue in every era of SLO" },
+  { tier:8, name:"The Myth",            archetype:"You've heard of them even if you've never met them" },
+  { tier:8, name:"The Catalyst",        archetype:"Their presence triggers a chain reaction of good nights" },
+  { tier:8, name:"The Time Capsule",    archetype:"A walking archive of every night this town has had" },
+  { tier:8, name:"The Cornerstone",     archetype:"The bars would feel wrong without them" },
+  { tier:8, name:"The Oracle",          archetype:"Tells you what bar to go to. You go. It's perfect." },
+  { tier:8, name:"The Phenomenon",      archetype:"Science cannot explain their consistent good timing" },
+  { tier:8, name:"The Living Tradition",archetype:"They are the reason certain nights became ritual" },
+
+  // TIER 9: levels 81-90
+  { tier:9, name:"The Ascended",        archetype:"Transcended the concept of 'going out'" },
+  { tier:9, name:"The Patron Saint",    archetype:"Watching over DTSLO with quiet, experienced eyes" },
+  { tier:9, name:"The Architect",       archetype:"The current scene exists partly because of their influence" },
+  { tier:9, name:"The Untouchable",     archetype:"Beyond lines, beyond waits, beyond explanation" },
+  { tier:9, name:"The Relic",           archetype:"A living artifact of every great era of this town" },
+  { tier:9, name:"The Foundation",      archetype:"The nightlife ecosystem is built on their presence" },
+  { tier:9, name:"The Original",        archetype:"Was doing this before it was cool — and after" },
+  { tier:9, name:"The Eternal",         archetype:"Some say they've always been here. They're not wrong." },
+  { tier:9, name:"The Benchmark",       archetype:"All other nights are measured against their presence" },
+  { tier:9, name:"The Testament",       archetype:"A testament to what commitment to a good time looks like" },
+
+  // TIER 10: levels 91-100
+  { tier:10, name:"The DTSLO Legend",   archetype:"The highest form. The final boss. The reason for the app." },
+  { tier:10, name:"The Immortal",       archetype:"Has seen it all. Loves it still." },
+  { tier:10, name:"The Godfather",      archetype:"Nods and doors open, tabs close, crowds part" },
+  { tier:10, name:"The Infinite",       archetype:"Their story doesn't have an ending" },
+  { tier:10, name:"The Pinnacle",       archetype:"Every other character exists somewhere on the path here" },
+  { tier:10, name:"The Alpha Regular",  archetype:"The concept against which all regulars are defined" },
+  { tier:10, name:"The Final Round",    archetype:"Always buys the last round. Always." },
+  { tier:10, name:"The Crown",          archetype:"Not worn — earned, one night at a time" },
+  { tier:10, name:"The Undying",        archetype:"Still going strong when the rest of the city is asleep" },
+  { tier:10, name:"The Complete",       archetype:"Nothing left to prove. Still shows up anyway." },
+];
+
+// 10 variable trait pools — one unlocked per level within a tier
+const TRAIT_POOLS = [
+  // Pool 0 — unlocked at level X1
+  ["wild curly hair","sleek straight hair","messy bedhead","a fresh fade","long flowing locks","a sharp undercut","tousled beach waves","a neat bun","spiky tips","braided hair"],
+  // Pool 1 — unlocked at level X2
+  ["bright blue eyes","deep brown eyes","green eyes","hazel eyes","dark mysterious eyes","sparkling amber eyes","wide curious eyes","sharp focused eyes","warm kind eyes","intense piercing eyes"],
+  // Pool 2 — unlocked at level X3
+  ["a vintage band tee","a crisp button-up","a graphic hoodie","a leather jacket","a neon tank top","a flannel shirt","a silk blouse","a varsity jacket","a denim jacket","a bold patterned shirt"],
+  // Pool 3 — unlocked at level X4
+  ["ripped jeans","tailored chinos","cargo shorts","a mini skirt","flared pants","classic Levi's","jogger pants","plaid trousers","leather pants","bright colored shorts"],
+  // Pool 4 — unlocked at level X5
+  ["white sneakers","chunky boots","platform shoes","loafers","high heels","beat-up Vans","Chelsea boots","neon trainers","cowboy boots","sandals"],
+  // Pool 5 — unlocked at level X6
+  ["a backwards cap","a wide-brim hat","round sunglasses","a snapback","a beanie","a flower crown","aviator shades","a baseball cap","a bucket hat","no hat at all"],
+  // Pool 6 — unlocked at level X7
+  ["holding a cocktail","holding a beer","holding a mocktail","arms crossed coolly","hands in pockets","making a peace sign","pointing at something off-screen","laughing mid-sentence","checking their phone one last time","leaning against a wall"],
+  // Pool 7 — unlocked at level X8
+  ["a gold chain necklace","layered bracelets","hoop earrings","a watch","a friendship bracelet","a choker","stud earrings","a ring on every finger","a simple pendant","no jewelry"],
+  // Pool 8 — unlocked at level X9
+  ["a confident smirk","a warm wide smile","a mysterious half-smile","a raised eyebrow","a knowing grin","a laugh mid-sentence","a cool neutral expression","a bright beaming smile","a playful wink","a fierce stare"],
+  // Pool 9 — unlocked at level X0 (level 10 within tier)
+  ["glowing neon accent lighting behind them","a blurred bar crowd in the background","string lights in the background","a city street at night behind them","bokeh bar lights surrounding them","a dramatic spotlight effect","confetti falling around them","a smoky atmospheric haze","golden hour bar lighting","deep purple nightclub ambiance"],
+];
+
+// Seed a repeatable random from user ID so same user = same traits
+function seededRand(seed, index) {
+  let h = 0;
+  const str = seed + '_' + index;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(31, h) + str.charCodeAt(i) | 0;
+  }
+  return Math.abs(h);
+}
+
+function getCharacterForLevel(level) {
+  const clampedLevel = Math.max(1, Math.min(100, level));
+  const charIndex    = clampedLevel - 1;
+  return CHARACTERS[charIndex];
+}
+
+function getUnlockedTraits(level, userId) {
+  const levelInTier  = ((level - 1) % 10); // 0-9
+  const traitsCount  = levelInTier + 1;     // 1 at level X1, 10 at level X0
+  const traits = [];
+  for (let i = 0; i < traitsCount; i++) {
+    const pool   = TRAIT_POOLS[i];
+    const pick   = seededRand(userId, i) % pool.length;
+    traits.push(pool[pick]);
+  }
+  return traits;
+}
+
+function buildPrompt(character, traits) {
+  const base = `Cartoon illustration portrait of a nightlife character called "${character.name}". ` +
+    `They are ${character.archetype}. ` +
+    `Style: colorful flat cartoon, expressive face, clean lines, vibrant nightlife atmosphere. `;
+  const traitStr = traits.join(", ");
+  return base + `Character details: ${traitStr}. Square format, centered subject, no text.`;
+}
+
+// ── HF KEY MANAGEMENT ──
+// Safe localStorage wrapper — won't crash if blocked by host
+const safeStore = {
+  get(k)    { try { return localStorage.getItem(k) || ''; } catch(e) { return _memStore[k] || ''; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch(e) { _memStore[k] = v; } }
+};
+const _memStore = {};
+
+function saveHFKey() {
+  const key = document.getElementById('hf-key-input').value.trim();
+  if (!key.startsWith('hf_')) { showToast('⚠️ Key should start with hf_'); return; }
+  safeStore.set('hf_api_key', key);
+  document.getElementById('hf-key-box').style.display = 'none';
+  showToast('✅ API key saved!');
+}
+
+function getHFKey() {
+  return safeStore.get('hf_api_key');
+}
+
+// ── GENERATE CHARACTER ──
+async function generateCharacter() {
+  const hfKey = getHFKey();
+  if (!hfKey) {
+    document.getElementById('hf-key-box').style.display = 'block';
+    document.getElementById('hf-key-input').focus();
+    showToast('⚠️ Enter your Hugging Face API key first');
+    return;
+  }
+
+  const level     = Math.max(1, Math.floor(userXP / 100) + 1);
+  const character = getCharacterForLevel(level);
+  const traits    = getUnlockedTraits(level, currentUser.id);
+  const prompt    = buildPrompt(character, traits);
+
+  const btn = document.getElementById('char-gen-btn');
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+
+  // Show spinner
+  const wrap = document.querySelector('.char-img-wrap');
+  wrap.innerHTML = `<div class="char-generating"><div class="spinner"></div><span style="font-size:12px;color:var(--text2)">Drawing your character…</span></div>`;
+
+  try {
+    const res = await fetch(
+      'https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + hfKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ inputs: prompt })
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      // Model loading — retry once after 20s
+      if (res.status === 503) {
+        showToast('🔄 Model warming up, retrying in 20s…');
+        setTimeout(() => { btn.disabled = false; btn.textContent = '✨ Generate'; generateCharacter(); }, 20000);
+        return;
+      }
+      throw new Error(err.error || 'Generation failed (' + res.status + ')');
+    }
+
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+
+    // Save URL to Supabase profile
+    try {
+      await supabaseClient.from('profiles').upsert({
+        id: currentUser.id,
+        character_url: url,
+        character_level: level,
+        updated_at: new Date().toISOString()
+      });
+    } catch(e) { /* profiles table optional */ }
+
+    // Show image
+    wrap.innerHTML = `<img id="char-img" src="${url}" alt="Your character" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    document.getElementById('char-share-btn').style.display = 'inline-flex';
+    showToast('🎨 Character generated!');
+
+  } catch(e) {
+    wrap.innerHTML = `<div class="char-img-placeholder"><div>❌</div><span>${e.message}</span></div>`;
+    showToast('❌ ' + e.message);
+  }
+
+  btn.disabled = false; btn.textContent = '🔄 Regenerate';
+}
+
+// ── SHARE CHARACTER ──
+async function shareCharacter() {
+  const img = document.querySelector('.char-img-wrap img');
+  if (!img) return;
+  const level     = Math.max(1, Math.floor(userXP / 100) + 1);
+  const character = getCharacterForLevel(level);
+  const text      = `I'm "${character.name}" on DTSLO — Level ${level}! ${character.archetype} 🍻 dtslomenu.com`;
+  if (navigator.share) {
+    try { await navigator.share({ title: 'My DTSLO Character', text }); } catch(e) {}
+  } else {
+    await navigator.clipboard.writeText(text);
+    showToast('📋 Copied to clipboard!');
+  }
+}
+
+// ── RENDER CHARACTER CARD ──
+function renderCharacterCard() {
+  if (!currentUser) return;
+  const level     = Math.max(1, Math.floor(userXP / 100) + 1);
+  const tier      = Math.ceil(level / 10);
+  const character = getCharacterForLevel(level);
+  const traits    = getUnlockedTraits(level, currentUser.id);
+  const levelInTier = ((level - 1) % 10) + 1;
+
+  document.getElementById('char-tier-badge').textContent  = `Tier ${tier} · Level ${level}`;
+  document.getElementById('char-name').textContent        = character.name;
+  document.getElementById('char-archetype').textContent   = character.archetype;
+
+  // Render trait pills
+  const tc = document.getElementById('char-traits');
+  tc.innerHTML = traits.map(t => `<div class="char-trait">${t}</div>`).join('');
+
+  // Show/hide HF key box
+  const hfKey = getHFKey();
+  document.getElementById('hf-key-box').style.display = hfKey ? 'none' : 'block';
+  if (hfKey && document.getElementById('hf-key-input')) {
+    document.getElementById('hf-key-input').value = hfKey;
+  }
+}
+
+// ── CLOSE MODAL ON BACKDROP ──
+document.querySelectorAll('.modal').forEach(m =>
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); })
+);
+
+// ── ENTER KEY SHORTCUTS ──
+document.getElementById('login-password').addEventListener('keydown',  e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('signup-password').addEventListener('keydown', e => { if (e.key === 'Enter') doSignup(); });
+
+// ── INIT — restore session ──
+window.onload = async function () {
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session?.user) await onLogin(session.user);
+  } catch (e) { 
+    console.log('Session check failed:', e);
+    // Make sure auth screen is always visible if session restore fails
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user && !currentUser) {
+      await onLogin(session.user);
+    }
+    if (event === 'SIGNED_OUT') {
+      currentUser = null;
+    }
+  });
+};
+</script>
+</body>
+</html>
