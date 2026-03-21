@@ -5,51 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DTSLO</title>
 
-<!-- ✅ FIXED SUPABASE VERSION -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    margin:0;
-    background:#f5f7fa;
-}
+body { margin:0; background:#f5f7fa; font-family:sans-serif; }
 
 /* NAV */
 .navbar {
-    position: fixed;
-    top:0;
-    left:0;
-    right:0;
-    height:60px;
-    background:#111;
-    color:white;
-    display:flex;
-    align-items:center;
-    padding:0 15px;
-    z-index:2000;
+    position:fixed; top:0; left:0; right:0;
+    height:60px; background:#111; color:white;
+    display:flex; align-items:center; padding:0 15px;
 }
 
-.menu-btn { font-size:22px; cursor:pointer; }
-
-.dropdown {
-    position:absolute;
+/* 🔥 TRENDING */
+#trending-banner {
+    position:fixed;
     top:60px;
     left:0;
-    background:white;
-    width:220px;
-    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+    right:0;
+    background:#ff4757;
+    color:white;
+    text-align:center;
+    padding:10px;
+    font-weight:bold;
     display:none;
-}
-
-.dropdown div {
-    padding:15px;
-    border-bottom:1px solid #eee;
-    cursor:pointer;
+    z-index:1000;
 }
 
 /* PAGES */
-.page { display:none; padding-top:70px; }
+.page { display:none; padding-top:110px; }
 .active { display:block; }
 
 /* BARS */
@@ -58,163 +42,99 @@ body {
     margin:15px;
     padding:15px;
     border-radius:15px;
-    box-shadow:0 5px 15px rgba(0,0,0,0.05);
-    transition: transform 0.2s ease;
 }
 
-.bar.bump { transform: scale(1.03); }
-
 /* STATUS */
-.status { font-weight:bold; margin:10px 0; }
-
+.status { font-weight:bold; }
 .dead { color:#28a745; }
 .busy { color:#ffc107; }
 .packed { color:#dc3545; }
 
-@keyframes pulse {
-    0% {opacity:1;}
-    50% {opacity:0.5;}
-    100% {opacity:1;}
-}
-
-.status.live { animation:pulse 1.5s infinite; }
-
 /* BUTTONS */
-.buttons button {
+button {
     margin:5px;
     padding:10px;
     border:none;
     border-radius:10px;
-    cursor:pointer;
-    transition:transform 0.1s;
 }
-.buttons button:active { transform:scale(0.9); }
 
-/* XP BAR */
+/* XP */
 #xp-bar {
     position:fixed;
     bottom:0;
-    left:0;
     height:6px;
     background:#28a745;
     width:0%;
-    transition:width 0.4s;
-    box-shadow:0 0 10px #28a745;
-}
-
-/* FLOAT XP */
-.xp-float {
-    position:fixed;
-    bottom:20px;
-    left:50%;
-    transform:translateX(-50%);
-    color:#28a745;
-    font-weight:bold;
-    animation:floatUp 1s forwards;
-}
-@keyframes floatUp {
-    0% {opacity:1; transform:translate(-50%,0);}
-    100% {opacity:0; transform:translate(-50%,-40px);}
-}
-
-/* CART */
-#checkout-btn {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    background:#111;
-    color:white;
-    padding:10px 15px;
-    border-radius:20px;
-}
-
-/* PRODUCTS */
-.product-grid {
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
-    gap:10px;
-    padding:10px;
-}
-
-.card {
-    background:white;
-    padding:15px;
-    border-radius:15px;
-    text-align:center;
 }
 </style>
 </head>
 
 <body>
 
-<div class="navbar">
-    <div class="menu-btn" onclick="toggleMenu()">☰</div>
-</div>
+<div class="navbar">☰ DTSLO</div>
 
-<div id="menu" class="dropdown">
-    <div onclick="showPage('line')">Line Check</div>
-    <div onclick="showPage('delivery')">Line & Entry Delivery</div>
-    <div onclick="showPage('food')">Food Recommendations</div>
-    <div onclick="showPage('events')">Concerts & Events</div>
-</div>
+<!-- 🔥 TRENDING -->
+<div id="trending-banner"></div>
 
 <div id="line" class="page active"></div>
-
-<div id="delivery" class="page">
-    <button id="checkout-btn">Cart (<span id="cart-count">0</span>)</button>
-    <div id="product-grid" class="product-grid"></div>
-</div>
-
-<div id="food" class="page"><h2 style="padding:20px;">Food Coming Soon</h2></div>
-<div id="events" class="page"><h2 style="padding:20px;">Events Coming Soon</h2></div>
 
 <div id="xp-bar"></div>
 
 <script>
-/* SUPABASE */
-const SUPABASE_URL = "https://jwgwufggptpdmgcmmqes.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18";
+const supabaseClient = window.supabase.createClient(
+"https://jwgwufggptpdmgcmmqes.supabase.co",
+"YOUR_KEY"
+);
 
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-/* MENU */
-function toggleMenu(){
-    let m=document.getElementById("menu");
-    m.style.display = m.style.display==="block"?"none":"block";
-}
-function showPage(p){
-    document.querySelectorAll(".page").forEach(pg=>pg.classList.remove("active"));
-    document.getElementById(p).classList.add("active");
-}
-
-/* DATA */
 var bars = [
     {name:"Library", reports:[]},
     {name:"Mothers Tavern", reports:[]},
     {name:"Frog & Peach", reports:[]}
 ];
 
-var xp = 0;
+var xp=0;
 
 /* STATUS */
 function getStatus(bar){
     if(bar.reports.length===0) return "No Data";
     let recent = bar.reports.slice(0,5);
-    let counts = {};
+    let counts={};
     recent.forEach(r=>{
         counts[r.status]=(counts[r.status]||0)+1;
     });
     return Object.keys(counts).reduce((a,b)=>counts[a]>counts[b]?a:b);
 }
 
-function getStatusClass(status){
-    if(status==="Dead") return "dead";
-    if(status==="Busy") return "busy";
-    if(status==="Packed") return "packed";
-    return "";
+/* 🔥 TRENDING FUNCTION */
+function updateTrending(){
+    let now = Date.now();
+    let counts = {};
+
+    bars.forEach(bar=>{
+        let recent = bar.reports.filter(r => now - r.time < 1800000);
+        counts[bar.name] = recent.length;
+    });
+
+    let topBar=null, max=0;
+
+    for(let b in counts){
+        if(counts[b]>max){
+            max=counts[b];
+            topBar=b;
+        }
+    }
+
+    let banner=document.getElementById("trending-banner");
+
+    if(max>0){
+        banner.style.display="block";
+        banner.innerText=`🔥 ${topBar} is HOT right now (${max} reports)`;
+    } else {
+        banner.style.display="none";
+    }
 }
 
-/* RENDER BARS */
+/* RENDER */
 function renderBars(){
     let container=document.getElementById("line");
     container.innerHTML="";
@@ -222,110 +142,53 @@ function renderBars(){
     bars.forEach((bar,i)=>{
         let status=getStatus(bar);
         container.innerHTML+=`
-        <div class="bar" id="bar-${i}">
+        <div class="bar">
             <h3>${bar.name}</h3>
-            <div class="status live ${getStatusClass(status)}">${status}</div>
-            <div class="buttons">
-                <button onclick="report(${i},'Dead')">Dead</button>
-                <button onclick="report(${i},'Busy')">Busy</button>
-                <button onclick="report(${i},'Packed')">Packed</button>
-            </div>
+            <div class="status">${status}</div>
+            <button onclick="report(${i},'Dead')">Dead</button>
+            <button onclick="report(${i},'Busy')">Busy</button>
+            <button onclick="report(${i},'Packed')">Packed</button>
         </div>`;
     });
 }
 
 /* REPORT */
 async function report(i,status){
-    try {
-        await supabaseClient.from("reports").insert([
-            {bar: bars[i].name, status: status}
-        ]);
-    } catch(e){
-        console.log("Insert failed:", e);
-    }
+    await supabaseClient.from("reports").insert([
+        {bar: bars[i].name, status: status}
+    ]);
 
     xp+=10;
     document.getElementById("xp-bar").style.width=(xp%100)+"%";
 
-    // XP FLOAT
-    let el=document.createElement("div");
-    el.className="xp-float";
-    el.innerText="+10 XP";
-    document.body.appendChild(el);
-    setTimeout(()=>el.remove(),1000);
-
-    // BUMP ANIMATION
-    let card=document.getElementById("bar-"+i);
-    if(card){
-        card.classList.add("bump");
-        setTimeout(()=>card.classList.remove("bump"),200);
-    }
-
     loadReports();
 }
 
-/* LOAD REPORTS */
+/* LOAD */
 async function loadReports(){
-    try {
-        const {data,error} = await supabaseClient
-            .from("reports")
-            .select("*")
-            .order("created_at",{ascending:false});
+    const {data} = await supabaseClient
+        .from("reports")
+        .select("*")
+        .order("created_at",{ascending:false});
 
-        if(error) throw error;
+    bars.forEach(b=>b.reports=[]);
 
-        bars.forEach(b=>b.reports=[]);
-
-        data.forEach(r=>{
-            let b = bars.find(x=>x.name===r.bar);
-            if(b){
-                b.reports.push({
-                    status:r.status,
-                    time:new Date(r.created_at).getTime()
-                });
-            }
-        });
-
-    } catch(e){
-        console.log("Load failed:", e);
-    }
+    data.forEach(r=>{
+        let b=bars.find(x=>x.name===r.bar);
+        if(b){
+            b.reports.push({
+                status:r.status,
+                time:new Date(r.created_at).getTime()
+            });
+        }
+    });
 
     renderBars();
-}
-
-/* PRODUCTS */
-var products=[
-    {name:"Redbull",price:3.99},
-    {name:"Charger",price:14.99}
-];
-
-var cart={};
-
-function renderProducts(){
-    let grid=document.getElementById("product-grid");
-    grid.innerHTML=""; // ✅ FIXED DUPLICATE BUG
-
-    products.forEach(p=>{
-        grid.innerHTML+=`
-        <div class="card">
-            <h3>${p.name}</h3>
-            <p>$${p.price}</p>
-            <button onclick="addToCart('${p.name}')">Add</button>
-        </div>`;
-    });
-}
-
-function addToCart(name){
-    cart[name]=(cart[name]||0)+1;
-    let total=0;
-    for(let k in cart) total+=cart[k];
-    document.getElementById("cart-count").innerText=total;
+    updateTrending(); // 🔥 HERE IT RUNS
 }
 
 /* INIT */
 window.onload=function(){
-    renderBars();
-    renderProducts();
     loadReports();
     setInterval(loadReports,5000);
 };
