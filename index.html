@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DTSLO</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #13131a;
+  --surface2: #1c1c26;
+  --border: rgba(255,255,255,0.07);
+  --accent: #e8ff47;
+  --accent2: #ff6b35;
+  --text: #f0f0f0;
+  --muted: #666;
+  --dead: #4ade80;
+  --busy: #facc15;
+  --packed: #f87171;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* ─── NAV ─── */
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 58px;
+  background: rgba(10,10,15,0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 14px;
+  z-index: 2000;
+  gap: 6px;
+}
+
+.nav-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-right: auto;
+}
+
+.nav-btn {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  padding: 7px 13px;
+  border-radius: 30px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .2s;
+}
+.nav-btn:hover { color: var(--text); background: var(--surface); }
+.nav-btn.active { color: var(--bg); background: var(--accent); font-weight: 600; }
+
+.nav-xp {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all .2s;
+}
+.nav-xp:hover { background: var(--surface2); }
+
+/* ─── PAGES ─── */
+.page { display: none; padding: 74px 14px 100px; min-height: 100vh; }
+.page.active { display: block; }
+
+/* ─── SECTION TITLE ─── */
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
+/* ─── CARDS / BARS ─── */
+.bar-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 10px;
+  transition: border-color .2s;
+}
+.bar-card:hover { border-color: rgba(255,255,255,0.14); }
+
+.bar-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.bar-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 1px;
+}
+.bar-time { font-size: 12px; color: var(--muted); }
+
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+}
+.status-Dead   { background: rgba(74,222,128,.15); color: var(--dead); }
+.status-Busy   { background: rgba(250,204,21,.15);  color: var(--busy); }
+.status-Packed { background: rgba(248,113,113,.15); color: var(--packed); }
+.status-No-Data { background: var(--surface2); color: var(--muted); }
+
+.report-btns { display: flex; gap: 8px; margin-top: 12px; }
+.report-btn {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 9px 4px;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  transition: all .2s;
+}
+.report-btn:hover { background: rgba(255,255,255,0.08); }
+.btn-dead:hover   { border-color: var(--dead);   color: var(--dead); }
+.btn-busy:hover   { border-color: var(--busy);   color: var(--busy); }
+.btn-packed:hover { border-color: var(--packed); color: var(--packed); }
+
+/* Rating */
+.star-row { display: flex; gap: 4px; margin-top: 10px; }
+.star {
+  font-size: 20px; cursor: pointer;
+  color: var(--muted); transition: color .15s;
+}
+.star.on { color: var(--accent); }
+
+/* Activity mini-bars */
+.activity-row {
+  display: flex; gap: 3px; margin-top: 12px; align-items: flex-end; height: 30px;
+}
+.activity-bar {
+  flex: 1; border-radius: 3px; min-height: 4px;
+  background: var(--surface2);
+  transition: all .3s;
+}
+
+/* ─── DELIVERY ─── */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.product-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 12px;
+  text-align: center;
+  transition: all .2s;
+}
+.product-card:hover { border-color: rgba(255,255,255,0.14); transform: translateY(-2px); }
+.product-emoji { font-size: 32px; margin-bottom: 6px; }
+.product-name  { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+.product-price { color: var(--accent); font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+.add-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700; font-size: 13px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.add-btn:hover { transform: scale(1.05); }
+
+.cart-fab {
+  position: fixed;
+  bottom: 80px; right: 14px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 14px 22px;
+  border-radius: 30px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700; font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 8px 30px rgba(232,255,71,0.3);
+  transition: all .2s;
+  z-index: 1500;
+}
+.cart-fab:hover { transform: scale(1.05); box-shadow: 0 12px 40px rgba(232,255,71,0.4); }
+
+/* ─── LOST ─── */
+.lost-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 10px;
+  transition: border-color .2s;
+}
+.lost-card.resolved { opacity: .5; border-style: dashed; }
+.lost-tag {
+  display: inline-block;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .5px;
+  margin-bottom: 8px;
+}
+.tag-lost     { background: rgba(248,113,113,.15); color: var(--packed); }
+.tag-found    { background: rgba(74,222,128,.15);  color: var(--dead); }
+.tag-resolved { background: var(--surface2); color: var(--muted); }
+.lost-photo { width:100%; max-height:200px; object-fit:cover; border-radius:10px; margin:10px 0; }
+.lost-actions { display:flex; gap:8px; margin-top:12px; }
+.lost-action-btn {
+  flex:1; background:var(--surface2); border:1px solid var(--border);
+  color:var(--text); padding:8px 6px; border-radius:10px;
+  font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500;
+  cursor:pointer; transition:all .2s; text-align:center;
+}
+.lost-action-btn:hover { background:rgba(255,255,255,0.08); }
+.lost-action-btn.contact { border-color:var(--accent); color:var(--accent); }
+.lost-action-btn.resolve { border-color:var(--dead); color:var(--dead); }
+.search-bar { display:flex; gap:8px; margin-bottom:12px; }
+.search-input {
+  flex:1; background:var(--surface); border:1px solid var(--border);
+  color:var(--text); padding:10px 14px; border-radius:10px;
+  font-family:'DM Sans',sans-serif; font-size:14px; outline:none; transition:border-color .2s;
+}
+.search-input:focus { border-color:rgba(255,255,255,0.2); }
+.search-input::placeholder { color:var(--muted); }
+.expiry-bar { height:3px; border-radius:2px; background:var(--surface2); margin-top:10px; overflow:hidden; }
+.expiry-fill { height:100%; border-radius:2px; }
+.photo-preview { width:100%; max-height:160px; object-fit:cover; border-radius:10px; margin-top:8px; display:none; }
+
+/* ─── LEADERBOARD ─── */
+.lb-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 8px;
+}
+.lb-rank {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; width: 32px; text-align: center;
+  color: var(--muted);
+}
+.lb-rank.gold   { color: #f59e0b; }
+.lb-rank.silver { color: #94a3b8; }
+.lb-rank.bronze { color: #a16207; }
+.lb-name { flex: 1; font-weight: 600; }
+.lb-xp {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px; color: var(--accent);
+}
+
+/* ─── PROFILE ─── */
+.profile-hero {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 14px;
+}
+.avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 30px; color: var(--bg);
+  margin: 0 auto 12px;
+}
+.xp-bar-bg {
+  background: var(--surface2);
+  border-radius: 10px; height: 8px;
+  margin: 10px 0;
+  overflow: hidden;
+}
+.xp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 10px;
+  transition: width .5s ease;
+}
+.badges-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
+.badge {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px; font-weight: 600;
+}
+.badge.earned { border-color: var(--accent); color: var(--accent); }
+
+/* ─── BOTTOM NAV ─── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 64px;
+  background: rgba(10,10,15,0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-around;
+  z-index: 2000;
+}
+.bnav-btn {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3px; background: none; border: none;
+  color: var(--muted); cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px; font-weight: 500;
+  padding: 6px 16px;
+  border-radius: 12px;
+  transition: all .2s;
+}
+.bnav-btn .icon { font-size: 20px; }
+.bnav-btn:hover { color: var(--text); }
+.bnav-btn.active { color: var(--accent); }
+
+/* ─── MODALS ─── */
+.modal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  display: none; align-items: flex-end; justify-content: center;
+  z-index: 4000;
+}
+.modal.open { display: flex; }
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 500px;
+  padding: 24px;
+  animation: slideUp .25s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(60px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.modal-handle {
+  width: 36px; height: 4px;
+  background: var(--border);
+  border-radius: 4px;
+  margin: 0 auto 18px;
+}
+.modal-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; letter-spacing: 1px;
+  margin-bottom: 16px;
+}
+
+/* ─── FORM INPUTS ─── */
+.input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  margin-bottom: 10px;
+  transition: border-color .2s;
+  outline: none;
+}
+.input:focus { border-color: rgba(255,255,255,0.2); }
+.input::placeholder { color: var(--muted); }
+
+select.input { cursor: pointer; }
+textarea.input { resize: vertical; min-height: 80px; }
+
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700; font-size: 15px;
+  cursor: pointer;
+  transition: all .2s;
+  margin-top: 4px;
+}
+.btn-primary:hover { transform: scale(1.02); }
+
+.btn-ghost {
+  width: 100%;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: all .2s;
+}
+.btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+/* Cart item row */
+.cart-item-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.cart-item-controls { display: flex; align-items: center; gap: 10px; }
+.qty-btn {
+  width: 28px; height: 28px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text); border-radius: 50%;
+  font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Admin table */
+.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-table th {
+  text-align: left; padding: 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted); font-weight: 500;
+}
+.admin-table td { padding: 10px; border-bottom: 1px solid var(--border); }
+.order-status {
+  display: inline-block;
+  padding: 3px 8px; border-radius: 10px;
+  font-size: 11px; font-weight: 700;
+}
+.order-pending  { background: rgba(250,204,21,.15); color: var(--busy); }
+.order-complete { background: rgba(74,222,128,.15);  color: var(--dead); }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 12px 22px; border-radius: 30px;
+  font-size: 14px; font-weight: 500;
+  opacity: 0; pointer-events: none;
+  transition: all .3s; z-index: 5000;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Pulse dot */
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--dead);
+  display: inline-block; margin-right: 5px;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .5; transform: scale(1.4); }
+}
+
+/* Filter chips */
+.filter-chips { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.chip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .2s;
+}
+.chip.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+/* Auth tabs */
+.auth-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+.auth-tab {
+  flex: 1; padding: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all .2s;
+}
+.auth-tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+/* Stat grid */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--accent); }
+
+/* Shimmer skeleton */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px; height: 80px;
+  margin-bottom: 10px;
+}
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV (desktop style) -->
+<div class="navbar" id="topnav" style="display:none">
+  <span class="nav-logo">DTSLO</span>
+  <button class="nav-btn" onclick="showPage('line')">Lines</button>
+  <button class="nav-btn" onclick="showPage('delivery')">Delivery</button>
+  <button class="nav-btn" onclick="showPage('lost')">Lost &amp; Found</button>
+  <button class="nav-btn" onclick="showPage('leaderboard')">Leaderboard</button>
+  <button class="nav-btn" onclick="showPage('admin')">Admin</button>
+  <div class="nav-xp" onclick="showPage('profile')">⚡ <span id="xp-top">0</span> XP</div>
+</div>
+
+<!-- PAGES -->
+<div id="line"        class="page active"></div>
+<div id="delivery"    class="page"></div>
+<div id="lost"        class="page"></div>
+<div id="leaderboard" class="page"></div>
+<div id="profile"     class="page"></div>
+<div id="admin"       class="page"></div>
+
+<!-- CART FAB -->
+<button class="cart-fab" id="cart-fab" onclick="openCheckout()" style="display:none">
+  🛒 Cart · <span id="cart-count">0</span>
+</button>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="bnav-btn active" onclick="showPage('line')"        id="bnav-line">        <span class="icon">📍</span>Lines</button>
+  <button class="bnav-btn"        onclick="showPage('delivery')"    id="bnav-delivery">    <span class="icon">🛍</span>Delivery</button>
+  <button class="bnav-btn"        onclick="showPage('lost')"        id="bnav-lost">        <span class="icon">🔎</span>L&amp;F</button>
+  <button class="bnav-btn"        onclick="showPage('leaderboard')" id="bnav-leaderboard"> <span class="icon">🏆</span>Ranks</button>
+  <button class="bnav-btn"        onclick="showPage('profile')"     id="bnav-profile">     <span class="icon">👤</span>You</button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════ MODALS ═══════ -->
+
+<!-- AUTH MODAL -->
+<div class="modal open" id="auth-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Welcome to DTSLO</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuth('login')"    id="tab-login">Login</button>
+      <button class="auth-tab"        onclick="switchAuth('register')" id="tab-register">Sign Up</button>
+    </div>
+    <div id="auth-login-form">
+      <input class="input" id="auth-email"    placeholder="Email" type="email">
+      <input class="input" id="auth-password" placeholder="Password" type="password">
+      <button class="btn-primary" onclick="login()">Login</button>
+    </div>
+    <div id="auth-register-form" style="display:none">
+      <input class="input" id="reg-name"     placeholder="Display Name">
+      <input class="input" id="reg-email"    placeholder="Email" type="email">
+      <input class="input" id="reg-password" placeholder="Password (6+ chars)" type="password">
+      <button class="btn-primary" onclick="register()">Create Account</button>
+    </div>
+    <button class="btn-ghost" onclick="guestMode()">Continue as Guest</button>
+  </div>
+</div>
+
+<!-- CHECKOUT MODAL -->
+<div class="modal" id="checkout-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Your Order</div>
+    <div id="order-summary"></div>
+    <div style="display:flex;justify-content:space-between;padding:12px 0;font-weight:700;font-size:16px;">
+      <span>Total</span>
+      <span id="order-total" style="color:var(--accent)"></span>
+    </div>
+    <input class="input" id="order-name"  placeholder="Name">
+    <input class="input" id="order-phone" placeholder="Phone / Pickup info">
+    <button class="btn-primary" onclick="placeOrder()">Place Order 🎉</button>
+    <button class="btn-ghost"   onclick="closeModal('checkout-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- LOST MODAL -->
+<div class="modal" id="lost-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Post an Item</div>
+    <select class="input" id="lf-type">
+      <option value="lost">🔴 Lost</option>
+      <option value="found">🟢 Found</option>
+    </select>
+    <input    class="input" id="lf-title"       placeholder="Item (e.g. Black iPhone 14)">
+    <input    class="input" 
