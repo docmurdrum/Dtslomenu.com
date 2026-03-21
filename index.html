@@ -29,10 +29,7 @@ body {
     z-index:2000;
 }
 
-.menu-btn {
-    font-size:22px;
-    cursor:pointer;
-}
+.menu-btn { font-size:22px; cursor:pointer; }
 
 .dropdown {
     position:absolute;
@@ -51,13 +48,8 @@ body {
 }
 
 /* PAGES */
-.page {
-    display:none;
-    padding-top:70px;
-}
-.active {
-    display:block;
-}
+.page { display:none; padding-top:70px; }
+.active { display:block; }
 
 /* BARS */
 .bar {
@@ -69,31 +61,22 @@ body {
     transition: transform 0.2s ease;
 }
 
-.bar.bump {
-    transform: scale(1.03);
-}
+.bar.bump { transform: scale(1.03); }
 
 /* STATUS */
-.status {
-    font-weight:bold;
-    margin:10px 0;
-}
+.status { font-weight:bold; margin:10px 0; }
 
-/* COLORS */
 .dead { color:#28a745; }
 .busy { color:#ffc107; }
 .packed { color:#dc3545; }
 
-/* PULSE */
 @keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
+    0% {opacity:1;}
+    50% {opacity:0.5;}
+    100% {opacity:1;}
 }
 
-.status.live {
-    animation: pulse 1.5s infinite;
-}
+.status.live { animation:pulse 1.5s infinite; }
 
 /* BUTTONS */
 .buttons button {
@@ -102,14 +85,11 @@ body {
     border:none;
     border-radius:10px;
     cursor:pointer;
-    transition: transform 0.1s ease;
+    transition:transform 0.1s;
 }
+.buttons button:active { transform:scale(0.9); }
 
-.buttons button:active {
-    transform: scale(0.9);
-}
-
-/* XP BAR */
+/* XP */
 #xp-bar {
     position:fixed;
     bottom:0;
@@ -117,7 +97,7 @@ body {
     height:6px;
     background:#28a745;
     width:0%;
-    transition: width 0.4s ease;
+    transition:width 0.4s;
     box-shadow:0 0 10px #28a745;
 }
 
@@ -129,12 +109,11 @@ body {
     transform:translateX(-50%);
     color:#28a745;
     font-weight:bold;
-    animation: floatUp 1s ease forwards;
+    animation:floatUp 1s forwards;
 }
-
 @keyframes floatUp {
-    0% { opacity:1; transform:translate(-50%,0); }
-    100% { opacity:0; transform:translate(-50%,-40px); }
+    0% {opacity:1; transform:translate(-50%,0);}
+    100% {opacity:0; transform:translate(-50%,-40px);}
 }
 
 /* CART */
@@ -191,9 +170,12 @@ body {
 <div id="xp-bar"></div>
 
 <script>
+/* SUPABASE FIXED */
 const SUPABASE_URL = "https://jwgwufggptpdmgcmmqes.supabase.co";
-const SUPABASE_KEY = "YOUR_KEY_HERE";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18";
+
+const { createClient } = supabase;
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* MENU */
 function toggleMenu(){
@@ -240,7 +222,7 @@ function renderBars(){
     setTimeout(()=>{
         container.innerHTML="";
         bars.forEach((bar,i)=>{
-            let status = getStatus(bar);
+            let status=getStatus(bar);
             container.innerHTML+=`
             <div class="bar" id="bar-${i}">
                 <h3>${bar.name}</h3>
@@ -257,9 +239,13 @@ function renderBars(){
 
 /* REPORT */
 async function report(i,status){
-    await supabaseClient.from("reports").insert([
-        {bar: bars[i].name, status: status}
-    ]);
+    try {
+        await supabaseClient.from("reports").insert([
+            {bar: bars[i].name, status: status}
+        ]);
+    } catch(e){
+        console.log("Insert failed:", e);
+    }
 
     xp+=10;
     document.getElementById("xp-bar").style.width=(xp%100)+"%";
@@ -271,7 +257,7 @@ async function report(i,status){
     document.body.appendChild(el);
     setTimeout(()=>el.remove(),1000);
 
-    // BUMP CARD
+    // BUMP
     let card=document.getElementById("bar-"+i);
     if(card){
         card.classList.add("bump");
@@ -283,26 +269,31 @@ async function report(i,status){
 
 /* LOAD */
 async function loadReports(){
-    const {data,error} = await supabaseClient
-        .from("reports")
-        .select("*")
-        .order("created_at",{ascending:false});
+    try {
+        const {data,error} = await supabaseClient
+            .from("reports")
+            .select("*")
+            .order("created_at",{ascending:false});
 
-    if(error){console.log(error);return;}
+        if(error) throw error;
 
-    bars.forEach(b=>b.reports=[]);
+        bars.forEach(b=>b.reports=[]);
 
-    data.forEach(r=>{
-        let b = bars.find(x=>x.name===r.bar);
-        if(b){
-            b.reports.push({
-                status:r.status,
-                time:new Date(r.created_at).getTime()
-            });
-        }
-    });
+        data.forEach(r=>{
+            let b = bars.find(x=>x.name===r.bar);
+            if(b){
+                b.reports.push({
+                    status:r.status,
+                    time:new Date(r.created_at).getTime()
+                });
+            }
+        });
 
-    renderBars();
+    } catch(e){
+        console.log("Load failed:", e);
+    }
+
+    renderBars(); // ALWAYS render
 }
 
 /* PRODUCTS */
