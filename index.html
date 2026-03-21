@@ -17,14 +17,11 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
     padding:0 15px; z-index:2000;
 }
 
-.menu-btn { font-size:22px; cursor:pointer; }
-
+.menu-btn { font-size:22px; }
 #player-info { margin-left:10px; font-size:14px; }
-
 #leaderboard { margin-left:auto; font-size:12px; }
 
-.page { display:none; padding-top:80px; }
-.active { display:block; }
+.page { padding-top:80px; }
 
 .bar {
     background:white; margin:15px; padding:15px;
@@ -33,13 +30,17 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
 }
 
 .status { font-weight:bold; margin:10px 0; }
-.dead { color:#28a745; }
-.busy { color:#ffc107; }
-.packed { color:#dc3545; }
 
 .buttons button {
-    margin:5px; padding:10px;
-    border:none; border-radius:10px;
+    margin:4px;
+    padding:8px 10px;
+    border:none;
+    border-radius:10px;
+    font-size:12px;
+}
+
+.confirm-btn {
+    background:#eee;
 }
 
 #xp-bar {
@@ -70,17 +71,16 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
 <body>
 
 <div class="navbar">
-    <div class="menu-btn" onclick="toggleMenu()">☰</div>
+    <div class="menu-btn">☰</div>
     <div id="player-info">Lv 1 • Rookie</div>
     <div id="leaderboard">🏆 0 reports</div>
 </div>
 
-<div id="line" class="page active"></div>
-
+<div id="line" class="page"></div>
 <div id="xp-bar"></div>
 
 <script>
-/* SUPABASE */
+/* 📍 INSERT KEY (Line ~65) */
 const supabaseClient = window.supabase.createClient(
 "https://jwgwufggptpdmgcmmqes.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18"
@@ -95,11 +95,12 @@ var bars = [
 
 var xp = 0;
 var level = 1;
-var streak = 0;
-var lastReportTime = 0;
-
-/* 🏆 LEADERBOARD */
 var totalReports = parseInt(localStorage.getItem("reports")) || 0;
+
+/* CHECK-IN */
+var lastCheckInDate = localStorage.getItem("checkinDate") || "";
+var today = new Date().toDateString();
+var firstCheckInDone = (lastCheckInDate === today);
 
 /* TITLE */
 function getTitle(){
@@ -110,18 +111,22 @@ function getTitle(){
 }
 
 function updatePlayerUI(){
-    let el = document.getElementById("player-info");
-    if(el){
-        el.innerText = `Lv ${level} • ${getTitle()}`;
-    }
+    document.getElementById("player-info").innerText =
+        `Lv ${level} • ${getTitle()}`;
 }
 
-/* 🏆 UPDATE LEADERBOARD */
 function updateLeaderboardUI(){
-    let el = document.getElementById("leaderboard");
-    if(el){
-        el.innerText = `🏆 ${totalReports} reports`;
-    }
+    document.getElementById("leaderboard").innerText =
+        `🏆 ${totalReports} reports`;
+}
+
+/* XP FLOAT */
+function showXP(text){
+    let el=document.createElement("div");
+    el.className="xp-float";
+    el.innerText=text;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),1000);
 }
 
 /* LEVEL */
@@ -130,41 +135,55 @@ function checkLevelUp(){
     if(xp >= required){
         level++;
         xp -= required;
-        showLevelUp();
+        showXP("🎉 LEVEL UP!");
     }
 }
 
-function showLevelUp(){
-    let el = document.createElement("div");
-    el.innerText = "🎉 LEVEL UP!";
-    Object.assign(el.style,{
-        position:"fixed",top:"40%",left:"50%",
-        transform:"translate(-50%,-50%)",
-        background:"#111",color:"white",
-        padding:"20px",borderRadius:"15px",
-        zIndex:"3000"
-    });
-    document.body.appendChild(el);
-    setTimeout(()=>el.remove(),1500);
+/* 📍 CHECK-IN */
+function checkIn(){
+    let bonus = firstCheckInDone ? 15 : 25;
+    xp += bonus;
+
+    if(!firstCheckInDone){
+        firstCheckInDone = true;
+        localStorage.setItem("checkinDate", today);
+    }
+
+    showXP(`+${bonus} XP 📍`);
+    updateBar();
 }
 
-/* STREAK */
-function updateStreak(){
-    let now = Date.now();
-    if(now - lastReportTime < 60000){
-        streak++;
-    } else {
-        streak = 1;
-    }
-    lastReportTime = now;
+/* ✅ CONFIRM */
+function confirmStatus(status){
+    xp += 5;
+    showXP(`+5 XP ✔️`);
+    updateBar();
+}
 
-    if(streak > 1){
-        let el = document.createElement("div");
-        el.className="xp-float";
-        el.innerText=`🔥 ${streak} streak`;
-        document.body.appendChild(el);
-        setTimeout(()=>el.remove(),1000);
-    }
+/* REPORT */
+async function report(i,status){
+    try {
+        await supabaseClient.from("reports").insert([
+            {bar: bars[i].name, status: status}
+        ]);
+    } catch(e){ console.log(e); }
+
+    xp += 10;
+
+    totalReports++;
+    localStorage.setItem("reports", totalReports);
+    updateLeaderboardUI();
+
+    showXP("+10 XP");
+
+    loadReports();
+}
+
+/* UPDATE UI */
+function updateBar(){
+    document.getElementById("xp-bar").style.width = (xp % 100) + "%";
+    checkLevelUp();
+    updatePlayerUI();
 }
 
 /* STATUS */
@@ -178,13 +197,6 @@ function getStatus(bar){
     return Object.keys(counts).reduce((a,b)=>counts[a]>counts[b]?a:b);
 }
 
-function getStatusClass(status){
-    if(status==="Dead") return "dead";
-    if(status==="Busy") return "busy";
-    if(status==="Packed") return "packed";
-    return "";
-}
-
 /* RENDER */
 function renderBars(){
     let container=document.getElementById("line");
@@ -192,74 +204,46 @@ function renderBars(){
 
     bars.forEach((bar,i)=>{
         let status=getStatus(bar);
+
         container.innerHTML+=`
         <div class="bar">
             <h3>${bar.name}</h3>
-            <div class="status ${getStatusClass(status)}">${status}</div>
+            <div class="status">${status}</div>
+
             <div class="buttons">
                 <button onclick="report(${i},'Dead')">Dead</button>
                 <button onclick="report(${i},'Busy')">Busy</button>
                 <button onclick="report(${i},'Packed')">Packed</button>
+                <button onclick="checkIn()">📍 I'm Here</button>
+            </div>
+
+            <div class="buttons">
+                <button class="confirm-btn" onclick="confirmStatus('Dead')">Still Dead</button>
+                <button class="confirm-btn" onclick="confirmStatus('Busy')">Still Busy</button>
+                <button class="confirm-btn" onclick="confirmStatus('Packed')">Still Packed</button>
             </div>
         </div>`;
     });
 }
 
-/* REPORT */
-async function report(i,status){
-    try {
-        await supabaseClient.from("reports").insert([
-            {bar: bars[i].name, status: status}
-        ]);
-    } catch(e){ console.log(e); }
-
-    xp += 10;
-
-    // 🏆 leaderboard update
-    totalReports++;
-    localStorage.setItem("reports", totalReports);
-    updateLeaderboardUI();
-
-    document.getElementById("xp-bar").style.width = (xp % 100) + "%";
-
-    let el=document.createElement("div");
-    el.className="xp-float";
-    el.innerText="+10 XP";
-    document.body.appendChild(el);
-    setTimeout(()=>el.remove(),1000);
-
-    updateStreak();
-    checkLevelUp();
-    updatePlayerUI();
-
-    loadReports();
-}
-
 /* LOAD */
 async function loadReports(){
     try {
-        const {data,error} = await supabaseClient
+        const {data} = await supabaseClient
             .from("reports")
             .select("*")
             .order("created_at",{ascending:false});
-
-        if(error) throw error;
 
         bars.forEach(b=>b.reports=[]);
 
         data.forEach(r=>{
             let b = bars.find(x=>x.name===r.bar);
             if(b){
-                b.reports.push({
-                    status:r.status,
-                    time:new Date(r.created_at).getTime()
-                });
+                b.reports.push({status:r.status});
             }
         });
 
-    } catch(e){
-        console.log(e);
-    }
+    } catch(e){ console.log(e); }
 
     renderBars();
 }
@@ -268,8 +252,7 @@ async function loadReports(){
 window.onload=function(){
     renderBars();
     loadReports();
-    updateLeaderboardUI(); // ✅ important
-    setInterval(loadReports,5000);
+    updateLeaderboardUI();
 };
 </script>
 
