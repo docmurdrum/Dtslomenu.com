@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DTSLO</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<!-- ✅ FIXED SUPABASE VERSION -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 body {
@@ -89,7 +90,7 @@ body {
 }
 .buttons button:active { transform:scale(0.9); }
 
-/* XP */
+/* XP BAR */
 #xp-bar {
     position:fixed;
     bottom:0;
@@ -170,12 +171,11 @@ body {
 <div id="xp-bar"></div>
 
 <script>
-/* SUPABASE FIXED */
+/* SUPABASE */
 const SUPABASE_URL = "https://jwgwufggptpdmgcmmqes.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18";
 
-const { createClient } = supabase;
-const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* MENU */
 function toggleMenu(){
@@ -214,27 +214,24 @@ function getStatusClass(status){
     return "";
 }
 
-/* RENDER */
+/* RENDER BARS */
 function renderBars(){
     let container=document.getElementById("line");
-    container.innerHTML="<p style='padding:20px;'>Loading live data...</p>";
+    container.innerHTML="";
 
-    setTimeout(()=>{
-        container.innerHTML="";
-        bars.forEach((bar,i)=>{
-            let status=getStatus(bar);
-            container.innerHTML+=`
-            <div class="bar" id="bar-${i}">
-                <h3>${bar.name}</h3>
-                <div class="status live ${getStatusClass(status)}">${status}</div>
-                <div class="buttons">
-                    <button onclick="report(${i},'Dead')">Dead</button>
-                    <button onclick="report(${i},'Busy')">Busy</button>
-                    <button onclick="report(${i},'Packed')">Packed</button>
-                </div>
-            </div>`;
-        });
-    },200);
+    bars.forEach((bar,i)=>{
+        let status=getStatus(bar);
+        container.innerHTML+=`
+        <div class="bar" id="bar-${i}">
+            <h3>${bar.name}</h3>
+            <div class="status live ${getStatusClass(status)}">${status}</div>
+            <div class="buttons">
+                <button onclick="report(${i},'Dead')">Dead</button>
+                <button onclick="report(${i},'Busy')">Busy</button>
+                <button onclick="report(${i},'Packed')">Packed</button>
+            </div>
+        </div>`;
+    });
 }
 
 /* REPORT */
@@ -257,7 +254,7 @@ async function report(i,status){
     document.body.appendChild(el);
     setTimeout(()=>el.remove(),1000);
 
-    // BUMP
+    // BUMP ANIMATION
     let card=document.getElementById("bar-"+i);
     if(card){
         card.classList.add("bump");
@@ -267,7 +264,7 @@ async function report(i,status){
     loadReports();
 }
 
-/* LOAD */
+/* LOAD REPORTS */
 async function loadReports(){
     try {
         const {data,error} = await supabaseClient
@@ -293,7 +290,7 @@ async function loadReports(){
         console.log("Load failed:", e);
     }
 
-    renderBars(); // ALWAYS render
+    renderBars();
 }
 
 /* PRODUCTS */
@@ -306,6 +303,8 @@ var cart={};
 
 function renderProducts(){
     let grid=document.getElementById("product-grid");
+    grid.innerHTML=""; // ✅ FIXED DUPLICATE BUG
+
     products.forEach(p=>{
         grid.innerHTML+=`
         <div class="card">
@@ -325,8 +324,8 @@ function addToCart(name){
 
 /* INIT */
 window.onload=function(){
-    renderProducts();
     renderBars();
+    renderProducts();
     loadReports();
     setInterval(loadReports,5000);
 };
