@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DTSLO</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
@@ -355,8 +354,9 @@ body {
   backdrop-filter: blur(8px);
   display: none; align-items: flex-end; justify-content: center;
   z-index: 4000;
+  pointer-events: none;
 }
-.modal.open { display: flex; }
+.modal.open { display: flex; pointer-events: all; }
 .modal-box {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -608,7 +608,7 @@ textarea.input { resize: vertical; min-height: 80px; }
       <input class="input" id="reg-password" placeholder="Password (6+ chars)" type="password">
       <button class="btn-primary" onclick="register()">Create Account</button>
     </div>
-    <button class="btn-ghost" onclick="guestMode()">Continue as Guest</button>
+    <button class="btn-ghost" onclick="var m=document.getElementById('auth-modal');m.classList.remove('open');m.style.display='none';">Continue as Guest</button>
   </div>
 </div>
 
@@ -630,5 +630,4 @@ textarea.input { resize: vertical; min-height: 80px; }
 </div>
 
 <!-- LOST MODAL -->
-<div class="modal" id="lost-modal">
-  <div class="modal-box">
+<div class
