@@ -14,11 +14,11 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto; margin:0;
 .navbar {
     position:fixed; top:0; left:0; right:0;
     height:60px; background:#111; color:white;
-    display:flex; align-items:center; padding:0 15px;
+    display:flex; align-items:center; padding:0 10px;
     z-index:2000;
 }
 .navbar button {
-    margin-right:10px;
+    margin-right:8px;
     background:#333;
     color:white;
     border:none;
@@ -26,41 +26,17 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto; margin:0;
     border-radius:8px;
 }
 
-#player-info { margin-left:10px; font-size:14px; }
-#leaderboard { margin-left:auto; font-size:12px; }
-
 /* PAGES */
 .page { display:none; padding-top:80px; }
 .active { display:block; }
 
-/* BARS */
+/* CARDS */
 .bar {
-    background:white; margin:15px; padding:15px;
-    border-radius:15px;
-    box-shadow:0 5px 15px rgba(0,0,0,0.05);
-}
-.status { font-weight:bold; margin:10px 0; }
-
-.buttons button {
-    margin:4px; padding:8px;
-    border:none; border-radius:10px;
-}
-.confirm-btn { background:#eee; }
-
-/* XP */
-#xp-bar {
-    position:fixed; bottom:0; left:0;
-    height:6px; background:#28a745;
-    width:0%; transition:width 0.3s;
-}
-
-/* FEED */
-.feed-card {
     background:white;
     margin:10px;
-    padding:10px;
-    border-radius:10px;
-    font-size:13px;
+    padding:12px;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.05);
 }
 
 /* DELIVERY */
@@ -87,14 +63,15 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto; margin:0;
     border-radius:20px;
 }
 
-/* MODAL */
-#checkout-modal {
+/* MODALS */
+.modal {
     position:fixed;
     top:0; left:0; right:0; bottom:0;
     background:rgba(0,0,0,0.5);
     display:none;
     align-items:center;
     justify-content:center;
+    z-index:3000;
 }
 .modal-box {
     background:white;
@@ -108,16 +85,15 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto; margin:0;
 
 <body>
 
+<!-- NAV -->
 <div class="navbar">
     <button onclick="showPage('line')">Lines</button>
     <button onclick="showPage('delivery')">Delivery</button>
-    <div id="player-info">Lv 1</div>
-    <div id="leaderboard">🏆 0</div>
+    <button onclick="showPage('lost')">Lost & Found</button>
 </div>
 
 <!-- LINE PAGE -->
 <div id="line" class="page active">
-    <div id="activity-feed"></div>
     <div id="bars"></div>
 </div>
 
@@ -129,24 +105,53 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto; margin:0;
     <div id="product-grid" class="product-grid"></div>
 </div>
 
-<!-- MODAL -->
-<div id="checkout-modal">
+<!-- LOST PAGE -->
+<div id="lost" class="page">
+
+    <button onclick="openLostModal()" style="margin:10px;padding:10px;background:#111;color:white;border-radius:10px;">
+        + Post Item
+    </button>
+
+    <div id="lost-feed"></div>
+
+</div>
+
+<!-- CHECKOUT MODAL -->
+<div id="checkout-modal" class="modal">
     <div class="modal-box">
         <h3>Checkout</h3>
         <div id="order-summary"></div>
 
-        <input id="name" placeholder="Name" style="width:100%;margin:8px 0;padding:10px;">
-        <input id="phone" placeholder="Phone" style="width:100%;margin:8px 0;padding:10px;">
+        <input id="name" placeholder="Name" style="width:100%;margin:6px 0;padding:10px;">
+        <input id="phone" placeholder="Phone" style="width:100%;margin:6px 0;padding:10px;">
 
         <button onclick="placeOrder()" style="width:100%;padding:10px;">Place Order</button>
         <button onclick="closeCheckout()" style="width:100%;margin-top:5px;">Cancel</button>
     </div>
 </div>
 
-<div id="xp-bar"></div>
+<!-- LOST MODAL -->
+<div id="lost-modal" class="modal">
+    <div class="modal-box">
+        <h3>Post Item</h3>
+
+        <select id="lf-type" style="width:100%;margin:5px 0;padding:10px;">
+            <option value="lost">Lost</option>
+            <option value="found">Found</option>
+        </select>
+
+        <input id="lf-title" placeholder="Item" style="width:100%;margin:5px 0;padding:10px;">
+        <input id="lf-location" placeholder="Location" style="width:100%;margin:5px 0;padding:10px;">
+        <input id="lf-contact" placeholder="Contact" style="width:100%;margin:5px 0;padding:10px;">
+        <textarea id="lf-description" placeholder="Details" style="width:100%;margin:5px 0;padding:10px;"></textarea>
+
+        <button onclick="submitLostItem()" style="width:100%;padding:10px;">Submit</button>
+        <button onclick="closeLostModal()" style="width:100%;margin-top:5px;">Cancel</button>
+    </div>
+</div>
 
 <script>
-/* 🔑 INSERT KEY HERE (LINE ~140) */
+/* 🔑 PUT YOUR KEY HERE (LINE ~110) */
 const supabaseClient = window.supabase.createClient(
 "https://jwgwufggptpdmgcmmqes.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18"
@@ -158,75 +163,34 @@ function showPage(p){
     document.getElementById(p).classList.add("active");
 }
 
-/* DATA */
+/* BARS */
 var bars = [
     {name:"Library", reports:[]},
     {name:"Mothers Tavern", reports:[]},
     {name:"Frog & Peach", reports:[]}
 ];
 
+/* PRODUCTS */
 var products = [
     {name:"Redbull",price:3.99},
     {name:"Water",price:1.99},
     {name:"Charger",price:14.99}
 ];
 
-/* USER */
-var xp=0;
-var totalReports = parseInt(localStorage.getItem("reports"))||0;
-var myBarReports = JSON.parse(localStorage.getItem("myBarReports"))||{};
+/* STATE */
 var cart = {};
-var activityFeed=[];
+var xp = 0;
 
-/* HELPERS */
+/* TIME */
 function timeAgo(t){
     let s=Math.floor((Date.now()-t)/1000);
-    if(s<60) return s+" sec ago";
+    if(s<60) return s+"s ago";
     let m=Math.floor(s/60);
-    if(m<60) return m+" min ago";
-    return Math.floor(m/60)+" hr ago";
+    if(m<60) return m+"m ago";
+    return Math.floor(m/60)+"h ago";
 }
 
-function showXP(text){
-    let el=document.createElement("div");
-    el.innerText=text;
-    el.style.position="fixed";
-    el.style.bottom="40px";
-    el.style.left="50%";
-    el.style.transform="translateX(-50%)";
-    el.style.color="green";
-    document.body.appendChild(el);
-    setTimeout(()=>el.remove(),1000);
-}
-
-function addActivity(text){
-    activityFeed.unshift({text:text,time:Date.now()});
-    if(activityFeed.length>20) activityFeed.pop();
-    renderFeed();
-}
-
-/* FEED */
-function renderFeed(){
-    let f=document.getElementById("activity-feed");
-    f.innerHTML="";
-    activityFeed.forEach(a=>{
-        f.innerHTML+=`
-        <div class="feed-card">
-            ${a.text}
-            <div style="font-size:11px;color:#777;">${timeAgo(a.time)}</div>
-        </div>`;
-    });
-}
-
-/* STATUS */
-function getStatus(bar){
-    if(bar.reports.length===0) return "No Data";
-    let c={};
-    bar.reports.slice(0,5).forEach(r=>c[r.status]=(c[r.status]||0)+1);
-    return Object.keys(c).reduce((a,b)=>c[a]>c[b]?a:b);
-}
-
-/* RENDER BARS */
+/* BARS */
 function renderBars(){
     let c=document.getElementById("bars");
     c.innerHTML="";
@@ -234,49 +198,17 @@ function renderBars(){
         c.innerHTML+=`
         <div class="bar">
             <h3>${bar.name}</h3>
-            <div>${getStatus(bar)}</div>
-            <div>${bar.reports[0]?timeAgo(bar.reports[0].time):"No data"}</div>
-
-            <button onclick="report(${i},'Dead')">Dead</button>
             <button onclick="report(${i},'Busy')">Busy</button>
             <button onclick="report(${i},'Packed')">Packed</button>
         </div>`;
     });
 }
 
-/* REPORT */
 async function report(i,status){
     let bar=bars[i];
-
     try{
-        await supabaseClient.from("reports").insert([{bar:bar.name,status:status}]);
+        await supabaseClient.from("reports").insert([{bar:bar.name,status}]);
     }catch(e){console.log(e);}
-
-    xp+=10;
-    showXP("+10 XP");
-
-    myBarReports[bar.name]=(myBarReports[bar.name]||0)+1;
-    localStorage.setItem("myBarReports",JSON.stringify(myBarReports));
-
-    totalReports++;
-    localStorage.setItem("reports",totalReports);
-
-    addActivity(`${status} at ${bar.name}`);
-
-    loadReports();
-}
-
-/* LOAD */
-async function loadReports(){
-    try{
-        const {data}=await supabaseClient.from("reports").select("*").order("created_at",{ascending:false});
-        bars.forEach(b=>b.reports=[]);
-        data.forEach(r=>{
-            let b=bars.find(x=>x.name===r.bar);
-            if(b) b.reports.push({status:r.status,time:new Date(r.created_at).getTime()});
-        });
-    }catch(e){console.log(e);}
-    renderBars();
 }
 
 /* DELIVERY */
@@ -299,7 +231,6 @@ function addToCart(name){
         Object.values(cart).reduce((a,b)=>a+b,0);
 }
 
-/* CHECKOUT */
 function openCheckout(){
     document.getElementById("checkout-modal").style.display="flex";
     let s=document.getElementById("order-summary");
@@ -312,20 +243,14 @@ function closeCheckout(){
     document.getElementById("checkout-modal").style.display="none";
 }
 
-/* PLACE ORDER */
 async function placeOrder(){
     let name=document.getElementById("name").value;
     let phone=document.getElementById("phone").value;
 
-    if(!name||!phone){
-        alert("Enter info");
-        return;
-    }
+    if(!name||!phone){ alert("Enter info"); return; }
 
     let items="";
-    for(let i in cart){
-        items+=`${i} x${cart[i]}, `;
-    }
+    for(let i in cart){ items+=`${i} x${cart[i]}, `; }
 
     try{
         await supabaseClient.from("orders").insert([{name,phone,items}]);
@@ -333,17 +258,69 @@ async function placeOrder(){
         cart={};
         document.getElementById("cart-count").innerText=0;
         closeCheckout();
-    }catch(e){
-        console.log(e);
-        alert("Error");
-    }
+    }catch(e){ console.log(e); alert("Error"); }
+}
+
+/* LOST & FOUND */
+function openLostModal(){
+    document.getElementById("lost-modal").style.display="flex";
+}
+function closeLostModal(){
+    document.getElementById("lost-modal").style.display="none";
+}
+
+async function submitLostItem(){
+    let type=document.getElementById("lf-type").value;
+    let title=document.getElementById("lf-title").value;
+    let location=document.getElementById("lf-location").value;
+    let contact=document.getElementById("lf-contact").value;
+    let description=document.getElementById("lf-description").value;
+
+    if(!title){ alert("Enter item"); return; }
+
+    try{
+        await supabaseClient.from("lost_found")
+        .insert([{type,title,location,contact,description}]);
+
+        xp += 15;
+        closeLostModal();
+        loadLostItems();
+    }catch(e){ console.log(e); alert("Error"); }
+}
+
+async function loadLostItems(){
+    let c=document.getElementById("lost-feed");
+    if(!c) return;
+
+    try{
+        const {data} = await supabaseClient
+            .from("lost_found")
+            .select("*")
+            .order("created_at",{ascending:false});
+
+        c.innerHTML="";
+
+        data.forEach(item=>{
+            let tag=item.type==="lost"?"🔴 Lost":"🟢 Found";
+
+            c.innerHTML+=`
+            <div class="bar">
+                <h3>${tag}: ${item.title}</h3>
+                <div>${item.location||""}</div>
+                <div>${timeAgo(new Date(item.created_at).getTime())}</div>
+                <p>${item.description||""}</p>
+                ${item.contact?`<div>${item.contact}</div>`:""}
+            </div>`;
+        });
+
+    }catch(e){ console.log(e); }
 }
 
 /* INIT */
 window.onload=function(){
     renderBars();
     renderProducts();
-    loadReports();
+    loadLostItems();
 };
 </script>
 
