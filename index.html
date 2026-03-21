@@ -225,7 +225,9 @@ body {
   border-radius: var(--radius);
   padding: 16px;
   margin-bottom: 10px;
+  transition: border-color .2s;
 }
+.lost-card.resolved { opacity: .5; border-style: dashed; }
 .lost-tag {
   display: inline-block;
   padding: 3px 10px; border-radius: 20px;
@@ -233,8 +235,31 @@ body {
   text-transform: uppercase; letter-spacing: .5px;
   margin-bottom: 8px;
 }
-.tag-lost  { background: rgba(248,113,113,.15); color: var(--packed); }
-.tag-found { background: rgba(74,222,128,.15);  color: var(--dead); }
+.tag-lost     { background: rgba(248,113,113,.15); color: var(--packed); }
+.tag-found    { background: rgba(74,222,128,.15);  color: var(--dead); }
+.tag-resolved { background: var(--surface2); color: var(--muted); }
+.lost-photo { width:100%; max-height:200px; object-fit:cover; border-radius:10px; margin:10px 0; }
+.lost-actions { display:flex; gap:8px; margin-top:12px; }
+.lost-action-btn {
+  flex:1; background:var(--surface2); border:1px solid var(--border);
+  color:var(--text); padding:8px 6px; border-radius:10px;
+  font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500;
+  cursor:pointer; transition:all .2s; text-align:center;
+}
+.lost-action-btn:hover { background:rgba(255,255,255,0.08); }
+.lost-action-btn.contact { border-color:var(--accent); color:var(--accent); }
+.lost-action-btn.resolve { border-color:var(--dead); color:var(--dead); }
+.search-bar { display:flex; gap:8px; margin-bottom:12px; }
+.search-input {
+  flex:1; background:var(--surface); border:1px solid var(--border);
+  color:var(--text); padding:10px 14px; border-radius:10px;
+  font-family:'DM Sans',sans-serif; font-size:14px; outline:none; transition:border-color .2s;
+}
+.search-input:focus { border-color:rgba(255,255,255,0.2); }
+.search-input::placeholder { color:var(--muted); }
+.expiry-bar { height:3px; border-radius:2px; background:var(--surface2); margin-top:10px; overflow:hidden; }
+.expiry-fill { height:100%; border-radius:2px; }
+.photo-preview { width:100%; max-height:160px; object-fit:cover; border-radius:10px; margin-top:8px; display:none; }
 
 /* ─── LEADERBOARD ─── */
 .lb-row {
@@ -605,6 +630,11 @@ textarea.input { resize: vertical; min-height: 80px; }
     <input    class="input" id="lf-location"    placeholder="Location / Bar">
     <input    class="input" id="lf-contact"     placeholder="Contact (phone or IG)">
     <textarea class="input" id="lf-description" placeholder="Extra details..."></textarea>
+    <label style="display:block;cursor:pointer">
+      <div class="input" style="color:var(--muted);cursor:pointer;text-align:center">📷 Add Photo (optional)</div>
+      <input type="file" id="lf-photo" accept="image/*" style="display:none" onchange="previewPhoto(this)">
+    </label>
+    <img id="lf-photo-preview" class="photo-preview" alt="preview">
     <button class="btn-primary" onclick="submitLostItem()">Post Item</button>
     <button class="btn-ghost"   onclick="closeModal('lost-modal')">Cancel</button>
   </div>
@@ -996,14 +1026,21 @@ async function placeOrder() {
 }
 
 /* ─── LOST & FOUND ─── */
+const LF_EXPIRY_DAYS = 7; // posts auto-expire after 7 days
+let lostSearch = "";
+
 function renderLostPage() {
   let page = document.getElementById("lost");
   page.innerHTML = `
     <div class="section-title">🔎 Lost &amp; Found</div>
+    <div class="search-bar">
+      <input class="search-input" placeholder="🔍 Search items..." oninput="lostSearch=this.value;loadLostItems()">
+    </div>
     <div class="filter-chips">
       <div class="chip active" onclick="setLostFilter('all',this)">All</div>
       <div class="chip"        onclick="setLostFilter('lost',this)">🔴 Lost</div>
       <div class="chip"        onclick="setLostFilter('found',this)">🟢 Found</div>
+      <div class="chip"        onclick="setLostFilter('resolved',this)">✅ Resolved</div>
     </div>
     <button onclick="openModal('lost-modal')" style="
       background:var(--accent);color:var(--bg);border:none;
@@ -1022,6 +1059,15 @@ function setLostFilter(val, el) {
   loadLostItems();
 }
 
+function getExpiryInfo(createdAt) {
+  let age   = Date.now() - new Date(createdAt).getTime();
+  let total = LF_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  let pct   = Math.max(0, Math.min(100, 100 - (age / total * 100)));
+  let daysLeft = Math.ceil((total - age) / (24*60*60*1000));
+  let color = pct > 50 ? "var(--dead)" : pct > 20 ? "var(--busy)" : "var(--packed)";
+  return { pct, daysLeft, color, expired: age > total };
+}
+
 async function loadLostItems() {
   let c = document.getElementById("lost-feed");
   if (!c) return;
@@ -1029,27 +1075,126 @@ async function loadLostItems() {
 
   try {
     let q = sb.from("lost_found").select("*").order("created_at",{ascending:false});
-    if (lostFilter !== "all") q = q.eq("type", lostFilter);
+
+    // Filter by status
+    if (lostFilter === "resolved") {
+      q = q.eq("resolved", true);
+    } else if (lostFilter !== "all") {
+      q = q.eq("type", lostFilter).eq("resolved", false);
+    } else {
+      q = q.eq("resolved", false);
+    }
+
+    // Auto-exclude expired posts (older than 7 days) unless viewing resolved
+    if (lostFilter !== "resolved") {
+      let cutoff = new Date(Date.now() - LF_EXPIRY_DAYS*24*60*60*1000).toISOString();
+      q = q.gte("created_at", cutoff);
+    }
+
     const { data } = await q;
     c.innerHTML = "";
     if (!data || !data.length) {
       c.innerHTML = `<p style="color:var(--muted);text-align:center;padding:30px">Nothing here yet</p>`;
       return;
     }
-    data.forEach(item => {
-      let tagClass = item.type==="lost" ? "tag-lost" : "tag-found";
-      let tagLabel = item.type==="lost" ? "🔴 Lost"   : "🟢 Found";
+
+    // Client-side keyword search
+    let items = data;
+    if (lostSearch.trim()) {
+      let kw = lostSearch.toLowerCase();
+      items = data.filter(i =>
+        (i.title||"").toLowerCase().includes(kw) ||
+        (i.description||"").toLowerCase().includes(kw) ||
+        (i.location||"").toLowerCase().includes(kw)
+      );
+    }
+
+    if (!items.length) {
+      c.innerHTML = `<p style="color:var(--muted);text-align:center;padding:30px">No results for "${lostSearch}"</p>`;
+      return;
+    }
+
+    items.forEach(item => {
+      let isResolved = item.resolved;
+      let tagClass = isResolved ? "tag-resolved" : item.type==="lost" ? "tag-lost" : "tag-found";
+      let tagLabel = isResolved ? "✅ Resolved"  : item.type==="lost" ? "🔴 Lost"   : "🟢 Found";
+      let exp = getExpiryInfo(item.created_at);
+
+      // Show contact button if contact info exists
+      let contactBtn = item.contact && !isResolved
+        ? `<button class="lost-action-btn contact" onclick="contactItem('${item.contact.replace(/'/g,"\\'")}')">📱 Contact</button>`
+        : "";
+
+      // Show resolve button only for own posts or any post (adjust logic as needed)
+      let resolveBtn = !isResolved
+        ? `<button class="lost-action-btn resolve" onclick="resolveItem('${item.id}')">✅ Mark Resolved</button>`
+        : "";
+
       c.innerHTML += `
-        <div class="lost-card">
-          <span class="lost-tag ${tagClass}">${tagLabel}</span>
+        <div class="lost-card ${isResolved?"resolved":""}">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between">
+            <span class="lost-tag ${tagClass}">${tagLabel}</span>
+            <span style="font-size:11px;color:var(--muted)">${timeAgo(new Date(item.created_at).getTime())}</span>
+          </div>
           <h3 style="font-size:16px;font-weight:700;margin-bottom:4px">${item.title}</h3>
           ${item.location ? `<div style="font-size:13px;color:var(--muted)">📍 ${item.location}</div>` : ""}
-          <div style="font-size:12px;color:var(--muted);margin:4px 0">${timeAgo(new Date(item.created_at).getTime())}</div>
           ${item.description ? `<p style="font-size:13px;margin-top:6px;color:#ccc">${item.description}</p>` : ""}
-          ${item.contact ? `<div style="font-size:13px;margin-top:6px;color:var(--accent)">📱 ${item.contact}</div>` : ""}
+          ${item.photo_url ? `<img class="lost-photo" src="${item.photo_url}" alt="item photo">` : ""}
+          ${!isResolved ? `
+            <div class="expiry-bar">
+              <div class="expiry-fill" style="width:${exp.pct}%;background:${exp.color}"></div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Expires in ${exp.daysLeft} day${exp.daysLeft===1?"":"s"}</div>
+          ` : ""}
+          ${(contactBtn||resolveBtn) ? `<div class="lost-actions">${contactBtn}${resolveBtn}</div>` : ""}
         </div>`;
     });
+
   } catch(e) { console.log(e); c.innerHTML = `<p style="color:var(--muted);padding:20px">Failed to load</p>`; }
+}
+
+function contactItem(contact) {
+  // Try to detect phone vs IG handle
+  if (/^\d[\d\s\-\(\)]{6,}/.test(contact)) {
+    window.open("sms:" + contact.replace(/\D/g,""));
+  } else if (contact.startsWith("@")) {
+    window.open("https://instagram.com/" + contact.slice(1));
+  } else {
+    toast("📱 Contact: " + contact);
+  }
+}
+
+async function resolveItem(id) {
+  try {
+    await sb.from("lost_found").update({ resolved: true }).eq("id", id);
+    await addXP(10, "Item resolved");
+    toast("✅ Marked as resolved!");
+    loadLostItems();
+  } catch(e) { console.log(e); toast("❌ Error"); }
+}
+
+function previewPhoto(input) {
+  let preview = document.getElementById("lf-photo-preview");
+  if (input.files && input.files[0]) {
+    let reader = new FileReader();
+    reader.onload = e => {
+      preview.src = e.target.result;
+      preview.style.display = "block";
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+async function uploadPhoto(file) {
+  if (!file) return null;
+  try {
+    let ext  = file.name.split(".").pop();
+    let path = `lost/${Date.now()}.${ext}`;
+    const { error } = await sb.storage.from("lost-photos").upload(path, file);
+    if (error) { console.log(error); return null; }
+    const { data } = sb.storage.from("lost-photos").getPublicUrl(path);
+    return data.publicUrl;
+  } catch(e) { console.log(e); return null; }
 }
 
 async function submitLostItem() {
@@ -1058,13 +1203,25 @@ async function submitLostItem() {
   let location    = document.getElementById("lf-location").value.trim();
   let contact     = document.getElementById("lf-contact").value.trim();
   let description = document.getElementById("lf-description").value.trim();
+  let photoFile   = document.getElementById("lf-photo").files[0];
+
   if (!title) { toast("⚠️ Enter item name"); return; }
 
+  toast("Posting...");
+
   try {
-    await sb.from("lost_found").insert([{ type, title, location, contact, description }]);
+    let photo_url = await uploadPhoto(photoFile);
+    await sb.from("lost_found").insert([{ type, title, location, contact, description, photo_url, resolved: false }]);
     await addXP(15, "Lost & Found post");
+
+    // Reset form
+    ["lf-title","lf-location","lf-contact","lf-description"].forEach(id => document.getElementById(id).value="");
+    document.getElementById("lf-photo").value = "";
+    document.getElementById("lf-photo-preview").style.display = "none";
+
     closeModal("lost-modal");
     loadLostItems();
+    toast("📣 Item posted!");
   } catch(e) { console.log(e); toast("❌ Error posting item"); }
 }
 
