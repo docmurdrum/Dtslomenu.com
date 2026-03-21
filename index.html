@@ -644,6 +644,11 @@
       <button class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
     </div>
 
+    <!-- DEV LOGIN -->
+    <button class="btn-primary" onclick="devLogin()" style="margin-bottom:16px;background:#22c55e;font-size:13px;padding:10px">
+      🛠️ Dev Login (Temp)
+    </button>
+
     <!-- LOGIN -->
     <div id="login-form" class="auth-form">
       <div class="input-group">
@@ -892,6 +897,31 @@ function showAuthError(form, msg) {
   const el = document.getElementById(form + '-error');
   el.textContent = msg;
   el.style.display = 'block';
+}
+
+// ── DEV LOGIN ──
+async function devLogin() {
+  const devEmail = 'dev_temp_' + Math.random().toString(36).slice(2,8) + '@dtslo.dev';
+  const devPass  = 'devpass123';
+  const btn      = event.target;
+  btn.disabled = true; btn.textContent = '⏳ Logging in…';
+  try {
+    // Try signing up first
+    const { data, error } = await supabaseClient.auth.signUp({
+      email: devEmail, password: devPass,
+      options: { data: { username: 'DevUser_' + devEmail.slice(9,15) } }
+    });
+    if (error) throw error;
+    if (data.session) {
+      await onLogin(data.user);
+      showToast('🛠️ Dev login active — temp account');
+      return;
+    }
+    throw new Error('No session returned');
+  } catch(e) {
+    showAuthError('login', '❌ Dev login failed: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '🛠️ Dev Login (Temp)';
 }
 
 // ── LOGIN ──
