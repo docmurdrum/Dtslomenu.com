@@ -12,7 +12,7 @@ body {
     background: #f5f7fa;
 }
 
-/* MENU BUTTON */
+/* MENU */
 #menu-btn {
     position: fixed;
     top: 15px;
@@ -23,10 +23,8 @@ body {
     padding: 12px 15px;
     border-radius: 10px;
     z-index: 2000;
-    font-size: 18px;
 }
 
-/* DROPDOWN */
 #menu-dropdown {
     display: none;
     position: fixed;
@@ -49,7 +47,7 @@ body {
     background: #f0f0f0;
 }
 
-/* CART BUTTON */
+/* CART */
 #checkout-btn {
     position: fixed;
     top: 15px;
@@ -62,14 +60,8 @@ body {
 }
 
 /* SECTIONS */
-.section {
-    display: none;
-}
-
-/* ACTIVE SECTION */
-.active {
-    display: block;
-}
+.section { display: none; }
+.active { display: block; }
 
 /* HEADER */
 .header-container {
@@ -81,7 +73,7 @@ body {
     border-bottom-right-radius: 25px;
 }
 
-/* PRODUCT GRID */
+/* GRID */
 .product-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
@@ -105,10 +97,18 @@ body {
 }
 
 button {
-    padding: 12px;
+    padding: 10px;
     border: none;
     border-radius: 10px;
     cursor: pointer;
+}
+
+/* LINE CHECK CARDS */
+.bar-card {
+    background:white;
+    padding:15px;
+    margin-bottom:12px;
+    border-radius:12px;
 }
 
 /* CHECKOUT */
@@ -154,27 +154,22 @@ button {
 <!-- CART -->
 <button id="checkout-btn" onclick="toggleCheckout()">🛒 (<span id="cart-count">0</span>)</button>
 
-<!-- ================= SECTIONS ================= -->
-
 <!-- LINE CHECK -->
 <div id="linecheck" class="section active">
     <div class="header-container">
         <h1>Line Check</h1>
-        <p>See how busy bars are in real time</p>
+        <p>Live bar activity</p>
     </div>
 
-    <div style="padding:20px;text-align:center;">
-        🚧 Coming next step (this is your crowd-sourced feature)
-    </div>
+    <div id="best-bar" style="padding:15px;font-weight:bold;"></div>
+    <div id="bars-list" style="padding:15px;"></div>
 </div>
 
-<!-- DELIVERY (YOUR CURRENT APP) -->
+<!-- DELIVERY -->
 <div id="delivery" class="section">
     <div class="header-container">
         <h1>Line & Entry Delivery</h1>
-        <p>Skip the line. We deliver your spot.</p>
     </div>
-
     <div id="product-grid" class="product-grid"></div>
 </div>
 
@@ -183,10 +178,7 @@ button {
     <div class="header-container">
         <h1>Food Recommendations</h1>
     </div>
-
-    <div style="padding:20px;">
-        🍔 Best late night food coming soon
-    </div>
+    <div style="padding:20px;">Coming soon 🍔</div>
 </div>
 
 <!-- EVENTS -->
@@ -194,10 +186,7 @@ button {
     <div class="header-container">
         <h1>Concerts & Events</h1>
     </div>
-
-    <div style="padding:20px;">
-        🎵 Events feed coming soon
-    </div>
+    <div style="padding:20px;">Coming soon 🎵</div>
 </div>
 
 <!-- CHECKOUT -->
@@ -232,7 +221,89 @@ function showSection(id) {
     document.getElementById('menu-dropdown').style.display = "none";
 }
 
-/* PRODUCTS */
+/* LINE CHECK SYSTEM */
+var bars = [
+    { name: "The Library", reports: [] },
+    { name: "Frog & Peach", reports: [] },
+    { name: "Bull’s Tavern", reports: [] }
+];
+
+function reportStatus(i, status) {
+    bars[i].reports.push({ status: status, time: Date.now() });
+    updateBars();
+}
+
+function getStatus(reports) {
+    if (reports.length === 0) return "No Data";
+    var recent = reports.slice(-10);
+    var score = 0;
+
+    recent.forEach(r => {
+        if (r.status === "Not Busy") score += 1;
+        if (r.status === "Moderate") score += 2;
+        if (r.status === "Packed") score += 3;
+    });
+
+    var avg = score / recent.length;
+    if (avg < 1.7) return "🟢 Not Busy";
+    if (avg < 2.4) return "🟡 Moderate";
+    return "🔴 Packed";
+}
+
+function getTrend(reports) {
+    if (reports.length < 6) return "";
+    var last = reports.slice(-3);
+    var prev = reports.slice(-6, -3);
+
+    function avg(arr) {
+        var s = 0;
+        arr.forEach(r => {
+            if (r.status === "Not Busy") s += 1;
+            if (r.status === "Moderate") s += 2;
+            if (r.status === "Packed") s += 3;
+        });
+        return s / arr.length;
+    }
+
+    var diff = avg(last) - avg(prev);
+    if (diff > 0.3) return "📈 Getting busier";
+    if (diff < -0.3) return "📉 Slowing down";
+    return "➖ Stable";
+}
+
+function updateBars() {
+    var container = document.getElementById("bars-list");
+    container.innerHTML = "";
+
+    var bestBar = null;
+    var bestScore = 999;
+
+    bars.forEach((bar, i) => {
+        var status = getStatus(bar.reports);
+        var trend = getTrend(bar.reports);
+
+        var score = status.includes("🟢") ? 1 : status.includes("🟡") ? 2 : 3;
+        if (score < bestScore) {
+            bestScore = score;
+            bestBar = bar.name;
+        }
+
+        container.innerHTML += `
+        <div class="bar-card">
+            <strong>${bar.name}</strong><br>
+            ${status}<br>
+            <small>${trend}</small><br><br>
+            <button onclick="reportStatus(${i}, 'Not Busy')">🟢</button>
+            <button onclick="reportStatus(${i}, 'Moderate')">🟡</button>
+            <button onclick="reportStatus(${i}, 'Packed')">🔴</button>
+        </div>`;
+    });
+
+    document.getElementById("best-bar").innerHTML =
+        bestBar ? "🔥 Best Right Now: " + bestBar : "";
+}
+
+/* DELIVERY SYSTEM */
 var products = [
     { name: "Redbull", size: "12oz", price: 3.99, available: true },
     { name: "Charger", size: "1 unit", price: 14.99, available: true }
@@ -243,8 +314,7 @@ var cart = {};
 function renderProducts() {
     var grid = document.getElementById('product-grid');
     grid.innerHTML = "";
-    for (var i = 0; i < products.length; i++) {
-        var p = products[i];
+    products.forEach(p => {
         if (p.available) {
             grid.innerHTML += `
             <div class="card">
@@ -254,13 +324,13 @@ function renderProducts() {
                 <button onclick="addToCart('${p.name}')">Add</button>
             </div>`;
         }
-    }
+    });
 }
 
 function addToCart(name) {
     cart[name] = (cart[name] || 0) + 1;
     var total = 0;
-    for (var key in cart) total += cart[key];
+    for (var k in cart) total += cart[k];
     document.getElementById('cart-count').innerText = total;
 }
 
@@ -275,15 +345,13 @@ function submitOrder() {
     navigator.geolocation.getCurrentPosition(function(pos) {
         var loc = pos.coords.latitude + "," + pos.coords.longitude;
         var items = "";
-
-        for (var key in cart) items += key + "(" + cart[key] + ") ";
+        for (var k in cart) items += k + "(" + cart[k] + ") ";
 
         var body = "Order: " + fn + " | " + ph + " | " + items + " | " + loc;
 
         window.location.href = "sms:+18052506655?&body=" + encodeURIComponent(body);
 
         document.getElementById('thankyou-modal').style.display = "flex";
-
         cart = {};
         document.getElementById('cart-count').innerText = "0";
     });
@@ -293,7 +361,11 @@ function closeModal() {
     document.getElementById('thankyou-modal').style.display = "none";
 }
 
-window.onload = renderProducts;
+/* INIT */
+window.onload = function() {
+    renderProducts();
+    updateBars();
+};
 
 </script>
 
