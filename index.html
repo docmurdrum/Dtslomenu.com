@@ -19,10 +19,9 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
 
 .menu-btn { font-size:22px; cursor:pointer; }
 
-#player-info {
-    margin-left:10px;
-    font-size:14px;
-}
+#player-info { margin-left:10px; font-size:14px; }
+
+#leaderboard { margin-left:auto; font-size:12px; }
 
 .page { display:none; padding-top:80px; }
 .active { display:block; }
@@ -52,7 +51,6 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
     transition:width 0.3s;
 }
 
-/* floating text */
 .xp-float {
     position:fixed;
     bottom:30px;
@@ -74,6 +72,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
 <div class="navbar">
     <div class="menu-btn" onclick="toggleMenu()">☰</div>
     <div id="player-info">Lv 1 • Rookie</div>
+    <div id="leaderboard">🏆 0 reports</div>
 </div>
 
 <div id="line" class="page active"></div>
@@ -87,9 +86,6 @@ const supabaseClient = window.supabase.createClient(
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18"
 );
 
-/* MENU */
-function toggleMenu(){}
-
 /* DATA */
 var bars = [
     {name:"Library", reports:[]},
@@ -102,6 +98,9 @@ var level = 1;
 var streak = 0;
 var lastReportTime = 0;
 
+/* 🏆 LEADERBOARD */
+var totalReports = parseInt(localStorage.getItem("reports")) || 0;
+
 /* TITLE */
 function getTitle(){
     if(level < 3) return "Rookie";
@@ -110,7 +109,6 @@ function getTitle(){
     return "Nightlife Legend";
 }
 
-/* UI UPDATE */
 function updatePlayerUI(){
     let el = document.getElementById("player-info");
     if(el){
@@ -118,7 +116,15 @@ function updatePlayerUI(){
     }
 }
 
-/* LEVEL UP */
+/* 🏆 UPDATE LEADERBOARD */
+function updateLeaderboardUI(){
+    let el = document.getElementById("leaderboard");
+    if(el){
+        el.innerText = `🏆 ${totalReports} reports`;
+    }
+}
+
+/* LEVEL */
 function checkLevelUp(){
     let required = level * 100;
     if(xp >= required){
@@ -128,7 +134,6 @@ function checkLevelUp(){
     }
 }
 
-/* POPUPS */
 function showLevelUp(){
     let el = document.createElement("div");
     el.innerText = "🎉 LEVEL UP!";
@@ -143,14 +148,6 @@ function showLevelUp(){
     setTimeout(()=>el.remove(),1500);
 }
 
-function showStreak(){
-    let el = document.createElement("div");
-    el.className="xp-float";
-    el.innerText=`🔥 ${streak} streak`;
-    document.body.appendChild(el);
-    setTimeout(()=>el.remove(),1000);
-}
-
 /* STREAK */
 function updateStreak(){
     let now = Date.now();
@@ -160,7 +157,14 @@ function updateStreak(){
         streak = 1;
     }
     lastReportTime = now;
-    if(streak > 1) showStreak();
+
+    if(streak > 1){
+        let el = document.createElement("div");
+        el.className="xp-float";
+        el.innerText=`🔥 ${streak} streak`;
+        document.body.appendChild(el);
+        setTimeout(()=>el.remove(),1000);
+    }
 }
 
 /* STATUS */
@@ -211,6 +215,11 @@ async function report(i,status){
 
     xp += 10;
 
+    // 🏆 leaderboard update
+    totalReports++;
+    localStorage.setItem("reports", totalReports);
+    updateLeaderboardUI();
+
     document.getElementById("xp-bar").style.width = (xp % 100) + "%";
 
     let el=document.createElement("div");
@@ -259,6 +268,7 @@ async function loadReports(){
 window.onload=function(){
     renderBars();
     loadReports();
+    updateLeaderboardUI(); // ✅ important
     setInterval(loadReports,5000);
 };
 </script>
