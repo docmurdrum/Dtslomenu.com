@@ -3,278 +3,241 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DTSLO App</title>
+<title>DTSLO</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <style>
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    margin: 0;
-    background: #f5f7fa;
+    margin:0;
+    background:#f5f7fa;
 }
 
-/* MENU */
-#menu-btn {
+/* NAV */
+.navbar {
     position: fixed;
-    top: 15px;
-    left: 15px;
-    background: #111;
-    color: white;
-    border: none;
-    padding: 12px 15px;
-    border-radius: 10px;
-    z-index: 2000;
+    top:0;
+    left:0;
+    right:0;
+    height:60px;
+    background:#111;
+    color:white;
+    display:flex;
+    align-items:center;
+    padding:0 15px;
+    z-index:2000;
 }
 
-#menu-dropdown {
-    display: none;
-    position: fixed;
-    top: 60px;
-    left: 15px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    overflow: hidden;
-    z-index: 2000;
+.menu-btn {
+    font-size:22px;
+    cursor:pointer;
 }
 
-.menu-item {
-    padding: 12px 18px;
-    cursor: pointer;
-    border-bottom: 1px solid #eee;
+.dropdown {
+    position:absolute;
+    top:60px;
+    left:0;
+    background:white;
+    width:220px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+    display:none;
 }
 
-/* XP BAR */
+.dropdown div {
+    padding:15px;
+    border-bottom:1px solid #eee;
+    cursor:pointer;
+}
+
+/* PAGES */
+.page {
+    display:none;
+    padding-top:70px;
+}
+.active {
+    display:block;
+}
+
+/* BARS */
+.bar {
+    background:white;
+    margin:15px;
+    padding:15px;
+    border-radius:15px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.05);
+}
+
+.status {
+    font-weight:bold;
+    margin:10px 0;
+}
+
+.buttons button {
+    margin:5px;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+/* XP */
 #xp-bar {
-    position: fixed;
-    top: 15px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #111;
-    color: white;
-    padding: 8px 14px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    z-index: 2000;
+    position:fixed;
+    bottom:0;
+    left:0;
+    height:6px;
+    background:#28a745;
+    width:0%;
 }
 
 /* CART */
 #checkout-btn {
     position: fixed;
-    top: 15px;
-    right: 15px;
-    padding: 12px 18px;
-    background: #111;
-    color: white;
-    border-radius: 30px;
-    z-index: 1000;
+    top: 10px;
+    right: 10px;
+    background:#111;
+    color:white;
+    padding:10px 15px;
+    border-radius:20px;
 }
 
-.section { display: none; }
-.active { display: block; }
-
-.header-container {
-    text-align: center;
-    padding: 80px 20px 30px;
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-}
-
-/* BAR CARDS */
-.bar-card {
-    background:white;
-    padding:15px;
-    margin:12px;
-    border-radius:12px;
-}
-
-/* LEADERBOARD */
-#leaderboard {
-    background:white;
-    margin:15px;
-    padding:15px;
-    border-radius:12px;
-}
-
-/* TOAST */
-.toast {
-    position: fixed;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #111;
-    color: white;
-    padding: 12px 18px;
-    border-radius: 20px;
-    z-index: 3000;
-}
-
-/* DELIVERY GRID */
+/* PRODUCT GRID */
 .product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 18px;
-    margin: 30px;
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:10px;
+    padding:10px;
 }
 
 .card {
-    background: white;
-    padding: 18px;
-    border-radius: 18px;
-    text-align: center;
+    background:white;
+    padding:15px;
+    border-radius:15px;
+    text-align:center;
 }
 </style>
 </head>
 
 <body>
 
-<button id="menu-btn" onclick="toggleMenu()">☰</button>
-
-<div id="menu-dropdown">
-    <div class="menu-item" onclick="showSection('linecheck')">Line Check</div>
-    <div class="menu-item" onclick="showSection('delivery')">Delivery</div>
+<div class="navbar">
+    <div class="menu-btn" onclick="toggleMenu()">☰</div>
 </div>
 
-<div id="xp-bar">🔥 0 pts</div>
-
-<button id="checkout-btn">🛒 (<span id="cart-count">0</span>)</button>
+<div id="menu" class="dropdown">
+    <div onclick="showPage('line')">Line Check</div>
+    <div onclick="showPage('delivery')">Line & Entry Delivery</div>
+    <div onclick="showPage('food')">Food Recommendations</div>
+    <div onclick="showPage('events')">Concerts & Events</div>
+</div>
 
 <!-- LINE CHECK -->
-<div id="linecheck" class="section active">
-    <div class="header-container">
-        <h1>Line Check</h1>
-    </div>
-
-    <div id="best-bar" style="padding:15px;font-weight:bold;"></div>
-
-    <div id="leaderboard"></div>
-
-    <div id="bars-list"></div>
-</div>
+<div id="line" class="page active"></div>
 
 <!-- DELIVERY -->
-<div id="delivery" class="section">
-    <div class="header-container">
-        <h1>Delivery</h1>
-    </div>
+<div id="delivery" class="page">
+    <button id="checkout-btn">Cart (<span id="cart-count">0</span>)</button>
     <div id="product-grid" class="product-grid"></div>
 </div>
 
+<!-- OTHER -->
+<div id="food" class="page"><h2 style="padding:20px;">Food Coming Soon</h2></div>
+<div id="events" class="page"><h2 style="padding:20px;">Events Coming Soon</h2></div>
+
+<div id="xp-bar"></div>
+
 <script>
+/* SUPABASE */
+const SUPABASE_URL = "https://jwgwufggptpdmgcmmqes.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* MENU */
 function toggleMenu(){
-    var m = document.getElementById('menu-dropdown');
-    m.style.display = m.style.display === 'block' ? 'none' : 'block';
-}
-function showSection(id){
-    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
+    let m=document.getElementById("menu");
+    m.style.display = m.style.display==="block"?"none":"block";
 }
 
-/* XP + STREAK */
-var xp = 0;
-var streak = 0;
-var lastTap = 0;
-
-function addXP(){
-    xp++;
-    var now = Date.now();
-
-    if(now - lastTap < 60000){
-        streak++;
-    } else {
-        streak = 1;
-    }
-
-    lastTap = now;
-
-    document.getElementById("xp-bar").innerText =
-        "🔥 " + xp + " pts | Streak: " + streak;
-}
-
-/* TOAST */
-function toast(msg){
-    var t = document.createElement("div");
-    t.className = "toast";
-    t.innerText = msg;
-    document.body.appendChild(t);
-    setTimeout(()=>t.remove(),1500);
+function showPage(p){
+    document.querySelectorAll(".page").forEach(pg=>pg.classList.remove("active"));
+    document.getElementById(p).classList.add("active");
 }
 
 /* BARS */
 var bars = [
-    { name: "The Library", reports: [] },
-    { name: "Frog & Peach", reports: [] },
-    { name: "Bull’s Tavern", reports: [] }
+    {name:"Library", reports:[]},
+    {name:"Mothers Tavern", reports:[]},
+    {name:"Frog & Peach", reports:[]}
 ];
 
-function reportStatus(i,status){
-    bars[i].reports.push({status:status,time:Date.now()});
-    addXP();
-    toast("🔥 You helped!");
-    updateBars();
+var xp = 0;
+
+function getStatus(bar){
+    if(bar.reports.length===0) return "No Data";
+    let recent = bar.reports.slice(0,5);
+    let counts = {};
+    recent.forEach(r=>{
+        counts[r.status]=(counts[r.status]||0)+1;
+    });
+    return Object.keys(counts).reduce((a,b)=>counts[a]>counts[b]?a:b);
 }
 
-function getScore(r){
-    if(r==="Not Busy") return 1;
-    if(r==="Moderate") return 2;
-    return 3;
-}
+function renderBars(){
+    let container=document.getElementById("line");
+    container.innerHTML="";
 
-function getStatus(reports){
-    if(!reports.length) return "No Data";
-    var avg = reports.slice(-10).reduce((a,b)=>a+getScore(b.status),0)/Math.min(10,reports.length);
-    if(avg<1.7) return "🟢 Not Busy";
-    if(avg<2.4) return "🟡 Moderate";
-    return "🔴 Packed";
-}
-
-function getTrend(reports){
-    if(reports.length<6) return "";
-    var last = reports.slice(-3);
-    var prev = reports.slice(-6,-3);
-    var diff = last.reduce((a,b)=>a+getScore(b.status),0)/3 -
-               prev.reduce((a,b)=>a+getScore(b.status),0)/3;
-
-    if(diff>0.3) return "📈 Busier";
-    if(diff<-0.3) return "📉 Slowing";
-    return "➖ Stable";
-}
-
-function updateBars(){
-    var list = document.getElementById("bars-list");
-    list.innerHTML="";
-
-    var best = null;
-    var bestScore = 999;
-
-    bars.forEach((b,i)=>{
-        var status = getStatus(b.reports);
-        var trend = getTrend(b.reports);
-
-        var score = status.includes("🟢")?1:status.includes("🟡")?2:3;
-        if(score<bestScore){ bestScore=score; best=b.name;}
-
-        list.innerHTML += `
-        <div class="bar-card">
-            <strong>${b.name}</strong><br>
-            ${status}<br>
-            <small>${trend}</small><br>
-            <small>👥 ${b.reports.length} updates</small><br><br>
-            <button onclick="reportStatus(${i},'Not Busy')">🟢</button>
-            <button onclick="reportStatus(${i},'Moderate')">🟡</button>
-            <button onclick="reportStatus(${i},'Packed')">🔴</button>
+    bars.forEach((bar,i)=>{
+        container.innerHTML+=`
+        <div class="bar">
+            <h3>${bar.name}</h3>
+            <div class="status">${getStatus(bar)}</div>
+            <div class="buttons">
+                <button onclick="report(${i},'Dead')">Dead</button>
+                <button onclick="report(${i},'Busy')">Busy</button>
+                <button onclick="report(${i},'Packed')">Packed</button>
+            </div>
         </div>`;
     });
-
-    document.getElementById("best-bar").innerHTML =
-        best ? "🔥 HOT RIGHT NOW: " + best : "";
-
-    document.getElementById("leaderboard").innerHTML =
-        "<strong>🏆 You:</strong> " + xp + " pts<br>🔥 Streak: " + streak;
 }
 
-/* DELIVERY */
+/* REPORT TO SUPABASE */
+async function report(i,status){
+    await supabaseClient.from("reports").insert([
+        {bar: bars[i].name, status: status}
+    ]);
+
+    xp+=10;
+    document.getElementById("xp-bar").style.width=(xp%100)+"%";
+
+    loadReports();
+}
+
+/* LOAD REPORTS */
+async function loadReports(){
+    const {data,error} = await supabaseClient
+        .from("reports")
+        .select("*")
+        .order("created_at",{ascending:false});
+
+    if(error){console.log(error);return;}
+
+    bars.forEach(b=>b.reports=[]);
+
+    data.forEach(r=>{
+        let b = bars.find(x=>x.name===r.bar);
+        if(b){
+            b.reports.push({
+                status:r.status,
+                time:new Date(r.created_at).getTime()
+            });
+        }
+    });
+
+    renderBars();
+}
+
+/* PRODUCTS */
 var products=[
     {name:"Redbull",price:3.99},
     {name:"Charger",price:14.99}
@@ -283,10 +246,9 @@ var products=[
 var cart={};
 
 function renderProducts(){
-    var g=document.getElementById("product-grid");
-    g.innerHTML="";
+    let grid=document.getElementById("product-grid");
     products.forEach(p=>{
-        g.innerHTML+=`
+        grid.innerHTML+=`
         <div class="card">
             <h3>${p.name}</h3>
             <p>$${p.price}</p>
@@ -295,23 +257,19 @@ function renderProducts(){
     });
 }
 
-function addToCart(n){
-    cart[n]=(cart[n]||0)+1;
-    document.getElementById("cart-count").innerText =
-        Object.values(cart).reduce((a,b)=>a+b,0);
+function addToCart(name){
+    cart[name]=(cart[name]||0)+1;
+    let total=0;
+    for(let k in cart) total+=cart[k];
+    document.getElementById("cart-count").innerText=total;
 }
-
-/* AUTO PROMPT */
-setTimeout(()=>{
-    toast("How busy is it right now?");
-},5000);
 
 /* INIT */
 window.onload=function(){
     renderProducts();
-    updateBars();
+    loadReports();
+    setInterval(loadReports,5000);
 };
-
 </script>
 
 </body>
