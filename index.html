@@ -65,6 +65,15 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto; margin:0;
     0%{opacity:1;}
     100%{opacity:0; transform:translate(-50%,-40px);}
 }
+
+.feed-card {
+    background:white;
+    padding:10px;
+    margin:10px;
+    border-radius:10px;
+    font-size:13px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.05);
+}
 </style>
 </head>
 
@@ -75,11 +84,20 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto; margin:0;
     <div id="leaderboard">🏆 0 reports</div>
 </div>
 
-<div id="line" class="page"></div>
+<div class="page">
+
+    <!-- 🔥 LIVE FEED -->
+    <div id="activity-feed"></div>
+
+    <!-- BARS -->
+    <div id="line"></div>
+
+</div>
+
 <div id="xp-bar"></div>
 
 <script>
-/* 🔑 SUPABASE (LINE ~60) */
+/* 🔑 SUPABASE (LINE ~70) */
 const supabaseClient = window.supabase.createClient(
 "https://jwgwufggptpdmgcmmqes.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18"
@@ -97,6 +115,9 @@ var xp = 0;
 var level = 1;
 var totalReports = parseInt(localStorage.getItem("reports")) || 0;
 var myBarReports = JSON.parse(localStorage.getItem("myBarReports")) || {};
+
+/* FEED */
+var activityFeed = [];
 
 /* CHECK-IN */
 var lastCheckInDate = localStorage.getItem("checkinDate") || "";
@@ -158,6 +179,7 @@ function timeAgo(timestamp){
     return Math.floor(min/60) + " hr ago";
 }
 
+/* LAST UPDATED */
 function getLastUpdated(bar){
     if(bar.reports.length===0) return "No data";
     return timeAgo(bar.reports[0].time);
@@ -197,6 +219,37 @@ function getFirstReportBonus(bar){
     return {xp:0,label:""};
 }
 
+/* 🔥 FEED */
+function addActivity(text){
+    activityFeed.unshift({
+        text:text,
+        time:Date.now()
+    });
+
+    if(activityFeed.length > 20){
+        activityFeed.pop();
+    }
+
+    renderFeed();
+}
+
+function renderFeed(){
+    let feed=document.getElementById("activity-feed");
+    if(!feed) return;
+
+    feed.innerHTML="";
+
+    activityFeed.forEach(a=>{
+        feed.innerHTML+=`
+        <div class="feed-card">
+            ${a.text}
+            <div style="font-size:11px;color:#777;">
+                ${timeAgo(a.time)}
+            </div>
+        </div>`;
+    });
+}
+
 /* CHECK-IN */
 function checkIn(){
     let bonus = firstCheckInDone ? 15 : 25;
@@ -208,6 +261,7 @@ function checkIn(){
     }
 
     showXP(`+${bonus} XP 📍`);
+    addActivity("📍 Someone checked in");
     updateBar();
 }
 
@@ -232,7 +286,7 @@ async function report(i,status){
     let gained = 10 + bonus.xp;
     xp += gained;
 
-    /* ownership tracking */
+    /* ownership */
     myBarReports[bar.name]=(myBarReports[bar.name]||0)+1;
     localStorage.setItem("myBarReports", JSON.stringify(myBarReports));
 
@@ -241,8 +295,17 @@ async function report(i,status){
     updateLeaderboardUI();
 
     showXP(`+${gained} XP ${bonus.label}`);
-    updateBar();
 
+    /* 🔥 FEED EVENTS */
+    if(bonus.xp === 50){
+        addActivity(`🔥 First report at ${bar.name}`);
+    } else if(bonus.xp === 25){
+        addActivity(`⚡ ${bar.name} revived`);
+    } else {
+        addActivity(`📊 ${status} at ${bar.name}`);
+    }
+
+    updateBar();
     loadReports();
 }
 
@@ -254,7 +317,7 @@ function renderBars(){
     bars.forEach((bar,i)=>{
         let last = bar.reports[0]?.time || 0;
 
-        let nudge = "";
+        let nudge="";
         if(bar.reports.length===0){
             nudge="🔥 Be first — big XP";
         } else if(Date.now()-last > 600000){
@@ -319,6 +382,7 @@ window.onload=function(){
     renderBars();
     loadReports();
     updateLeaderboardUI();
+    renderFeed();
 };
 </script>
 
