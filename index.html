@@ -630,4 +630,941 @@ textarea.input { resize: vertical; min-height: 80px; }
 </div>
 
 <!-- LOST MODAL -->
-<div class
+<div class="modal" id="lost-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Post an Item</div>
+    <select class="input" id="lf-type">
+      <option value="lost">🔴 Lost</option>
+      <option value="found">🟢 Found</option>
+    </select>
+    <input    class="input" id="lf-title"       placeholder="Item (e.g. Black iPhone 14)">
+    <input    class="input" id="lf-location"    placeholder="Location / Bar">
+    <input    class="input" id="lf-contact"     placeholder="Contact (phone or IG)">
+    <textarea class="input" id="lf-description" placeholder="Extra details..."></textarea>
+    <label style="display:block;cursor:pointer">
+      <div class="input" style="color:var(--muted);cursor:pointer;text-align:center">📷 Add Photo (optional)</div>
+      <input type="file" id="lf-photo" accept="image/*" style="display:none" onchange="previewPhoto(this)">
+    </label>
+    <img id="lf-photo-preview" class="photo-preview" alt="preview">
+    <button class="btn-primary" onclick="submitLostItem()">Post Item</button>
+    <button class="btn-ghost"   onclick="closeModal('lost-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- REPORT CONFIRM MODAL -->
+<div class="modal" id="report-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="report-modal-title">Report</div>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:16px;">Help the crew know what's up. You'll earn <strong style="color:var(--accent)">10 XP</strong> for reporting!</p>
+
+    <!-- rating -->
+    <div style="font-size:13px;color:var(--muted);margin-bottom:6px;">Rate the vibe (optional)</div>
+    <div class="star-row" id="rating-stars">
+      <span class="star" data-val="1" onclick="setRating(1)">★</span>
+      <span class="star" data-val="2" onclick="setRating(2)">★</span>
+      <span class="star" data-val="3" onclick="setRating(3)">★</span>
+      <span class="star" data-val="4" onclick="setRating(4)">★</span>
+      <span class="star" data-val="5" onclick="setRating(5)">★</span>
+    </div>
+
+    <button class="btn-primary" id="report-confirm-btn" onclick="confirmReport()" style="margin-top:14px">Submit Report</button>
+    <button class="btn-ghost" onclick="closeModal('report-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- ═══════ SCRIPT ═══════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// Global error catcher — shows errors on screen
+window.onerror = function(msg, src, line) {
+  let box = document.getElementById("debug-box");
+  if (box) { box.style.display = "block"; box.innerHTML += `<div>❌ ${msg} (line ${line})</div>`; }
+  return false;
+};
+window.onunhandledrejection = function(e) {
+  let box = document.getElementById("debug-box");
+  if (box) { box.style.display = "block"; box.innerHTML += `<div>❌ ${e.reason}</div>`; }
+};
+/* ─── SUPABASE ─── */
+/* ======================================================
+   🔑 SUPABASE CONFIG — REPLACE YOUR KEY HERE
+   ====================================================== */
+const SUPABASE_URL = "https://jwgwufggptpdmgcmmqes.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18";
+/* ====================================================== */
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ─── STATE ─── */
+let currentUser  = null;
+let userProfile  = null;
+let xp           = 0;
+let currentPage  = 'line';
+let cart         = {};
+let pendingReport = null;
+let pendingRating = 0;
+let lostFilter   = 'all';
+
+const BARS = [
+  { name:"Library",        emoji:"📚", address:"976 Higuera St" },
+  { name:"Mothers Tavern", emoji:"🍺", address:"725 Higuera St" },
+  { name:"Frog & Peach",   emoji:"🐸", address:"728 Higuera St" },
+  { name:"SLO Brew",       emoji:"🎸", address:"736 Higuera St" },
+  { name:"Creekside",      emoji:"🌊", address:"101 Buckley Rd" }
+];
+
+const PRODUCTS = [
+  { name:"Red Bull",   emoji:"🐂", price:3.99, desc:"Energy boost" },
+  { name:"Water",      emoji:"💧", price:1.99, desc:"Hydrate!" },
+  { name:"Phone Charger", emoji:"🔋", price:14.99, desc:"USB-C & Lightning" },
+  { name:"Advil",      emoji:"💊", price:4.99, desc:"2 pack" },
+  { name:"Gum",        emoji:"🫧", price:1.49, desc:"Fresh breath" },
+  { name:"Chips",      emoji:"🍟", price:2.49, desc:"Late night munchies" }
+];
+
+const BADGES = [
+  { id:"reporter",   label:"Reporter",   emoji:"📡", req: p => p.xp >= 50 },
+  { id:"informant",  label:"Informant",  emoji:"🕵️", req: p => p.xp >= 200 },
+  { id:"legend",     label:"Legend",     emoji:"🏅", req: p => p.xp >= 500 },
+  { id:"founder",    label:"Founder",    emoji:"🌟", req: p => p.reports >= 10 },
+];
+
+let barsData = BARS.map(b => ({ ...b, reports:[], avgRating:0 }));
+
+/* ─── UTILS ─── */
+function timeAgo(t) {
+  let s = Math.floor((Date.now()-t)/1000);
+  if (s<60)  return s+"s ago";
+  let m = Math.floor(s/60);
+  if (m<60)  return m+"m ago";
+  return Math.floor(m/60)+"h ago";
+}
+
+function toast(msg, dur=2400) {
+  let el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), dur);
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+function openModal(id) {
+  document.getElementById(id).classList.add("open");
+}
+
+function getStatus(bar) {
+  if (!bar.reports.length) return "No Data";
+  let counts = {};
+  bar.reports.slice(0,5).forEach(r => counts[r.status]=(counts[r.status]||0)+1);
+  return Object.keys(counts).reduce((a,b) => counts[a]>counts[b]?a:b);
+}
+
+function updateXPDisplay() {
+  let el = document.getElementById("xp-top");
+  if (el) el.textContent = xp;
+}
+
+/* ─── AUTH ─── */
+function switchAuth(tab) {
+  document.getElementById("auth-login-form").style.display    = tab==="login"    ? "block" : "none";
+  document.getElementById("auth-register-form").style.display = tab==="register" ? "block" : "none";
+  document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("tab-"+tab).classList.add("active");
+}
+
+async function login() {
+  let email = document.getElementById("auth-email").value.trim();
+  let pass  = document.getElementById("auth-password").value;
+  if (!email || !pass) { toast("⚠️ Fill in all fields"); return; }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) { toast("❌ " + error.message); return; }
+  await onLogin(data.user);
+}
+
+async function register() {
+  let name  = document.getElementById("reg-name").value.trim();
+  let email = document.getElementById("reg-email").value.trim();
+  let pass  = document.getElementById("reg-password").value;
+  if (!name || !email || !pass) { toast("⚠️ Fill in all fields"); return; }
+  const { data, error } = await sb.auth.signUp({ email, password: pass });
+  if (error) { toast("❌ " + error.message); return; }
+  // insert profile
+  if (data.user) {
+    await sb.from("profiles").insert([{ id: data.user.id, display_name: name, xp: 0, reports: 0 }]);
+    await onLogin(data.user, name);
+  }
+}
+
+async function guestMode() {
+  try {
+    currentUser = null;
+    userProfile = { display_name: "Guest", xp: 0, reports: 0 };
+    xp = 0;
+    document.getElementById("auth-modal").classList.remove("open");
+    document.getElementById("auth-modal").style.display = "none";
+    let el = document.getElementById("xp-top");
+    if (el) el.textContent = xp;
+    toast("👋 Continuing as guest");
+  } catch(e) {
+    console.log(e);
+    document.getElementById("auth-modal").style.display = "none";
+  }
+}
+
+async function onLogin(user, overrideName) {
+  currentUser = user;
+  const { data } = await sb.from("profiles").select("*").eq("id", user.id).single();
+  userProfile = data || { display_name: overrideName||user.email, xp: 0, reports: 0 };
+  xp = userProfile.xp || 0;
+  closeModal("auth-modal");
+  updateXPDisplay();
+  renderProfile();
+  toast("✅ Welcome back, " + userProfile.display_name + "!");
+}
+
+async function addXP(amount, label) {
+  xp += amount;
+  updateXPDisplay();
+  toast("⚡ +" + amount + " XP — " + label);
+  if (currentUser) {
+    await sb.from("profiles").update({ xp }).eq("id", currentUser.id);
+  }
+  renderProfile();
+}
+
+/* ─── NAV ─── */
+function showPage(p) {
+  document.querySelectorAll(".page").forEach(x => x.classList.remove("active"));
+  document.getElementById(p).classList.add("active");
+  document.querySelectorAll(".bnav-btn").forEach(b => b.classList.remove("active"));
+  const bnav = document.getElementById("bnav-"+p);
+  if (bnav) bnav.classList.add("active");
+  currentPage = p;
+
+  // Show/hide cart FAB
+  document.getElementById("cart-fab").style.display = (p === "delivery") ? "block" : "none";
+
+  if (p === "leaderboard") loadLeaderboard();
+  if (p === "admin")       loadAdminOrders();
+  if (p === "profile")     renderProfile();
+}
+
+/* ─── BARS / LINE PAGE ─── */
+function renderBarsPage() {
+  const page = document.getElementById("line");
+  page.innerHTML = `
+    <div class="section-title" style="display:flex;align-items:center;gap:8px;">
+      <span class="live-dot"></span> Bar Lines
+    </div>
+    <div id="bars-container"></div>
+  `;
+  renderBars();
+}
+
+function renderBars() {
+  let c = document.getElementById("bars-container");
+  if (!c) return;
+  c.innerHTML = "";
+
+  barsData.forEach((bar, i) => {
+    let status = getStatus(bar);
+    let statusClass = "status-" + (status === "No Data" ? "No-Data" : status);
+    let last = bar.reports[0] ? timeAgo(bar.reports[0].time) : "No data yet";
+    let rating = bar.avgRating ? "⭐ " + bar.avgRating.toFixed(1) : "";
+
+    // Mini activity sparkline
+    let spark = "";
+    let sparks = bar.reports.slice(0,7).reverse();
+    sparks.forEach((r, idx) => {
+      let h = Math.min(100, 20 + idx*12);
+      let col = r.status==="Dead" ? "var(--dead)" : r.status==="Busy" ? "var(--busy)" : "var(--packed)";
+      spark += `<div class="activity-bar" style="background:${col};height:${h}%"></div>`;
+    });
+    // pad
+    for (let j=sparks.length; j<7; j++) spark += `<div class="activity-bar"></div>`;
+
+    c.innerHTML += `
+      <div class="bar-card">
+        <div class="bar-header">
+          <div>
+            <div class="bar-name">${bar.emoji} ${bar.name}</div>
+            <div style="font-size:12px;color:var(--muted)">${bar.address}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="status-badge ${statusClass}">${status}</div>
+            <div class="bar-time">${last}</div>
+            ${rating ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${rating}</div>` : ""}
+          </div>
+        </div>
+        <div class="activity-row">${spark}</div>
+        <div class="report-btns">
+          <button class="report-btn btn-dead"   onclick="openReport(${i},'Dead')">🟢 Dead</button>
+          <button class="report-btn btn-busy"   onclick="openReport(${i},'Busy')">🟡 Busy</button>
+          <button class="report-btn btn-packed" onclick="openReport(${i},'Packed')">🔴 Packed</button>
+        </div>
+      </div>`;
+  });
+}
+
+async function loadReports() {
+  try {
+    const { data, error } = await sb.from("reports").select("*").order("created_at",{ascending:false});
+    if (error) { console.log(error); return; }
+
+    barsData.forEach(b => { b.reports=[]; b.ratings=[]; });
+
+    data.forEach(r => {
+      let bar = barsData.find(b => b.name===r.bar);
+      if (bar) {
+        bar.reports.push({ status:r.status, time:new Date(r.created_at).getTime() });
+        if (r.rating) bar.ratings.push(r.rating);
+      }
+    });
+
+    barsData.forEach(b => {
+      b.avgRating = b.ratings.length
+        ? b.ratings.reduce((a,c)=>a+c,0)/b.ratings.length
+        : 0;
+    });
+
+  } catch(e) { console.log(e); }
+  renderBars();
+}
+
+/* ─── REPORT FLOW ─── */
+let pendingBarIdx = null;
+let pendingStatus = null;
+
+function openReport(i, status) {
+  pendingBarIdx = i;
+  pendingStatus = status;
+  pendingRating = 0;
+  document.getElementById("report-modal-title").textContent =
+    "Report: " + barsData[i].name + " → " + status;
+  document.querySelectorAll(".star").forEach(s => s.classList.remove("on"));
+  openModal("report-modal");
+}
+
+function setRating(val) {
+  pendingRating = val;
+  document.querySelectorAll(".star").forEach(s => {
+    s.classList.toggle("on", parseInt(s.dataset.val) <= val);
+  });
+}
+
+async function confirmReport() {
+  if (pendingBarIdx === null) return;
+  let bar = barsData[pendingBarIdx];
+  closeModal("report-modal");
+
+  try {
+    let payload = { bar: bar.name, status: pendingStatus };
+    if (pendingRating) payload.rating = pendingRating;
+    if (currentUser)  payload.user_id = currentUser.id;
+
+    await sb.from("reports").insert([payload]);
+    await addXP(10, "Bar report");
+    if (currentUser) {
+      await sb.from("profiles").update({ reports: (userProfile.reports||0)+1 }).eq("id", currentUser.id);
+      if (userProfile) userProfile.reports = (userProfile.reports||0)+1;
+    }
+  } catch(e) { console.log(e); }
+
+  loadReports();
+}
+
+/* ─── DELIVERY ─── */
+function renderDeliveryPage() {
+  let page = document.getElementById("delivery");
+  page.innerHTML = `<div class="section-title">🛍 Delivery</div><div id="product-grid" class="product-grid"></div>`;
+  let g = document.getElementById("product-grid");
+  PRODUCTS.forEach(p => {
+    g.innerHTML += `
+      <div class="product-card">
+        <div class="product-emoji">${p.emoji}</div>
+        <div class="product-name">${p.name}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${p.desc}</div>
+        <div class="product-price">$${p.price.toFixed(2)}</div>
+        <button class="add-btn" onclick="addToCart('${p.name}',${p.price})">Add +</button>
+      </div>`;
+  });
+}
+
+function addToCart(name, price) {
+  if (!cart[name]) cart[name] = { qty:0, price };
+  cart[name].qty++;
+  let total = Object.values(cart).reduce((a,c)=>a+c.qty,0);
+  document.getElementById("cart-count").textContent = total;
+  document.getElementById("cart-fab").style.display = currentPage==="delivery" ? "block" : "none";
+  toast("➕ Added " + name);
+}
+
+function openCheckout() {
+  let s = document.getElementById("order-summary");
+  s.innerHTML = "";
+  let total = 0;
+  for (let name in cart) {
+    let item = cart[name];
+    total += item.qty * item.price;
+    s.innerHTML += `
+      <div class="cart-item-row">
+        <span>${name}</span>
+        <div class="cart-item-controls">
+          <button class="qty-btn" onclick="changeQty('${name}',-1)">−</button>
+          <span>${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty('${name}',1)">+</button>
+          <span style="color:var(--muted);font-size:13px">$${(item.qty*item.price).toFixed(2)}</span>
+        </div>
+      </div>`;
+  }
+  if (!Object.keys(cart).length) {
+    s.innerHTML = `<p style="color:var(--muted);text-align:center;padding:20px">Cart is empty</p>`;
+  }
+  document.getElementById("order-total").textContent = "$" + total.toFixed(2);
+  openModal("checkout-modal");
+}
+
+function changeQty(name, delta) {
+  cart[name].qty += delta;
+  if (cart[name].qty <= 0) delete cart[name];
+  let total = Object.values(cart).reduce((a,c)=>a+c.qty,0);
+  document.getElementById("cart-count").textContent = total;
+  openCheckout(); // re-render
+}
+
+function closeCheckout() { closeModal("checkout-modal"); }
+
+async function placeOrder() {
+  let name  = document.getElementById("order-name").value.trim();
+  let phone = document.getElementById("order-phone").value.trim();
+  if (!name || !phone) { toast("⚠️ Enter name & pickup info"); return; }
+
+  let items = Object.entries(cart).map(([n,v])=>`${n} x${v.qty}`).join(", ");
+  let total = Object.values(cart).reduce((a,c)=>a+(c.qty*c.price),0);
+
+  try {
+    await sb.from("orders").insert([{ name, phone, items, total: total.toFixed(2), status:"pending" }]);
+    await addXP(20, "Order placed");
+    cart = {};
+    document.getElementById("cart-count").textContent = "0";
+    closeModal("checkout-modal");
+    toast("🎉 Order placed! See you soon.");
+  } catch(e) { console.log(e); toast("❌ Error placing order"); }
+}
+
+/* ─── LOST & FOUND ─── */
+const LF_EXPIRY_DAYS = 7; // posts auto-expire after 7 days
+let lostSearch = "";
+
+function renderLostPage() {
+  lostSearch = ""; // reset search on page load
+  lostFilter = "all";
+  let page = document.getElementById("lost");
+  page.innerHTML = `
+    <div class="section-title">🔎 Lost &amp; Found</div>
+    <div class="search-bar">
+      <input class="search-input" placeholder="🔍 Search items..." oninput="lostSearch=this.value;loadLostItems()">
+    </div>
+    <div class="filter-chips">
+      <div class="chip active" onclick="setLostFilter('all',this)">All</div>
+      <div class="chip"        onclick="setLostFilter('lost',this)">🔴 Lost</div>
+      <div class="chip"        onclick="setLostFilter('found',this)">🟢 Found</div>
+      <div class="chip"        onclick="setLostFilter('resolved',this)">✅ Resolved</div>
+    </div>
+    <button onclick="openModal('lost-modal')" style="
+      background:var(--accent);color:var(--bg);border:none;
+      padding:11px 20px;border-radius:12px;font-family:'DM Sans',sans-serif;
+      font-weight:700;font-size:14px;cursor:pointer;margin-bottom:14px;display:block;width:100%">
+      + Post Item
+    </button>
+    <div id="lost-feed"></div>`;
+  loadLostItems();
+}
+
+function setLostFilter(val, el) {
+  lostFilter = val;
+  document.querySelectorAll("#lost .chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  loadLostItems();
+}
+
+function getExpiryInfo(createdAt) {
+  let age   = Date.now() - new Date(createdAt).getTime();
+  let total = LF_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  let pct   = Math.max(0, Math.min(100, 100 - (age / total * 100)));
+  let daysLeft = Math.ceil((total - age) / (24*60*60*1000));
+  let color = pct > 50 ? "var(--dead)" : pct > 20 ? "var(--busy)" : "var(--packed)";
+  return { pct, daysLeft, color, expired: age > total };
+}
+
+async function loadLostItems() {
+  let c = document.getElementById("lost-feed");
+  if (!c) return;
+  c.innerHTML = `<div class="skeleton"></div><div class="skeleton"></div>`;
+
+  try {
+    let q = sb.from("lost_found").select("*").order("created_at",{ascending:false});
+
+    // Filter by status
+    if (lostFilter === "resolved") {
+      q = q.eq("resolved", true);
+    } else if (lostFilter !== "all") {
+      q = q.eq("type", lostFilter).eq("resolved", false);
+    } else {
+      q = q.eq("resolved", false);
+    }
+
+    // Auto-exclude expired posts (older than 7 days) unless viewing resolved
+    if (lostFilter !== "resolved") {
+      let cutoff = new Date(Date.now() - LF_EXPIRY_DAYS*24*60*60*1000).toISOString();
+      q = q.gte("created_at", cutoff);
+    }
+
+    const { data } = await q;
+    c.innerHTML = "";
+    if (!data || !data.length) {
+      c.innerHTML = `<p style="color:var(--muted);text-align:center;padding:30px">Nothing here yet</p>`;
+      return;
+    }
+
+    // Client-side keyword search
+    let items = data;
+    if (lostSearch.trim()) {
+      let kw = lostSearch.toLowerCase();
+      items = data.filter(i =>
+        (i.title||"").toLowerCase().includes(kw) ||
+        (i.description||"").toLowerCase().includes(kw) ||
+        (i.location||"").toLowerCase().includes(kw)
+      );
+    }
+
+    if (!items.length) {
+      c.innerHTML = `<p style="color:var(--muted);text-align:center;padding:30px">No results for "${lostSearch}"</p>`;
+      return;
+    }
+
+    items.forEach(item => {
+      let isResolved = item.resolved;
+      let tagClass = isResolved ? "tag-resolved" : item.type==="lost" ? "tag-lost" : "tag-found";
+      let tagLabel = isResolved ? "✅ Resolved"  : item.type==="lost" ? "🔴 Lost"   : "🟢 Found";
+      let exp = getExpiryInfo(item.created_at);
+
+      // Show contact button if contact info exists
+      let contactBtn = item.contact && !isResolved
+        ? `<button class="lost-action-btn contact" onclick="contactItem('${item.contact.replace(/'/g,"\\'")}')">📱 Contact</button>`
+        : "";
+
+      // Show resolve button only for own posts or any post (adjust logic as needed)
+      let resolveBtn = !isResolved
+        ? `<button class="lost-action-btn resolve" onclick="resolveItem('${item.id}')">✅ Mark Resolved</button>`
+        : "";
+
+      c.innerHTML += `
+        <div class="lost-card ${isResolved?"resolved":""}">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between">
+            <span class="lost-tag ${tagClass}">${tagLabel}</span>
+            <span style="font-size:11px;color:var(--muted)">${timeAgo(new Date(item.created_at).getTime())}</span>
+          </div>
+          <h3 style="font-size:16px;font-weight:700;margin-bottom:4px">${item.title}</h3>
+          ${item.location ? `<div style="font-size:13px;color:var(--muted)">📍 ${item.location}</div>` : ""}
+          ${item.description ? `<p style="font-size:13px;margin-top:6px;color:#ccc">${item.description}</p>` : ""}
+          ${item.photo_url ? `<img class="lost-photo" src="${item.photo_url}" alt="item photo">` : ""}
+          ${!isResolved ? `
+            <div class="expiry-bar">
+              <div class="expiry-fill" style="width:${exp.pct}%;background:${exp.color}"></div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Expires in ${exp.daysLeft} day${exp.daysLeft===1?"":"s"}</div>
+          ` : ""}
+          ${(contactBtn||resolveBtn) ? `<div class="lost-actions">${contactBtn}${resolveBtn}</div>` : ""}
+        </div>`;
+    });
+
+  } catch(e) { console.log(e); c.innerHTML = `<p style="color:var(--muted);padding:20px">Failed to load</p>`; }
+}
+
+function contactItem(contact) {
+  // Try to detect phone vs IG handle
+  if (/^\d[\d\s\-\(\)]{6,}/.test(contact)) {
+    window.open("sms:" + contact.replace(/\D/g,""));
+  } else if (contact.startsWith("@")) {
+    window.open("https://instagram.com/" + contact.slice(1));
+  } else {
+    toast("📱 Contact: " + contact);
+  }
+}
+
+async function resolveItem(id) {
+  try {
+    await sb.from("lost_found").update({ resolved: true }).eq("id", id);
+    await addXP(10, "Item resolved");
+    toast("✅ Marked as resolved!");
+    loadLostItems();
+  } catch(e) { console.log(e); toast("❌ Error"); }
+}
+
+function previewPhoto(input) {
+  let preview = document.getElementById("lf-photo-preview");
+  if (input.files && input.files[0]) {
+    let reader = new FileReader();
+    reader.onload = e => {
+      preview.src = e.target.result;
+      preview.style.display = "block";
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+async function uploadPhoto(file) {
+  if (!file) return null;
+  try {
+    let ext  = file.name.split(".").pop();
+    let path = `lost/${Date.now()}.${ext}`;
+    const { error } = await sb.storage.from("lost-photos").upload(path, file);
+    if (error) { console.log(error); return null; }
+    const { data } = sb.storage.from("lost-photos").getPublicUrl(path);
+    return data.publicUrl;
+  } catch(e) { console.log(e); return null; }
+}
+
+async function submitLostItem() {
+  let type        = document.getElementById("lf-type").value;
+  let title       = document.getElementById("lf-title").value.trim();
+  let location    = document.getElementById("lf-location").value.trim();
+  let contact     = document.getElementById("lf-contact").value.trim();
+  let description = document.getElementById("lf-description").value.trim();
+  let photoFile   = document.getElementById("lf-photo").files[0];
+
+  if (!title) { toast("⚠️ Enter item name"); return; }
+
+  toast("Posting...");
+
+  try {
+    let photo_url = await uploadPhoto(photoFile);
+    await sb.from("lost_found").insert([{ type, title, location, contact, description, photo_url, resolved: false }]);
+    await addXP(15, "Lost & Found post");
+
+    // Reset form
+    ["lf-title","lf-location","lf-contact","lf-description"].forEach(id => document.getElementById(id).value="");
+    document.getElementById("lf-photo").value = "";
+    document.getElementById("lf-photo-preview").style.display = "none";
+
+    closeModal("lost-modal");
+    loadLostItems();
+    toast("📣 Item posted!");
+  } catch(e) { console.log(e); toast("❌ Error posting item"); }
+}
+
+/* ─── LEADERBOARD ─── */
+async function loadLeaderboard() {
+  let page = document.getElementById("leaderboard");
+  page.innerHTML = `<div class="section-title">🏆 Leaderboard</div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>`;
+
+  try {
+    const { data } = await sb.from("profiles").select("*").order("xp",{ascending:false}).limit(20);
+    page.innerHTML = `<div class="section-title">🏆 Leaderboard</div>`;
+    if (!data || !data.length) {
+      page.innerHTML += `<p style="color:var(--muted);padding:20px">No players yet</p>`;
+      return;
+    }
+    data.forEach((p, i) => {
+      let rankClass = i===0?"gold":i===1?"silver":i===2?"bronze":"";
+      let medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":"";
+      let isMe = currentUser && p.id===currentUser.id;
+      page.innerHTML += `
+        <div class="lb-row" style="${isMe?"border-color:var(--accent)":""}">
+          <div class="lb-rank ${rankClass}">${medal||("#"+(i+1))}</div>
+          <div class="lb-name">${p.display_name||"Anonymous"}${isMe?" 👈":""}</div>
+          <div class="lb-xp">${p.xp} XP</div>
+        </div>`;
+    });
+  } catch(e) { console.log(e); }
+}
+
+/* ─── CHARACTER SYSTEM ─── */
+const LEVELS = [
+  { level:1,  xp:0,    name:"The Freshman",   title:"New in Town",                color:"#94a3b8", glow:false,  animated:false },
+  { level:2,  xp:100,  name:"The Tourist",    title:"Just Visiting",              color:"#94a3b8", glow:false,  animated:false },
+  { level:3,  xp:200,  name:"The Curious",    title:"Getting Warmed Up",          color:"#7dd3fc", glow:false,  animated:false },
+  { level:4,  xp:300,  name:"The Regular",    title:"Knows the Spots",            color:"#7dd3fc", glow:false,  animated:false },
+  { level:5,  xp:400,  name:"The Socialite",  title:"Life of the Party",          color:"#86efac", glow:false,  animated:false },
+  { level:6,  xp:500,  name:"The Barfly",     title:"Always Around",              color:"#86efac", glow:false,  animated:false },
+  { level:7,  xp:600,  name:"The Connector",  title:"Knows Everyone",             color:"#fcd34d", glow:false,  animated:false },
+  { level:8,  xp:700,  name:"The Veteran",    title:"Been Around",                color:"#fcd34d", glow:false,  animated:false },
+  { level:9,  xp:800,  name:"The Nighthawk",  title:"Owns the Night",             color:"#f97316", glow:false,  animated:false },
+  { level:10, xp:900,  name:"The Insider",    title:"Has the Intel",              color:"#f97316", glow:false,  animated:false },
+  { level:11, xp:1000, name:"The VIP",        title:"Skip the Line",              color:"#e8ff47", glow:true,   animated:false },
+  { level:12, xp:1100, name:"The Cult Figure",title:"People Know Your Name",      color:"#e8ff47", glow:true,   animated:false },
+  { level:13, xp:1200, name:"The Icon",       title:"SLO Royalty",                color:"#fb923c", glow:true,   animated:false },
+  { level:14, xp:1300, name:"The Myth",       title:"Is This Real?",              color:"#fb923c", glow:true,   animated:false },
+  { level:15, xp:1400, name:"The Ghost",      title:"Seen Everywhere, Known by None", color:"#c084fc", glow:true, animated:true },
+  { level:16, xp:1500, name:"The Oracle",     title:"Knows Before It Happens",    color:"#c084fc", glow:true,   animated:true },
+  { level:17, xp:1600, name:"The Phantom",    title:"The Night Itself",           color:"#818cf8", glow:true,   animated:true },
+  { level:18, xp:1700, name:"The Architect",  title:"Built This Scene",           color:"#818cf8", glow:true,   animated:true },
+  { level:19, xp:1800, name:"The Immortal",   title:"Was Here First",             color:"#f472b6", glow:true,   animated:true },
+  { level:20, xp:1900, name:"The Legend",     title:"DTSLO Is You",               color:"#e8ff47", glow:true,   animated:true },
+];
+
+function getLevelData(xp) {
+  let lvl = LEVELS[0];
+  for (let l of LEVELS) { if (xp >= l.xp) lvl = l; }
+  return lvl;
+}
+
+function getNextLevel(xp) {
+  return LEVELS.find(l => l.xp > xp) || null;
+}
+
+function drawCharacter(lvl, size=120) {
+  try {
+    let c = lvl.color;
+    let l = lvl.level;
+    let glow = lvl.glow ? `filter:drop-shadow(0 0 10px ${c})` : "";
+    let anim = lvl.animated ? `style="animation:charFloat 2.5s ease-in-out infinite"` : "";
+
+    let hat = "";
+    if      (l >= 20) hat = `<ellipse cx="60" cy="20" rx="20" ry="6" fill="${c}"/><rect x="48" y="10" width="24" height="12" rx="4" fill="${c}"/>`;
+    else if (l >= 15) hat = `<polygon points="60,8 73,24 47,24" fill="${c}"/>`;
+    else if (l >= 11) hat = `<rect x="45" y="15" width="30" height="8" rx="4" fill="${c}"/>`;
+    else if (l >= 7)  hat = `<path d="M47 22 Q60 10 73 22" stroke="${c}" stroke-width="3" fill="none"/>`;
+    else if (l >= 4)  hat = `<rect x="50" y="17" width="20" height="6" rx="3" fill="${c}" opacity="0.7"/>`;
+
+    let aura = "";
+    if      (l >= 15) aura = `<circle cx="60" cy="70" r="54" fill="none" stroke="${c}" stroke-width="1.5" opacity="0.25"/>`;
+    else if (l >= 11) aura = `<circle cx="60" cy="70" r="50" fill="none" stroke="${c}" stroke-width="1" opacity="0.15"/>`;
+
+    let stars = l >= 20 ? `<text x="18" y="32" font-size="10" fill="${c}">★</text><text x="90" y="30" font-size="8" fill="${c}">★</text>` : "";
+
+    let smile = l >= 8
+      ? `<path d="M53 53 Q60 59 67 53" stroke="#8b5e3c" stroke-width="1.5" fill="none" stroke-linecap="round"/>`
+      : `<path d="M54 53 Q60 56 66 53" stroke="#8b5e3c" stroke-width="1.5" fill="none" stroke-linecap="round"/>`;
+
+    return `<svg width="${size}" height="${size}" viewBox="0 0 120 130" ${anim} style="${glow}">
+      ${aura}${stars}
+      <ellipse cx="60" cy="95" rx="26" ry="28" fill="#1c1c26" stroke="${l>=8?c:'#444'}" stroke-width="1.5"/>
+      <rect x="54" y="58" width="12" height="10" rx="2" fill="#c8a882"/>
+      <circle cx="60" cy="46" r="22" fill="#c8a882" stroke="${l>=8?c:'#555'}" stroke-width="1.5"/>
+      <circle cx="53" cy="44" r="3.5" fill="white"/><circle cx="67" cy="44" r="3.5" fill="white"/>
+      <circle cx="53.5" cy="44" r="2" fill="#1a1a2e"/><circle cx="67.5" cy="44" r="2" fill="#1a1a2e"/>
+      ${l>=5?`<circle cx="54" cy="43" r="0.8" fill="white"/><circle cx="68" cy="43" r="0.8" fill="white"/>`:""}
+      ${smile}
+      <path d="M38 40 Q42 24 60 22 Q78 24 82 40 Q78 30 60 28 Q42 30 38 40Z" fill="#3d2b1f"/>
+      ${hat}
+      <rect x="50" y="118" width="9" height="12" rx="4" fill="#333"/>
+      <rect x="61" y="118" width="9" height="12" rx="4" fill="#333"/>
+    </svg>`;
+  } catch(e) {
+    return `<div style="width:${size}px;height:${size}px;background:var(--surface2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px">👤</div>`;
+  }
+}
+
+/* ─── PROFILE ─── */
+function renderProfile() {
+  let page = document.getElementById("profile");
+  if (!userProfile) { page.innerHTML = `<p style="color:var(--muted);padding:20px">Not logged in</p>`; return; }
+
+  let lvl      = getLevelData(xp);
+  let nextLvl  = getNextLevel(xp);
+  let pct      = nextLvl ? Math.round(((xp - lvl.xp) / (nextLvl.xp - lvl.xp)) * 100) : 100;
+  let xpToNext = nextLvl ? (nextLvl.xp - xp) : 0;
+
+  let earned = BADGES.filter(b => b.req(userProfile||{xp,reports:0}));
+  let badgeHTML = BADGES.map(b => {
+    let has = earned.find(e=>e.id===b.id);
+    return `<div class="badge ${has?"earned":""}">${b.emoji} ${b.label}</div>`;
+  }).join("");
+
+  // Next 3 upcoming characters
+  let upcomingHTML = LEVELS.filter(l => l.xp > xp).slice(0,3).map(l => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="width:40px;height:40px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid ${l.color}33">
+        <svg width="30" height="30" viewBox="0 0 120 130" style="opacity:0.4">
+          <circle cx="60" cy="44" r="22" fill="#666"/>
+          <ellipse cx="60" cy="90" rx="26" ry="32" fill="#444"/>
+        </svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--muted)">${l.name}</div>
+        <div style="font-size:11px;color:var(--muted)">${l.title}</div>
+      </div>
+      <div style="font-size:12px;color:${l.color};font-weight:700">${l.xp} XP</div>
+    </div>`).join("");
+
+  page.innerHTML = `
+    <div class="section-title">👤 Profile</div>
+
+    <!-- Character card -->
+    <div class="profile-hero" style="border-color:${lvl.color}44">
+      <div style="margin:0 auto 8px;width:120px;height:120px;display:flex;align-items:center;justify-content:center">
+        ${drawCharacter(lvl, 120)}
+      </div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:2px">${userProfile.display_name||"Guest"}</div>
+      <div style="color:${lvl.color};font-size:13px;font-weight:700;margin-bottom:2px">${lvl.name}</div>
+      <div style="color:var(--muted);font-size:12px;font-style:italic;margin-bottom:10px">"${lvl.title}"</div>
+
+      <!-- XP bar -->
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px">
+        <span>Level ${lvl.level}</span>
+        <span>${nextLvl ? `${xpToNext} XP to Level ${nextLvl.level}` : "MAX LEVEL"}</span>
+      </div>
+      <div class="xp-bar-bg">
+        <div class="xp-bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${lvl.color},${lvl.color}aa)"></div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">${xp} total XP</div>
+      <div class="badges-row">${badgeHTML}</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total XP</div>
+        <div class="stat-value" style="color:${lvl.color}">${xp}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Reports</div>
+        <div class="stat-value">${userProfile.reports||0}</div>
+      </div>
+    </div>
+
+    <!-- Upcoming characters -->
+    ${nextLvl ? `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Unlocking Next</div>
+      ${upcomingHTML}
+    </div>` : `<div style="text-align:center;padding:20px;color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px">👑 MAX LEVEL REACHED</div>`}
+
+    ${currentUser
+      ? `<button class="btn-ghost" onclick="logout()">Log Out</button>`
+      : `<button class="btn-primary" onclick="openModal('auth-modal')">Sign In to Save Progress</button>`}
+
+    <style>
+      @keyframes charFloat {
+        0%,100% { transform: translateY(0); }
+        50%      { transform: translateY(-6px); }
+      }
+      @keyframes auraPulse {
+        0%,100% { opacity: 0.3; r: 52; }
+        50%      { opacity: 0.6; r: 56; }
+      }
+    </style>`;
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  currentUser = null;
+  userProfile = { display_name:"Guest", xp:0, reports:0 };
+  xp = 0;
+  updateXPDisplay();
+  renderProfile();
+  toast("👋 Logged out");
+}
+
+/* ─── ADMIN ─── */
+async function loadAdminOrders() {
+  let page = document.getElementById("admin");
+  page.innerHTML = `<div class="section-title">⚙️ Admin — Orders</div><div class="skeleton"></div>`;
+
+  try {
+    const { data } = await sb.from("orders").select("*").order("created_at",{ascending:false}).limit(30);
+    page.innerHTML = `<div class="section-title">⚙️ Admin — Orders</div>`;
+
+    if (!data || !data.length) {
+      page.innerHTML += `<p style="color:var(--muted);padding:20px">No orders yet</p>`;
+      return;
+    }
+
+    let tableHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      <table class="admin-table">
+        <thead><tr>
+          <th>Name</th><th>Items</th><th>Total</th><th>Status</th><th>Action</th>
+        </tr></thead><tbody>`;
+
+    data.forEach(o => {
+      let sc = o.status==="complete" ? "order-complete" : "order-pending";
+      tableHTML += `<tr>
+        <td><strong>${o.name}</strong><br><span style="color:var(--muted);font-size:12px">${o.phone}</span></td>
+        <td style="font-size:12px;color:var(--muted)">${o.items}</td>
+        <td style="color:var(--accent);font-weight:700">$${o.total||"?"}</td>
+        <td><span class="order-status ${sc}">${o.status||"pending"}</span></td>
+        <td>
+          ${o.status!=="complete"
+            ? `<button onclick="markOrderComplete('${o.id}')" style="background:var(--dead);color:var(--bg);border:none;padding:5px 10px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:700">✓ Done</button>`
+            : "—"}
+        </td>
+      </tr>`;
+    });
+
+    tableHTML += `</tbody></table></div>`;
+    page.innerHTML += tableHTML;
+
+  } catch(e) { console.log(e); }
+}
+
+async function markOrderComplete(id) {
+  await sb.from("orders").update({ status:"complete" }).eq("id", id);
+  toast("✅ Order marked complete");
+  loadAdminOrders();
+}
+
+/* ─── REAL-TIME ─── */
+function setupRealtime() {
+  sb.channel("reports-rt")
+    .on("postgres_changes", { event:"INSERT", schema:"public", table:"reports" }, () => {
+      loadReports();
+    })
+    .subscribe();
+
+  sb.channel("orders-rt")
+    .on("postgres_changes", { event:"INSERT", schema:"public", table:"orders" }, () => {
+      if (currentPage === "admin") loadAdminOrders();
+    })
+    .subscribe();
+}
+
+/* ─── PUSH NOTIFICATIONS (browser) ─── */
+async function requestNotifications() {
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "default") {
+    let perm = await Notification.requestPermission();
+    if (perm === "granted") toast("🔔 Notifications enabled!");
+  }
+}
+
+function sendNotif(title, body) {
+  if (Notification.permission === "granted") {
+    new Notification(title, { body, icon:"https://fav.farm/🍺" });
+  }
+}
+
+/* ─── INIT ─── */
+window.onload = async function() {
+  // Always set safe defaults first
+  currentUser = null;
+  userProfile = { display_name: "Guest", xp: 0, reports: 0 };
+  xp = 0;
+
+  // Always render pages immediately — no waiting on Supabase
+  try { renderBarsPage(); }     catch(e) { console.log("renderBarsPage:", e); document.getElementById('line').innerHTML = '<p style="color:red;padding:20px">Error: '+e.message+'</p>'; }
+  try { renderDeliveryPage(); } catch(e) { console.log("renderDeliveryPage:", e); }
+  try { renderLostPage(); }     catch(e) { console.log("renderLostPage:", e); }
+  try { renderProfile(); }      catch(e) { console.log("renderProfile:", e); }
+
+  // Then try Supabase stuff in background
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user) await onLogin(session.user);
+  } catch(e) { console.log("Session check failed:", e); }
+
+  try { loadReports(); }        catch(e) { console.log("loadReports:", e); }
+  try { setupRealtime(); }      catch(e) { console.log("setupRealtime:", e); }
+  try { requestNotifications(); } catch(e) {}
+
+  setInterval(() => { try { loadReports(); } catch(e){} }, 60000);
+};
+</script>
+</body>
+</html>
