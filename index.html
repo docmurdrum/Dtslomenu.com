@@ -38,3 +38,308 @@ body {
     position:absolute;
     top:60px;
     left:0;
+    background:white;
+    width:220px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+    display:none;
+}
+
+.dropdown div {
+    padding:15px;
+    border-bottom:1px solid #eee;
+    cursor:pointer;
+}
+
+/* PAGES */
+.page {
+    display:none;
+    padding-top:70px;
+}
+.active {
+    display:block;
+}
+
+/* BARS */
+.bar {
+    background:white;
+    margin:15px;
+    padding:15px;
+    border-radius:15px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease;
+}
+
+.bar.bump {
+    transform: scale(1.03);
+}
+
+/* STATUS */
+.status {
+    font-weight:bold;
+    margin:10px 0;
+}
+
+/* COLORS */
+.dead { color:#28a745; }
+.busy { color:#ffc107; }
+.packed { color:#dc3545; }
+
+/* PULSE */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.status.live {
+    animation: pulse 1.5s infinite;
+}
+
+/* BUTTONS */
+.buttons button {
+    margin:5px;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    transition: transform 0.1s ease;
+}
+
+.buttons button:active {
+    transform: scale(0.9);
+}
+
+/* XP BAR */
+#xp-bar {
+    position:fixed;
+    bottom:0;
+    left:0;
+    height:6px;
+    background:#28a745;
+    width:0%;
+    transition: width 0.4s ease;
+    box-shadow:0 0 10px #28a745;
+}
+
+/* FLOAT XP */
+.xp-float {
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
+    color:#28a745;
+    font-weight:bold;
+    animation: floatUp 1s ease forwards;
+}
+
+@keyframes floatUp {
+    0% { opacity:1; transform:translate(-50%,0); }
+    100% { opacity:0; transform:translate(-50%,-40px); }
+}
+
+/* CART */
+#checkout-btn {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background:#111;
+    color:white;
+    padding:10px 15px;
+    border-radius:20px;
+}
+
+/* PRODUCTS */
+.product-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:10px;
+    padding:10px;
+}
+
+.card {
+    background:white;
+    padding:15px;
+    border-radius:15px;
+    text-align:center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="navbar">
+    <div class="menu-btn" onclick="toggleMenu()">☰</div>
+</div>
+
+<div id="menu" class="dropdown">
+    <div onclick="showPage('line')">Line Check</div>
+    <div onclick="showPage('delivery')">Line & Entry Delivery</div>
+    <div onclick="showPage('food')">Food Recommendations</div>
+    <div onclick="showPage('events')">Concerts & Events</div>
+</div>
+
+<div id="line" class="page active"></div>
+
+<div id="delivery" class="page">
+    <button id="checkout-btn">Cart (<span id="cart-count">0</span>)</button>
+    <div id="product-grid" class="product-grid"></div>
+</div>
+
+<div id="food" class="page"><h2 style="padding:20px;">Food Coming Soon</h2></div>
+<div id="events" class="page"><h2 style="padding:20px;">Events Coming Soon</h2></div>
+
+<div id="xp-bar"></div>
+
+<script>
+const SUPABASE_URL = "https://jwgwufggptpdmgcmmqes.supabase.co";
+const SUPABASE_KEY = "YOUR_KEY_HERE";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* MENU */
+function toggleMenu(){
+    let m=document.getElementById("menu");
+    m.style.display = m.style.display==="block"?"none":"block";
+}
+function showPage(p){
+    document.querySelectorAll(".page").forEach(pg=>pg.classList.remove("active"));
+    document.getElementById(p).classList.add("active");
+}
+
+/* DATA */
+var bars = [
+    {name:"Library", reports:[]},
+    {name:"Mothers Tavern", reports:[]},
+    {name:"Frog & Peach", reports:[]}
+];
+
+var xp = 0;
+
+/* STATUS */
+function getStatus(bar){
+    if(bar.reports.length===0) return "No Data";
+    let recent = bar.reports.slice(0,5);
+    let counts = {};
+    recent.forEach(r=>{
+        counts[r.status]=(counts[r.status]||0)+1;
+    });
+    return Object.keys(counts).reduce((a,b)=>counts[a]>counts[b]?a:b);
+}
+
+function getStatusClass(status){
+    if(status==="Dead") return "dead";
+    if(status==="Busy") return "busy";
+    if(status==="Packed") return "packed";
+    return "";
+}
+
+/* RENDER */
+function renderBars(){
+    let container=document.getElementById("line");
+    container.innerHTML="<p style='padding:20px;'>Loading live data...</p>";
+
+    setTimeout(()=>{
+        container.innerHTML="";
+        bars.forEach((bar,i)=>{
+            let status = getStatus(bar);
+            container.innerHTML+=`
+            <div class="bar" id="bar-${i}">
+                <h3>${bar.name}</h3>
+                <div class="status live ${getStatusClass(status)}">${status}</div>
+                <div class="buttons">
+                    <button onclick="report(${i},'Dead')">Dead</button>
+                    <button onclick="report(${i},'Busy')">Busy</button>
+                    <button onclick="report(${i},'Packed')">Packed</button>
+                </div>
+            </div>`;
+        });
+    },200);
+}
+
+/* REPORT */
+async function report(i,status){
+    await supabaseClient.from("reports").insert([
+        {bar: bars[i].name, status: status}
+    ]);
+
+    xp+=10;
+    document.getElementById("xp-bar").style.width=(xp%100)+"%";
+
+    // XP FLOAT
+    let el=document.createElement("div");
+    el.className="xp-float";
+    el.innerText="+10 XP";
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),1000);
+
+    // BUMP CARD
+    let card=document.getElementById("bar-"+i);
+    if(card){
+        card.classList.add("bump");
+        setTimeout(()=>card.classList.remove("bump"),200);
+    }
+
+    loadReports();
+}
+
+/* LOAD */
+async function loadReports(){
+    const {data,error} = await supabaseClient
+        .from("reports")
+        .select("*")
+        .order("created_at",{ascending:false});
+
+    if(error){console.log(error);return;}
+
+    bars.forEach(b=>b.reports=[]);
+
+    data.forEach(r=>{
+        let b = bars.find(x=>x.name===r.bar);
+        if(b){
+            b.reports.push({
+                status:r.status,
+                time:new Date(r.created_at).getTime()
+            });
+        }
+    });
+
+    renderBars();
+}
+
+/* PRODUCTS */
+var products=[
+    {name:"Redbull",price:3.99},
+    {name:"Charger",price:14.99}
+];
+
+var cart={};
+
+function renderProducts(){
+    let grid=document.getElementById("product-grid");
+    products.forEach(p=>{
+        grid.innerHTML+=`
+        <div class="card">
+            <h3>${p.name}</h3>
+            <p>$${p.price}</p>
+            <button onclick="addToCart('${p.name}')">Add</button>
+        </div>`;
+    });
+}
+
+function addToCart(name){
+    cart[name]=(cart[name]||0)+1;
+    let total=0;
+    for(let k in cart) total+=cart[k];
+    document.getElementById("cart-count").innerText=total;
+}
+
+/* INIT */
+window.onload=function(){
+    renderProducts();
+    renderBars();
+    loadReports();
+    setInterval(loadReports,5000);
+};
+</script>
+
+</body>
+</html>
