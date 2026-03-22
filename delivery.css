@@ -1,0 +1,59 @@
+/* ══════════════════════════════════════════
+   DELIVERY.CSS — Products, Cart
+   ══════════════════════════════════════════ */
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px; margin-bottom: 80px;
+}
+.product-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 16px; text-align: center;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.product-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+.product-emoji { font-size: 32px; margin-bottom: 8px; }
+.product-name  { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.product-price { font-size: 13px; color: var(--text2); margin-bottom: 12px; }
+
+.add-btn {
+  width: 100%; padding: 8px;
+  background: var(--accent); color: white;
+  border: none; border-radius: 10px;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all 0.18s;
+}
+.add-btn:hover { background: var(--accent2); }
+.add-btn:active { transform: scale(0.96); }
+
+.cart-fab {
+  position: fixed; bottom: 90px; right: 16px;
+  background: var(--accent); color: white;
+  border: none; padding: 14px 22px;
+  border-radius: 50px; font-size: 15px; font-weight: 700;
+  cursor: pointer; box-shadow: 0 8px 24px rgba(124,106,247,0.4);
+  transition: all 0.2s;
+  display: flex; align-items: center; gap: 8px; z-index: 1500;
+}
+.cart-fab:hover { background: var(--accent2); transform: translateY(-2px); }
+.cart-fab:active { transform: scale(0.96); }
+.cart-badge {
+  background: white; color: var(--accent);
+  border-radius: 12px; padding: 1px 8px;
+  font-size: 13px; font-weight: 800;
+}
+
+.order-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 15px;
+}
+.order-item:last-child { border-bottom: none; }
+.order-total {
+  display: flex; justify-content: space-between;
+  padding: 12px 0 4px; font-weight: 800; font-size: 16px;
+}
+
+@media (max-width: 480px) {
+  .product-grid { grid-template-columns: repeat(2, 1fr); }
+}
