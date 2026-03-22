@@ -125,6 +125,133 @@ function spawnBarParticles(cardEl, status) {
       cardEl.style.position = 'relative';
       cardEl.appendChild(p);
       setTimeout(() => p.remove(), 1400);
+// ══════════════════════════════════════════════
+// SHARED.JS — Supabase, State, Global Utilities
+// ══════════════════════════════════════════════
+
+// ── SUPABASE ──
+const supabaseClient = window.supabase.createClient(
+  "https://jwgwufggptpdmgcmmqes.supabase.co",
+  "sb_publishable_uIxE2Eol_nC2TFvkT_G1EQ_WxWWt7A3"
+);
+
+// ── GLOBAL STATE ──
+let currentUser  = null;
+let userXP       = 0;
+let reportCount  = 0;
+let postCount    = 0;
+
+// ── THEME ──
+function toggleTheme() {
+  const html = document.documentElement;
+  const dark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', dark ? 'light' : 'dark');
+  document.querySelector('.theme-toggle').textContent = dark ? '🌙' : '☀️';
+}
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── NAV ──
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+  document.getElementById(p).classList.add('active');
+  const nb = document.getElementById('nav-' + p);
+  if (nb) nb.classList.add('active');
+  if (p === 'profile') { renderProfile(); renderCharacterCard(); }
+}
+
+// ── USER HELPERS ──
+function getGender() {
+  return currentUser?.user_metadata?.gender || 'other';
+}
+
+function getGenderWord() {
+  const g = getGender();
+  if (g === 'male')   return 'man';
+  if (g === 'female') return 'woman';
+  return 'person';
+}
+
+function getGenderPronoun() {
+  const g = getGender();
+  if (g === 'male')   return 'he';
+  if (g === 'female') return 'she';
+  return 'they';
+}
+
+function getUsername() {
+  if (!currentUser) return '?';
+  return currentUser.user_metadata?.username
+      || currentUser.email?.split('@')[0]
+      || 'User';
+}
+
+function renderAvatar() {
+  const initial = getUsername()[0]?.toUpperCase() || '?';
+  const el = document.getElementById('avatar-btn');
+  if (el) el.textContent = initial;
+}
+
+// ── TIME HELPER ──
+function timeAgo(t) {
+  const s = Math.floor((Date.now() - t) / 1000);
+  if (s < 60) return s + 's ago';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + 'm ago';
+  return Math.floor(m / 60) + 'h ago';
+}
+
+// ── THURSDAY CHECK ──
+function isThursdayNight() {
+  const now = new Date();
+  return now.getDay() === 4 && now.getHours() >= 20;
+}
+
+function checkThursdayMode() {
+  const is = isThursdayNight();
+  document.documentElement.setAttribute('data-thursday', is ? 'true' : 'false');
+  if (is) startFireRain();
+}
+
+function startFireRain() {
+  if (document.querySelector('.fire-particle')) return;
+  const emojis = ['🔥','✨','🍺','⚡'];
+  function spawnFire() {
+    if (!isThursdayNight()) return;
+    const p = document.createElement('div');
+    p.className = 'fire-particle';
+    p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    p.style.left = Math.random() * 100 + 'vw';
+    p.style.top = '-30px';
+    p.style.animationDuration = (2 + Math.random() * 3) + 's';
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 5000);
+    setTimeout(spawnFire, 800 + Math.random() * 1200);
+  }
+  spawnFire();
+}
+
+// ── PARTICLES ──
+function spawnBarParticles(cardEl, status) {
+  const emojis = status === 'Packed' ? ['🔥','💥','⚡'] : status === 'Busy' ? ['🟡','✨','🎉'] : ['🟢','😌'];
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => {
+      const p = document.createElement('div');
+      p.className = 'bar-particle';
+      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      p.style.left = (10 + Math.random() * 80) + '%';
+      p.style.bottom = '60px';
+      p.style.animationDuration = (0.8 + Math.random() * 0.5) + 's';
+      cardEl.style.position = 'relative';
+      cardEl.appendChild(p);
+      setTimeout(() => p.remove(), 1400);
     }, i * 80);
   }
 }
