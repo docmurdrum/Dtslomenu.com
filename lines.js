@@ -286,6 +286,21 @@ function getBarMission(barName) {
   return SAMPLE_MISSIONS.some(m => m.bar === barName && m.active && !completedMissions?.has(m.id));
 }
 
+
+// ── FRIENDS AT BAR (for bar cards) ──
+function buildFriendsAtBarRow(barName) {
+  const friends = (window.friendsCheckins || []).filter(f => f.barName === barName);
+  if (!friends.length) return '';
+  const avatars = friends.slice(0,4).map(f =>
+    `<div style="width:22px;height:22px;border-radius:50%;background:${f.color};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:white;border:1.5px solid var(--bg);margin-right:-6px">${f.username[0].toUpperCase()}</div>`
+  ).join('');
+  const label = friends.length === 1 ? friends[0].username + ' is here' : friends.length + ' friends here';
+  return `<div style="padding:4px 16px 8px;display:flex;align-items:center;gap:8px">
+    <div style="display:flex">${avatars}</div>
+    <span style="font-size:11px;color:var(--neon-green);font-weight:700;margin-left:8px">👥 ${label}</span>
+  </div>`;
+}
+
 // ── RENDER BARS ──
 function renderBars() {
   const c = document.getElementById('bars');
@@ -401,6 +416,16 @@ function renderBars() {
         <button class="vote-btn packed ${userStatus==='Packed'?'selected':''}" onclick="handleVote(event,${i},'Packed')">
           <span class="vote-btn-icon">🔴</span>
           <span class="vote-btn-label">Packed</span>
+        </button>
+      </div>
+
+      <!-- Friends at this bar -->
+      ${buildFriendsAtBarRow(bar.name)}
+
+      <!-- Bar page button -->
+      <div style="padding:0 16px 14px">
+        <button onclick="openBarPage(${i})" style="width:100%;padding:11px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+          🏠 ${bar.name} Page ›
         </button>
       </div>
 

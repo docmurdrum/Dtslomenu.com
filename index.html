@@ -16,6 +16,8 @@
 <link rel="stylesheet" href="games.css">
 <link rel="stylesheet" href="achievements.css">
 <link rel="stylesheet" href="missions.css">
+<link rel="stylesheet" href="bar.css">
+<link rel="stylesheet" href="friends.css">
 </head>
 <body>
 
@@ -91,6 +93,10 @@
     </button>
     <button class="nav-btn" id="nav-games" onclick="showPage('games')">
       <span class="icon">🎮</span><span class="label">Games</span>
+    </button>
+    <button class="nav-btn" id="nav-friends" onclick="showPage('friends')" style="position:relative">
+      <span class="icon">👥</span><span class="label">Friends</span>
+      <div class="nav-friends-badge" id="friends-nav-badge"></div>
     </button>
     <button class="nav-btn" id="nav-resources" onclick="showPage('resources')">
       <span class="icon">📦</span><span class="label">Resources</span>
@@ -228,6 +234,102 @@
   </div>
 
 
+
+  <!-- ── BAR PAGE ── -->
+  <div id="bar" class="page">
+    <button class="game-back-btn" onclick="showPage('line')">← Back to Lines</button>
+
+    <!-- Hero -->
+    <div class="bar-page-hero">
+      <div class="bar-page-emoji-wrap" id="bar-page-emoji">🍺</div>
+      <div class="bar-page-name" id="bar-page-name">Bar Name</div>
+      <div class="bar-page-address-row">📍 <span id="bar-page-address">Address</span> · <span id="bar-page-hours">Hours</span></div>
+      <div class="bar-page-meta-row">
+        <div class="bar-page-status-badge" id="bar-page-status">No Data</div>
+      </div>
+      <div class="bar-page-tags" id="bar-page-tags"></div>
+      <div id="bar-page-vibe" style="margin-top:12px"></div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bar-actions-row">
+      <button class="bar-action-btn primary" onclick="openCheckinModal(currentBarIndex)">
+        <span class="ba-icon">📍</span>Check In · +20 XP
+      </button>
+      <button class="bar-action-btn" onclick="handleVoteFromBar('Packed')">
+        <span class="ba-icon">📊</span>Report Crowd
+      </button>
+    </div>
+
+    <!-- Vibe Reports -->
+    <div class="bar-section">
+      <div class="bar-section-title">📡 Recent Reports</div>
+      <div id="bar-page-reports"></div>
+    </div>
+
+    <!-- Active Missions -->
+    <div class="bar-section">
+      <div class="bar-section-title">🎯 Active Missions</div>
+      <div id="bar-page-missions"></div>
+    </div>
+
+    <!-- Friends Here -->
+    <div class="bar-section">
+      <div class="bar-section-title">👥 Friends Here</div>
+      <div id="bar-page-friends"></div>
+    </div>
+
+    <!-- Vibe History placeholder -->
+    <div class="bar-section">
+      <div class="bar-section-title">📈 Vibe History</div>
+      <div style="font-size:12px;color:var(--text2);padding:8px 0">Coming soon — track this bar's vibe over time</div>
+    </div>
+  </div>
+
+  <!-- ── FRIENDS PAGE ── -->
+  <div id="friends" class="page">
+    <div class="section-title">👥 Friends</div>
+
+    <!-- Search / Add -->
+    <div class="friends-search-row">
+      <input class="friends-search-input" id="friend-search-input" placeholder="Search by username…" onkeydown="if(event.key==='Enter')sendFriendRequest()">
+      <button class="friends-add-btn" onclick="sendFriendRequest()">Add</button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="friends-tabs-row">
+      <button class="friends-tab-btn active" id="ftab-btn-list" onclick="setFriendsTab('list')">Friends</button>
+      <button class="friends-tab-btn" id="ftab-btn-groups" onclick="setFriendsTab('groups')">Groups</button>
+      <button class="friends-tab-btn" id="ftab-btn-requests" onclick="setFriendsTab('requests')" style="position:relative">
+        Requests
+        <div class="friends-request-badge" id="friends-request-badge">0</div>
+      </button>
+    </div>
+
+    <!-- Friends list tab -->
+    <div id="friends-tab-list">
+      <div id="friends-list"></div>
+    </div>
+
+    <!-- Groups tab -->
+    <div id="friends-tab-groups" style="display:none">
+      <div class="new-group-row">
+        <input class="friends-search-input" id="new-group-name" placeholder="New group name…">
+        <button class="friends-add-btn" onclick="createGroupChat()">Create</button>
+      </div>
+      <div id="group-list"></div>
+    </div>
+
+    <!-- Requests tab -->
+    <div id="friends-tab-requests" style="display:none">
+      <div id="friends-requests-section" style="display:none">
+        <div class="friends-requests-title">Pending Requests</div>
+        <div id="friends-requests-list"></div>
+      </div>
+      <div id="friends-tab-requests-empty" style="font-size:12px;color:var(--text2);padding:16px 0">No pending requests</div>
+    </div>
+  </div>
+
   <!-- ── MISSED CONNECTIONS PAGE ── -->
   <div id="missed" class="page">
     <button style="background:none;border:none;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:0;margin-bottom:16px;display:flex;align-items:center;gap:6px" onclick="showPage('resources')">← Back to Resources</button>
@@ -316,6 +418,17 @@
       </div>
       <div class="recent-badges" id="recent-badges">
         <div style="font-size:12px;color:var(--text2);text-align:center;padding:16px 0;grid-column:1/-1">Loading badges...</div>
+      </div>
+    </div>
+
+    <!-- Character Collection -->
+    <div style="margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="badges-title">🎭 My Characters</div>
+        <button class="badges-see-all" onclick="loadUnlockedCharacters()">↺ Refresh</button>
+      </div>
+      <div id="char-collection" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        <div style="font-size:12px;color:var(--text2);text-align:center;padding:16px;grid-column:1/-1">Loading characters...</div>
       </div>
     </div>
 
@@ -537,6 +650,65 @@
       <button class="btn-primary" style="width:100%;padding:15px;font-size:16px" onclick="closeRedemptionModal()">Done</button>
     </div>
   </div>
+
+  <!-- ── DM / GROUP CHAT MODAL ── -->
+  <div id="dm-modal" class="dm-modal">
+    <div class="dm-header">
+      <button class="dm-back-btn" onclick="closeDM()">←</button>
+      <div class="dm-header-name" id="dm-header-name">Chat</div>
+    </div>
+    <div class="dm-messages" id="dm-messages"></div>
+    <div class="dm-input-row">
+      <input class="dm-input" id="dm-input" placeholder="Message…" onkeydown="if(event.key==='Enter')sendMessage()">
+      <button class="dm-send-btn" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+
+  <!-- ── MISSION DETAIL MODAL ── -->
+  <div id="mission-detail-modal" class="mission-detail-modal" onclick="if(event.target===this)closeMissionDetail()">
+    <div class="mission-detail-box">
+      <div class="modal-handle"></div>
+      <div class="mission-detail-header">
+        <div style="flex:1">
+          <div style="font-size:18px;font-weight:900;margin-bottom:4px" id="md-title">Mission</div>
+          <div style="font-size:12px;color:var(--text2)" id="md-bar">Bar</div>
+        </div>
+        <div class="mission-detail-type-badge" id="md-type">Tonight</div>
+      </div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px" id="md-desc"></div>
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        <div style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:12px;padding:10px 14px;flex:1;text-align:center">
+          <div style="font-size:14px;font-weight:800;color:var(--neon-green)" id="md-reward">Reward</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">Reward</div>
+        </div>
+        <div style="background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);border-radius:12px;padding:10px 14px;flex:1;text-align:center">
+          <div style="font-size:14px;font-weight:800;color:var(--gold)" id="md-xp">+0 XP</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">XP Reward</div>
+        </div>
+      </div>
+      <button class="btn-primary" style="width:100%;padding:15px;font-size:15px" onclick="completeMissionFromDetail()">✅ Complete Mission</button>
+      <button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeMissionDetail()">Cancel</button>
+    </div>
+  </div>
+
+
+  <!-- ── CHARACTER STORY MODAL ── -->
+  <div id="char-story-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:7000;display:none;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeCharStoryModal()">
+    <div style="background:var(--surface);border-radius:24px 24px 0 0;padding:24px 20px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;border-top:1px solid var(--border)">
+      <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px"></div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+        <img id="cs-modal-img" style="width:70px;height:70px;border-radius:14px;object-fit:cover;border:2px solid var(--border)" src="" onerror="this.style.display='none'">
+        <div>
+          <div id="cs-modal-title" style="font-size:20px;font-weight:900;margin-bottom:4px">Character</div>
+          <div id="cs-modal-completion" style="font-size:12px;color:var(--neon-green);font-weight:700">0% Complete</div>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Story Missions</div>
+      <div id="cs-modal-missions"></div>
+      <button class="btn-secondary" style="width:100%;margin-top:16px" onclick="closeCharStoryModal()">Close</button>
+    </div>
+  </div>
+
 </div><!-- /#app -->
 
 <!-- ── CHECKOUT MODAL ── -->
@@ -612,6 +784,21 @@
         <div class="game-grid-icon">🎲</div>
         <div class="game-grid-name">Dice</div>
         <div class="game-grid-desc">Classic &amp; dare dice games</div>
+      </div>
+      <div class="game-grid-card" style="--card-color:#f59e0b" onclick="switchGameMode('beerpong')">
+        <div class="game-grid-icon">🏓</div>
+        <div class="game-grid-name">Beer Pong</div>
+        <div class="game-grid-desc">Track your game live</div>
+      </div>
+      <div class="game-grid-card" style="--card-color:#22c55e" onclick="switchGameMode('nhie')">
+        <div class="game-grid-icon">🍺</div>
+        <div class="game-grid-name">Never Have I Ever</div>
+        <div class="game-grid-desc">Confessions + sips</div>
+      </div>
+      <div class="game-grid-card" style="--card-color:#b44fff" onclick="switchGameMode('whoami')">
+        <div class="game-grid-icon">🤔</div>
+        <div class="game-grid-name">Who Am I?</div>
+        <div class="game-grid-desc">Guess your card with yes/no</div>
       </div>
     </div>
 
@@ -837,6 +1024,22 @@
       </div>
     </div>
 
+
+    <!-- ══ BEER PONG ══ -->
+    <div class="game-panel" id="game-panel-beerpong">
+      <!-- Rendered by party_games.js -->
+    </div>
+
+    <!-- ══ NEVER HAVE I EVER ══ -->
+    <div class="game-panel" id="game-panel-nhie">
+      <!-- Rendered by party_games.js -->
+    </div>
+
+    <!-- ══ WHO AM I ══ -->
+    <div class="game-panel" id="game-panel-whoami">
+      <!-- Rendered by party_games.js -->
+    </div>
+
   </div><!-- end games page -->
 
 <div class="toast" id="toast"></div>
@@ -852,6 +1055,9 @@
 <script src="missed_connections.js"></script>
 <script src="games.js"></script>
 <script src="dice.js"></script>
+<script src="bar.js"></script>
+<script src="friends.js"></script>
+<script src="party_games.js"></script>
 <script src="achievements.js"></script>
 <script src="onboarding.js"></script>
 <script src="auth.js"></script>

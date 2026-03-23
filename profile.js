@@ -765,3 +765,144 @@ async function loadActivityFeed() {
     container.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:12px 0">Could not load activity</div>';
   }
 }
+
+// ══════════════════════════════════════════════
+// CHARACTER STORY SYSTEM
+// ══════════════════════════════════════════════
+
+let unlockedCharacters = {};  // { charId: { completedMissions: [1,2,3], unlockedAt: timestamp } }
+let characterStories   = {};  // charId -> story data
+
+// ── LOAD UNLOCKED CHARACTERS ──
+async function loadUnlockedCharacters() {
+  if (!currentUser) return;
+  try {
+    const { data } = await supabaseClient
+      .from('character_progress')
+      .select('*')
+      .eq('user_id', currentUser.id);
+    unlockedCharacters = {};
+    (data || []).forEach(row => {
+      unlockedCharacters[row.character_id] = {
+        completedMissions: row.completed_missions || [],
+        unlockedAt: row.unlocked_at,
+        completion: row.completion_pct || 0
+      };
+    });
+    renderCharacterCollection();
+  } catch(e) { console.error('loadUnlockedCharacters:', e); }
+}
+
+// ── RENDER CHARACTER COLLECTION ON PROFILE ──
+function renderCharacterCollection() {
+  const el = document.getElementById('char-collection');
+  if (!el) return;
+  const unlocked = Object.keys(unlockedCharacters).map(Number);
+  if (!unlocked.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text2);text-align:center;padding:16px">Earn XP to unlock characters and their story missions</div>';
+    return;
+  }
+  el.innerHTML = unlocked.map(cid => {
+    const char = CHARACTERS.find(c => c.id === cid);
+    if (!char) return '';
+    const prog  = unlockedCharacters[cid];
+    const pct   = prog.completion || 0;
+    const level = Math.floor((cid - 1) / 10); // rough grouping
+    return `
+    <div class="char-collection-card" onclick="openCharacterStory(${cid})">
+      <div class="ccc-img-wrap">
+        <img src="https://jwgwufggptpdmgcmmqes.supabase.co/storage/v1/object/public/characters/level_${String(cid*5-4).padStart(3,'0')}_1.jpg"
+          onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;border-radius:12px">
+        <div class="ccc-completion">${pct}%</div>
+      </div>
+      <div class="ccc-name">${char.name}</div>
+      <div class="ccc-progress-bar"><div class="ccc-progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ── OPEN CHARACTER STORY MODAL ──
+function openCharacterStory(charId) {
+  const char = CHARACTERS.find(c => c.id === charId);
+  if (!char) return;
+  const prog = unlockedCharacters[charId] || { completedMissions: [], completion: 0 };
+
+  document.getElementById('cs-modal-title').textContent = char.name;
+  document.getElementById('cs-modal-img').src =
+    `https://jwgwufggptpdmgcmmqes.supabase.co/storage/v1/object/public/characters/level_${String(charId*5-4).padStart(3,'0')}_1.jpg`;
+
+  // Story missions (5 per character, derived from scenes)
+  const missions = char.scenes.map((s, i) => ({
+    index: i + 1,
+    title: `Scene ${i+1}: ${char.name}`,
+    desc:  s.action,
+    done:  prog.completedMissions.includes(i + 1)
+  }));
+
+  const completion = Math.round((missions.filter(m => m.done).length / 5) * 100);
+  document.getElementById('cs-modal-completion').textContent = completion + '% Complete';
+
+  document.getElementById('cs-modal-missions').innerHTML = missions.map(m => `
+    <div class="cs-mission-row ${m.done ? 'done' : ''}">
+      <div class="cs-mission-check">${m.done ? '✅' : '⭕'}</div>
+      <div class="cs-mission-info">
+        <div class="cs-mission-title">${m.title}</div>
+        <div class="cs-mission-desc">${m.desc}</div>
+      </div>
+      ${!m.done ? `<button class="cs-complete-btn" onclick="completeCharStoryMission(${charId},${m.index})">Complete</button>` : ''}
+    </div>`).join('');
+
+  document.getElementById('char-story-modal').style.display = 'flex';
+}
+
+async function completeCharStoryMission(charId, missionIndex) {
+  if (!currentUser) return;
+  const prog = unlockedCharacters[charId] || { completedMissions: [], completion: 0 };
+  if (prog.completedMissions.includes(missionIndex)) return;
+
+  prog.completedMissions.push(missionIndex);
+  const completion = Math.round((prog.completedMissions.length / 5) * 100);
+  prog.completion = completion;
+  unlockedCharacters[charId] = prog;
+
+  try {
+    await supabaseClient.from('character_progress').upsert({
+      user_id: currentUser.id,
+      character_id: charId,
+      completed_missions: prog.completedMissions,
+      completion_pct: completion,
+      unlocked_at: prog.unlockedAt || new Date().toISOString()
+    }, { onConflict: 'user_id,character_id' });
+    gainXP(50);
+    showToast(`✅ Story mission complete · +50 XP`);
+    if (completion === 100) {
+      showToast(`🏆 ${CHARACTERS.find(c=>c.id===charId)?.name} — 100% Complete!`);
+    }
+    openCharacterStory(charId); // refresh modal
+  } catch(e) { showToast('❌ ' + e.message); }
+}
+
+function closeCharStoryModal() {
+  document.getElementById('char-story-modal').style.display = 'none';
+}
+
+// ── UNLOCK CHARACTER ON LEVEL UP ──
+async function unlockCharacterIfNeeded(level) {
+  if (!currentUser) return;
+  // Every level unlocks a character (level 1 = char 1, etc. up to 50)
+  const charId = Math.min(Math.ceil(level / 5), 50);
+  if (unlockedCharacters[charId]) return;
+  try {
+    await supabaseClient.from('character_progress').insert({
+      user_id: currentUser.id,
+      character_id: charId,
+      completed_missions: [],
+      completion_pct: 0,
+      unlocked_at: new Date().toISOString()
+    });
+    unlockedCharacters[charId] = { completedMissions: [], completion: 0, unlockedAt: new Date().toISOString() };
+    const char = CHARACTERS.find(c => c.id === charId);
+    if (char) showToast(`🎭 Unlocked: ${char.name}!`);
+    renderCharacterCollection();
+  } catch(e) {}
+}

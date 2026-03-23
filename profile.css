@@ -269,3 +269,50 @@
 @media (max-width: 480px) {
   .profile-hero { flex-direction: column; text-align: center; }
 }
+
+/* ── CHARACTER COLLECTION ── */
+.char-collection-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 8px; cursor: pointer;
+  transition: all 0.15s; overflow: hidden;
+}
+.char-collection-card:active { transform: scale(0.97); }
+.ccc-img-wrap {
+  width: 100%; aspect-ratio: 1/1; border-radius: 10px;
+  overflow: hidden; background: var(--surface); margin-bottom: 6px;
+  position: relative;
+}
+.ccc-completion {
+  position: absolute; bottom: 4px; right: 4px;
+  background: rgba(0,0,0,0.7); border-radius: 8px;
+  padding: 2px 6px; font-size: 9px; font-weight: 800; color: var(--neon-green);
+}
+.ccc-name {
+  font-size: 10px; font-weight: 800; text-align: center;
+  margin-bottom: 5px; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ccc-progress-bar {
+  height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
+}
+.ccc-progress-fill {
+  height: 100%; background: var(--neon-green); border-radius: 2px;
+  transition: width 0.5s;
+}
+
+/* ── CHARACTER STORY MODAL MISSIONS ── */
+.cs-mission-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.cs-mission-row:last-child { border-bottom: none; }
+.cs-mission-row.done { opacity: 0.6; }
+.cs-mission-check { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.cs-mission-info  { flex: 1; }
+.cs-mission-title { font-size: 13px; font-weight: 800; margin-bottom: 3px; }
+.cs-mission-desc  { font-size: 11px; color: var(--text2); line-height: 1.4; }
+.cs-complete-btn {
+  padding: 6px 12px; border-radius: 10px; border: none;
+  background: var(--accent); color: white; font-family: inherit;
+  font-size: 11px; font-weight: 800; cursor: pointer; flex-shrink: 0;
+}

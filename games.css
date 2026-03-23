@@ -828,3 +828,14 @@
 .dice-player-btn.active {
   background: var(--gold); border-color: var(--gold); color: #000;
 }
+
+/* ── NEVER HAVE I EVER ── */
+.nhie-card-wrap { cursor: pointer; }
+.nhie-card {
+  background: linear-gradient(135deg, var(--surface2), var(--surface));
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 32px 20px; min-height: 180px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: transform 0.15s;
+}
+.nhie-card:active { transform: scale(0.98); }

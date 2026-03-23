@@ -13,17 +13,19 @@ function switchGameMode(mode) {
   if (panel) panel.classList.add('active');
 
   // Init each mode when first opened
-  if (mode === 'trivia' && !triviaInitialized) initTrivia();
-  if (mode === 'bingo'  && !bingoInitialized)  initBingo();
-  if (mode === 'predict') { loadPropositions(); renderPredictions(); }
-  if (mode === 'dice') initDice();
+  if (mode === 'trivia')   { if (!triviaInitialized) initTrivia(); }
+  if (mode === 'bingo')    { if (!bingoInitialized)  initBingo(); }
+  if (mode === 'predict')  { loadPropositions(); renderPredictions(); }
+  if (mode === 'dice')     { initDice(); }
+  if (mode === 'beerpong') { initBeerPong(); }
+  if (mode === 'nhie')     { initNHIE(); }
+  if (mode === 'whoami')   { initWhoAmI(); }
 }
 
 function backToGamesGrid() {
   document.querySelectorAll('.game-panel').forEach(p => p.classList.remove('active'));
   const grid = document.getElementById('games-grid');
   if (grid) grid.style.display = 'grid';
-  // Reset trivia so next open starts fresh
   triviaInitialized = false;
   bingoInitialized  = false;
 }

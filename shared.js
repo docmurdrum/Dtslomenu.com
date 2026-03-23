@@ -34,14 +34,23 @@ function showToast(msg) {
 function showPage(p) {
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
-  document.getElementById(p).classList.add('active');
+  const pageEl = document.getElementById(p);
+  if (pageEl) pageEl.classList.add('active');
   const nb = document.getElementById('nav-' + p);
   if (nb) nb.classList.add('active');
-  if (p === 'profile') { renderProfile(); renderCharacterCard(); }
-  if (p === 'games') { initGamesPage(); }
+  if (p === 'profile')  { renderProfile(); renderCharacterCard(); }
+  if (p === 'games')    { initGamesPage(); }
   if (p === 'missions') { initMissionsPage(); }
-  if (p === 'resources') { renderResources(); }
-  if (p === 'missed') { initMissedConnections(); }
+  if (p === 'resources'){ renderResources(); }
+  if (p === 'missed')   { initMissedConnections(); }
+  if (p === 'friends')  { try { initFriends(); } catch(e) {} }
+  if (p === 'line')     { if (typeof loadReports === 'function') loadReports(); }
+}
+
+// ── HANDLE VOTE FROM BAR PAGE ──
+function handleVoteFromBar(status) {
+  if (currentBarIndex === null) return;
+  if (typeof report === 'function') report(currentBarIndex, status);
 }
 
 // ── USER HELPERS ──
