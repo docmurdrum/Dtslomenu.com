@@ -98,6 +98,62 @@ function updateSummaryStrip() {
   else sub.textContent = `${active} bar${active !== 1 ? 's' : ''} reporting · ${total} report${total !== 1 ? 's' : ''} (30min)`;
 }
 
+
+// ── TONIGHT BANNER ──
+let tonightSlideIdx = 0;
+let tonightInterval = null;
+
+function renderTonightBanner(sorted) {
+  const wrap = document.getElementById('tonight-banner-wrap');
+  if (!wrap) return;
+
+  const top3 = sorted
+    .filter(({ bar }) => getStatus(bar) !== 'No Data')
+    .slice(0, 3);
+
+  if (!top3.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+
+  const track = document.getElementById('tonight-track');
+  const dotsEl = document.getElementById('tonight-dots');
+  if (!track || !dotsEl) return;
+
+  track.innerHTML = top3.map(({ bar }) => {
+    const status = getStatus(bar);
+    const { text, barColor } = statusLabel(status);
+    const label = status === 'Packed' ? '🌙 Hottest Right Now'
+                : status === 'Busy'   ? '⚡ Getting Busy'
+                :                       '🟢 Still Space';
+    const waitMins = getAvgWaitTime(bar.name);
+    const waitStr  = waitMins > 0 ? `~${waitMins} min wait` : getRecentCount(bar) + ' reports';
+    return `
+      <div class="tonight-slide">
+        <div class="tonight-fire">${bar.emoji}</div>
+        <div class="tonight-text">
+          <div class="tonight-label">${label}</div>
+          <div class="tonight-bar">${bar.name}</div>
+          <div class="tonight-sub">${waitStr}</div>
+        </div>
+        <div class="tonight-status" style="background:${barColor}22;border-color:${barColor}44;color:${barColor}">${status.toUpperCase()}</div>
+      </div>`;
+  }).join('');
+
+  dotsEl.innerHTML = top3.map((_, i) =>
+    `<div class="tonight-dot ${i===0?'active':''}" id="tdot-${i}" onclick="goToTonightSlide(${i})"></div>`
+  ).join('');
+
+  tonightSlideIdx = 0;
+  clearInterval(tonightInterval);
+  tonightInterval = setInterval(() => goToTonightSlide((tonightSlideIdx + 1) % top3.length), 3500);
+}
+
+function goToTonightSlide(i) {
+  tonightSlideIdx = i;
+  const track = document.getElementById('tonight-track');
+  if (track) track.style.transform = `translateX(-${i * 100}%)`;
+  document.querySelectorAll('.tonight-dot').forEach((d, j) => d.classList.toggle('active', j === i));
+}
+
 function updateTicker() {
   const all = [];
   bars.forEach(bar => bar.reports.slice(0, 3).forEach(r => all.push({ bar: bar.name, status: r.status, time: r.time })));
@@ -106,6 +162,60 @@ function updateTicker() {
   if (!el) return;
   if (!all.length) { el.textContent = 'No reports yet tonight — be the first to report!'; return; }
   el.textContent = all.slice(0, 6).map(r => `${r.bar}: ${r.status} (${timeAgo(r.time)})`).join('   ·   ');
+}
+
+// ── REPORTER AVATARS ──
+const AVATAR_COLORS = ['#b44fff','#ff2d78','#00f5ff','#ffd700','#00ff88','#ff9500','#6366f1','#10b981'];
+
+function buildReporterAvatars(reports) {
+  if (!reports.length) return '';
+  const recent = reports.slice(0, 4);
+  const avatars = recent.map((r, i) => {
+    const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+    const initial = r.user_id ? r.user_id.slice(0,1).toUpperCase() : '?';
+    return `<div class="reporter-avatar-sm" style="background:${color}">${initial}</div>`;
+  }).join('');
+  const label = reports.length === 1 ? 'reported' : `reported · ${reports.length} reports`;
+  return `<div class="reporters-row-sm">${avatars}<span class="reporters-label-sm">${label}</span></div>`;
+}
+
+// ── CROWD PARTICLES ──
+function buildCrowdParticles(status, barColor) {
+  if (status === 'Dead' || status === 'No Data') return '';
+  const count = status === 'Packed' ? 16 : 8;
+  const color = status === 'Packed' ? '#ff2d78' : '#f59e0b';
+  let html = '<div class="bar-crowd-particles">';
+  for (let i = 0; i < count; i++) {
+    const x = 5 + Math.random() * 90;
+    const y = 10 + Math.random() * 80;
+    const size = 2 + Math.random() * 5;
+    const dur  = 1 + Math.random() * 2.5;
+    const del  = Math.random() * 3;
+    html += `<div class="crowd-dot-anim" style="left:${x}%;top:${y}%;width:${size}px;height:${size}px;background:${color};animation-duration:${dur}s;animation-delay:${del}s"></div>`;
+  }
+  return html + '</div>';
+}
+
+// ── VIBE SEGMENTS ──
+function buildVibeSegs(vibe, status) {
+  const total  = 12;
+  const active = Math.round((vibe / 100) * total);
+  const color  = status === 'Packed' ? '#ff2d78' : status === 'Busy' ? '#f59e0b' : '#22c55e';
+  const showFlames = vibe >= 80;
+  const segs = Array.from({length: total}, (_, i) =>
+    `<div class="vibe-seg-new ${i < active ? 'active' : ''}" style="${i < active ? `background:${color};box-shadow:0 0 4px ${color}66` : ''}"></div>`
+  ).join('');
+  return `<div class="vibe-row-new">
+    <div class="vibe-label-new">Vibe</div>
+    <div class="vibe-segs-wrap">${segs}</div>
+    ${showFlames ? `<div class="vibe-flames-new">🔥</div>` : `<div class="vibe-pct-new" style="color:${color}">${vibe}%</div>`}
+  </div>`;
+}
+
+// ── GET ACTIVE MISSIONS FOR BAR ──
+function getBarMission(barName) {
+  if (typeof SAMPLE_MISSIONS === 'undefined') return false;
+  return SAMPLE_MISSIONS.some(m => m.bar === barName && m.active && !completedMissions?.has(m.id));
 }
 
 // ── RENDER BARS ──
@@ -121,45 +231,77 @@ function renderBars() {
   const sorted = [...bars].map((bar, i) => ({ bar, i }))
     .sort((a, b) => (order[getStatus(a.bar)] ?? 3) - (order[getStatus(b.bar)] ?? 3));
 
+  // Update tonight banner
+  renderTonightBanner(sorted);
+  // Update last updated time
+  const lu = document.getElementById('lines-last-updated');
+  if (lu) lu.textContent = 'Updated just now';
+
   sorted.forEach(({ bar, i }) => {
-    const last        = bar.reports[0] ? timeAgo(bar.reports[0].time) : 'No reports yet';
+    const last        = bar.reports[0] ? timeAgo(bar.reports[0].time) : null;
     const status      = getStatus(bar);
     const { text, cls, vibe, barColor } = statusLabel(status);
     const recentCount = getRecentCount(bar);
-    const recent3     = bar.reports.slice(0, 3);
+    const recentReports = bar.reports.filter(r => r.time > Date.now() - 30*60*1000).slice(0,4);
     const userReport  = bar.reports.find(r => r.user_id === currentUser?.id && r.time > Date.now() - 30*60*1000);
     const userStatus  = userReport?.status;
+    const isCollapsed = status === 'Dead' || status === 'No Data';
+    const isPacked    = status === 'Packed';
+    const isBusy      = status === 'Busy';
+    const hasMission  = getBarMission(bar.name);
+    const avgWait     = getAvgWaitTime(bar.name);
+    const checkinCount = bar.checkinCount || 0;
 
-    const rank = sorted.indexOf(sorted.find(s => s.i === i));
+    // Second color for gradient
+    const color2 = bar.color + '88';
+
+    const waitText = avgWait > 0
+      ? avgWait <= 10 ? { cls:'wait-short',  t:`~${avgWait} min wait` }
+      : avgWait <= 20 ? { cls:'wait-medium', t:`~${avgWait} min wait` }
+      :                 { cls:'wait-long',   t:`~${avgWait}+ min wait` }
+      : status === 'Packed' ? { cls:'wait-long', t:'Long wait expected' }
+      : status === 'Busy'   ? { cls:'wait-medium', t:'Short wait' }
+      : null;
+
     const el = document.createElement('div');
-    el.className = 'bar-card' + (status === 'Packed' ? ' is-packed' : status === 'Busy' ? ' is-busy' : '');
+    el.className = `bar-card-v2${isPacked ? ' v2-packed' : isBusy ? ' v2-busy' : isCollapsed ? ' v2-collapsed' : ''}`;
+
     el.innerHTML = `
-      <div class="bar-card-flood" style="background:${barColor}"></div>
-      <div class="bar-status-bar" style="background:${barColor}"></div>
-      <div class="bar-card-inner">
-        <div class="bar-header">
-          <div class="bar-name-row">
-            <div class="bar-emoji-circle">${bar.emoji}</div>
-            <div class="bar-name-block">
-              <div class="bar-name">${bar.name}</div>
-              <div class="bar-address">📍 ${bar.address}</div>
-            </div>
+      <!-- Photo area -->
+      <div class="bar-photo-v2 ${isCollapsed ? 'photo-collapsed' : ''}">
+        <div class="bar-photo-gradient-v2" style="background:linear-gradient(135deg,${bar.color}22,${bar.color}44,#030308)">
+          <span class="bar-emoji-v2 ${isPacked ? 'emoji-shake' : ''}" style="filter:drop-shadow(0 0 18px ${bar.color}aa)">${bar.emoji}</span>
+        </div>
+        <div class="bar-photo-overlay-v2"></div>
+        ${buildCrowdParticles(status, bar.color)}
+        <div class="bar-status-badge-v2 status-badge-${status.replace(' ','')}">
+          ${text}
+        </div>
+        ${recentCount > 0 ? `<div class="bar-headcount-v2">👥 ${recentCount} reports</div>` : ''}
+      </div>
+
+      <!-- Body -->
+      <div class="bar-body-v2">
+        <div class="bar-top-v2">
+          <div>
+            <div class="bar-name-v2">${bar.name}</div>
+            <div class="bar-address-v2">📍 ${bar.address}</div>
           </div>
-          <div class="bar-meta">
-            <div class="bar-time">${last}</div>
-            ${recentCount > 0 ? `<div class="bar-report-badge">👥 ${recentCount}</div>` : ''}
+          <div class="bar-report-meta-v2">
+            ${last ? `<div class="bar-report-time-v2">${last}</div>` : ''}
           </div>
         </div>
 
-        <div class="bar-status-row">
-          <div class="status-pill ${cls}"><div class="dot"></div>${text}</div>
-          ${userStatus ? `<div style="font-size:11px;color:var(--text2);font-weight:600">You: ${userStatus} ✓</div>` : ''}
-        </div>
+        ${hasMission ? `<div class="bar-mission-badge"><div class="mission-blink-dot"></div>Active Mission</div>` : ''}
+        ${recentReports.length ? buildReporterAvatars(recentReports) : ''}
+        ${!isCollapsed ? buildVibeSegs(vibe, status) : ''}
 
-        <div class="vibe-wrap">
-          <div class="vibe-labels"><span>Empty</span><span>Vibe Meter</span><span>Packed</span></div>
-          <div class="vibe-track" id="vibe-${i}"></div>
-        </div>
+        ${!isCollapsed ? `<div class="bar-meta-pills">
+          ${waitText ? `<span class="wait-pill-v2 ${waitText.cls}">⏱ ${waitText.t}</span>` : ''}
+          ${checkinCount > 0 ? `<span class="checkin-count-v2">👤 ${checkinCount} checked in</span>` : ''}
+        </div>` : `<div class="bar-no-data-label">${status === 'No Data' ? 'Be the first to report' : 'Quiet right now'}</div>`}
+
+        ${userStatus ? `<div class="user-report-label">You reported: ${userStatus} ✓</div>` : ''}
       </div>
 
       <div class="vote-row">
@@ -176,20 +318,6 @@ function renderBars() {
           <span class="vote-btn-label">Packed</span>
         </button>
       </div>
-
-      ${recent3.length ? `
-      <div class="bar-feed">
-        ${recent3.map(r => {
-          const { barColor: rc } = statusLabel(r.status);
-          const initial = r.user_id ? r.user_id.slice(0,1).toUpperCase() : '?';
-          return `<div class="feed-item">
-            <div class="feed-avatar" style="background:${rc}">${initial}</div>
-            <span class="feed-status-text" style="color:${rc}">${r.status}</span>
-            ${r.headcount ? `<span style="font-size:11px;color:var(--text2)">· ~${r.headcount} people</span>` : ''}
-            <span>· ${timeAgo(r.time)}</span>
-          </div>`;
-        }).join('')}
-      </div>` : ''}
 
       ${(() => {
         const ci = activeCheckins[bar.name];

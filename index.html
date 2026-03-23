@@ -104,27 +104,32 @@
   <!-- ── LINES PAGE ── -->
   <div id="line" class="page active">
     <div class="streak-pill" id="streak-pill" style="display:none"><span class="streak-fire">🔥</span><span id="streak-count">0</span> week streak</div>
-    <div class="lines-header">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
       <div>
-        <div class="section-title" style="margin-bottom:2px">DTSLO Tonight</div>
-        <div id="lines-subtitle" style="font-size:13px;color:var(--text2)">Loading...</div>
+        <div class="section-title" style="margin-bottom:2px">Lines</div>
+        <div class="lines-last-updated-row">
+          <div class="live-dot"></div>
+          <span id="lines-last-updated" style="font-size:10px;color:var(--text2);font-weight:700">Loading...</span>
+        </div>
       </div>
-      <div class="lines-view-toggle">
-        <button class="view-btn active" id="view-list-btn" onclick="setView('list')">≡ List</button>
-        <button class="view-btn" id="view-map-btn" onclick="setView('map')">⊠ Grid</button>
-        <button class="view-btn" id="view-feed-btn" onclick="setView('feed')">⚡ Feed</button>
-      </div>
+      <button onclick="loadReports()" style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:7px 14px;color:var(--text2);font-family:inherit;font-size:11px;font-weight:800;cursor:pointer;margin-top:4px">↺ Refresh</button>
     </div>
 
     <div id="thursday-banner" style="display:none" class="thursday-banner">
       🔥 Thursday Night Mode — SLO's biggest night is live!
     </div>
 
-    <div class="hot-strip" id="hot-strip" style="display:none">
-      <div class="hot-strip-title">🔥 Hottest Right Now</div>
-      <div class="hot-cards" id="hot-cards"></div>
+    <!-- Tonight rotating banner -->
+    <div id="tonight-banner-wrap" style="display:none;margin-bottom:14px">
+      <div class="tonight-wrap-inner">
+        <div class="tonight-track" id="tonight-track"></div>
+      </div>
+      <div class="tonight-dots" id="tonight-dots"></div>
     </div>
 
+    <!-- Summary strip -->
     <div class="summary-strip">
       <div class="summary-chip">
         <div class="summary-chip-num" id="sum-packed" style="color:var(--red)">—</div>
@@ -140,17 +145,7 @@
       </div>
     </div>
 
-    <div class="hottest-strip" id="hottest-strip" style="display:none">
-      <div class="hottest-label">🔥 Hottest Right Now</div>
-      <div class="hottest-scroll" id="hottest-scroll"></div>
-    </div>
-
-    <div class="live-ticker">
-      <span class="live-dot"></span>
-      <div class="ticker-track" id="ticker-track">Loading reports...</div>
-    </div>
-
-    <!-- LIST VIEW -->
+    <!-- Bar list -->
     <div id="bars-list">
       <div id="bars"></div>
     </div>
