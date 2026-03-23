@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="profile.css">
 <link rel="stylesheet" href="games.css">
 <link rel="stylesheet" href="achievements.css">
+<link rel="stylesheet" href="missions.css">
 </head>
 <body>
 
@@ -85,14 +86,14 @@
     <button class="nav-btn active" id="nav-line" onclick="showPage('line')">
       <span class="icon">📍</span><span class="label">Lines</span>
     </button>
-    <button class="nav-btn" id="nav-delivery" onclick="showPage('delivery')">
-      <span class="icon">🛒</span><span class="label">Deliver</span>
-    </button>
-    <button class="nav-btn" id="nav-lost" onclick="showPage('lost')">
-      <span class="icon">🔍</span><span class="label">Lost</span>
+    <button class="nav-btn" id="nav-missions" onclick="showPage('missions')">
+      <span class="icon">🎯</span><span class="label">Missions</span>
     </button>
     <button class="nav-btn" id="nav-games" onclick="showPage('games')">
       <span class="icon">🎮</span><span class="label">Games</span>
+    </button>
+    <button class="nav-btn" id="nav-resources" onclick="showPage('resources')">
+      <span class="icon">📦</span><span class="label">Resources</span>
     </button>
     <button class="nav-btn" id="nav-profile" onclick="showPage('profile')">
       <span class="icon" id="avatar-btn">👤</span><span class="label">Profile</span>
@@ -174,8 +175,46 @@
     </div>
   </div>
 
-  <!-- ── DELIVERY PAGE ── -->
+  <!-- ── MISSIONS PAGE ── -->
+  <div id="missions" class="page">
+    <div class="section-title">🎯 Missions</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Complete missions. Earn real rewards.</div>
+
+    <!-- Category filter -->
+    <div class="missions-filter-row">
+      <button class="missions-filter-tab active" onclick="filterMissionsCat('all',this)">All</button>
+      <button class="missions-filter-tab" onclick="filterMissionsCat('tonight',this)">🌙 Tonight</button>
+      <button class="missions-filter-tab" onclick="filterMissionsCat('week',this)">📅 This Week</button>
+      <button class="missions-filter-tab" onclick="filterMissionsCat('group',this)">👥 Group</button>
+      <button class="missions-filter-tab" onclick="filterMissionsCat('competitive',this)">⚡ Competitive</button>
+      <button class="missions-filter-tab" onclick="filterMissionsCat('repeatable',this)">🔁 Repeatable</button>
+    </div>
+
+    <!-- Bar filter -->
+    <div class="bar-filter-row" id="missions-bar-filter"></div>
+
+    <!-- Mission cards -->
+    <div id="missions-list"></div>
+
+    <!-- Guest teaser -->
+    <div class="missions-guest-teaser" id="missions-guest-teaser" style="display:none">
+      <div class="missions-guest-teaser-icon">🔒</div>
+      <div class="missions-guest-teaser-title">More missions available</div>
+      <div class="missions-guest-teaser-sub">Sign up to see exclusive missions, earn real prizes, and track your progress.</div>
+      <button class="btn-primary" onclick="showPage('line')">Sign Up Free</button>
+    </div>
+  </div>
+
+  <!-- ── RESOURCES PAGE ── -->
+  <div id="resources" class="page">
+    <div class="section-title">📦 Resources</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:20px">Everything you need for a great night out.</div>
+    <div class="resources-grid" id="resources-grid"></div>
+  </div>
+
+  <!-- ── DELIVERY PAGE (accessed from Resources) ── -->
   <div id="delivery" class="page">
+    <button style="background:none;border:none;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:0;margin-bottom:16px;display:flex;align-items:center;gap:6px" onclick="showPage('resources')">← Back to Resources</button>
     <div class="section-title">Quick Delivery</div>
     <div id="product-grid" class="product-grid"></div>
     <button class="cart-fab" id="cart-fab" onclick="openCheckout()" style="display:none">
@@ -183,8 +222,9 @@
     </button>
   </div>
 
-  <!-- ── LOST & FOUND PAGE ── -->
+  <!-- ── LOST & FOUND PAGE (accessed from Resources) ── -->
   <div id="lost" class="page">
+    <button style="background:none;border:none;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:0;margin-bottom:16px;display:flex;align-items:center;gap:6px" onclick="showPage('resources')">← Back to Resources</button>
     <div class="lf-header">
       <div class="section-title" style="margin:0">Lost & Found</div>
       <button class="post-btn" onclick="openLostModal()">+ Post Item</button>
@@ -424,6 +464,28 @@
         <button class="ob-cta" id="ob-cta" onclick="onboardingNext()">Next →</button>
         <button class="ob-skip" onclick="closeOnboarding()">Skip</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ── REDEMPTION MODAL ── -->
+  <div id="redemption-overlay" class="redemption-overlay" onclick="if(event.target===this)closeRedemptionModal()">
+    <div class="redemption-box">
+      <div class="redemption-handle"></div>
+      <div class="redemption-title">🎉 Mission Complete!</div>
+      <div class="redemption-sub">
+        Show this code at <strong id="redemption-bar-name">the bar</strong> to claim: <span id="redemption-prize">your reward</span>.
+      </div>
+      <div style="font-size:11px;color:var(--text2);font-weight:700;margin-bottom:12px" id="redemption-mission-title"></div>
+      <div class="redemption-code-box">
+        <div class="redemption-code" id="redemption-code-display">DT-0000</div>
+        <div class="redemption-code-label">One-time redemption code</div>
+        <div class="redemption-countdown" id="redemption-timer-display">⏱ Expires in 10:00</div>
+      </div>
+      <div class="redemption-how">
+        <strong>How to redeem:</strong><br>
+        Show this screen to your bartender or staff. They enter the code to confirm. Each code works once only.
+      </div>
+      <button class="btn-primary" style="width:100%;padding:15px;font-size:16px" onclick="closeRedemptionModal()">Done</button>
     </div>
   </div>
 </div><!-- /#app -->
@@ -684,6 +746,7 @@
 <script src="lines.js"></script>
 <script src="delivery.js"></script>
 <script src="lost.js"></script>
+<script src="missions.js"></script>
 <script src="games.js"></script>
 <script src="achievements.js"></script>
 <script src="onboarding.js"></script>

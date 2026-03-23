@@ -39,6 +39,8 @@ function showPage(p) {
   if (nb) nb.classList.add('active');
   if (p === 'profile') { renderProfile(); renderCharacterCard(); }
   if (p === 'games') { initGamesPage(); }
+  if (p === 'missions') { initMissionsPage(); }
+  if (p === 'resources') { renderResources(); }
 }
 
 // ── USER HELPERS ──
