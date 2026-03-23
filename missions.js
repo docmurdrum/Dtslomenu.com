@@ -295,6 +295,14 @@ const RESOURCES = [
     action: () => showPage('lost'),
   },
   {
+    id: 'missed',
+    icon: '💘',
+    name: 'Missed Connections',
+    desc: 'Saw someone special tonight?',
+    cls: 'missed',
+    action: () => showPage('missed'),
+  },
+  {
     id: 'rides',
     icon: '🚗',
     name: 'Rides',

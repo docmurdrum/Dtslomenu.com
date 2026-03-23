@@ -232,6 +232,18 @@
     <div id="lost-feed"></div>
   </div>
 
+
+  <!-- ── MISSED CONNECTIONS PAGE ── -->
+  <div id="missed" class="page">
+    <button style="background:none;border:none;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:0;margin-bottom:16px;display:flex;align-items:center;gap:6px" onclick="showPage('resources')">← Back to Resources</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div class="section-title" style="margin:0">💘 Missed Connections</div>
+      <button class="post-btn" onclick="openMCModal()">+ Post</button>
+    </div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Saw someone special tonight? Let them know.</div>
+    <div class="mc-bar-filter-row" id="mc-bar-filter"></div>
+    <div id="mc-feed"></div>
+  </div>
   <!-- ── PROFILE PAGE ── -->
   <div id="profile" class="page">
     <div class="section-title">Profile</div>
@@ -434,6 +446,48 @@
   </div>
 
 
+
+  <!-- ── MISSED CONNECTIONS MODAL ── -->
+  <div id="mc-modal" class="modal">
+    <div class="modal-box">
+      <div class="modal-handle"></div>
+      <div class="modal-title">💘 Post a Missed Connection</div>
+
+      <select class="form-select" id="mc-bar" style="margin-bottom:10px">
+        <option value="">📍 Where did you see them?</option>
+        <option>Black Sheep Bar &amp; Grill</option>
+        <option>Bull's Tavern</option>
+        <option>Frog &amp; Peach Pub</option>
+        <option>High Bar</option>
+        <option>Nightcap</option>
+        <option>Feral Kitchen &amp; Lounge</option>
+        <option>The Library</option>
+        <option>The Mark</option>
+        <option>McCarthy's Irish Pub</option>
+        <option>Sidecar SLO</option>
+        <option>Eureka!</option>
+        <option>Finney's Crafthouse</option>
+        <option>Novo Restaurant &amp; Lounge</option>
+        <option>BA Start Arcade Bar</option>
+        <option>The Carrisa</option>
+      </select>
+
+      <input id="mc-time" class="form-input" type="text" placeholder="🕐 Around what time? (e.g. 11pm)" style="margin-bottom:10px">
+      <input id="mc-them" class="form-input" type="text" placeholder="💬 Describe them (e.g. blue dress, tall)" style="margin-bottom:10px">
+      <input id="mc-me"   class="form-input" type="text" placeholder="👕 What were you wearing?" style="margin-bottom:10px">
+      <textarea id="mc-msg" class="form-textarea" placeholder="✍️ Your message to them..." style="margin-bottom:12px"></textarea>
+
+      <div class="mc-anon-row">
+        <input type="checkbox" id="mc-anon">
+        <label for="mc-anon">Post anonymously (hide your username)</label>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-primary" onclick="submitMissedConnection()">💘 Post</button>
+        <button class="btn-secondary" onclick="closeMCModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
   <!-- ── ACHIEVEMENTS MODAL ── -->
   <div id="achievements-modal" class="achievements-modal" onclick="if(event.target===this)closeAchievementsModal()">
     <div class="achievements-modal-inner">
@@ -747,6 +801,7 @@
 <script src="delivery.js"></script>
 <script src="lost.js"></script>
 <script src="missions.js"></script>
+<script src="missed_connections.js"></script>
 <script src="games.js"></script>
 <script src="achievements.js"></script>
 <script src="onboarding.js"></script>

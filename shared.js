@@ -41,6 +41,7 @@ function showPage(p) {
   if (p === 'games') { initGamesPage(); }
   if (p === 'missions') { initMissionsPage(); }
   if (p === 'resources') { renderResources(); }
+  if (p === 'missed') { initMissedConnections(); }
 }
 
 // ── USER HELPERS ──
