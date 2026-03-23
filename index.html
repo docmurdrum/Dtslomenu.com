@@ -579,19 +579,45 @@
   <!-- ── GAMES PAGE ── -->
   <div id="games" class="page">
     <div class="section-title">🎮 Games</div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:18px">Solo games, duels &amp; predictions</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:18px">Pick a game to play</div>
 
-    <!-- Mode tabs -->
-    <div class="game-mode-tabs">
-  <button class="game-mode-tab active" id="game-tab-predict" onclick="switchGameMode('predict')">🔮 Predict</button>
-      <button class="game-mode-tab" id="game-tab-trivia"  onclick="switchGameMode('trivia')">🧠 Trivia</button>
-      <button class="game-mode-tab" id="game-tab-spinner" onclick="switchGameMode('spinner')">🌀 Spinner</button>
-      <button class="game-mode-tab" id="game-tab-bingo"   onclick="switchGameMode('bingo')">🎱 Bingo</button>
-      <button class="game-mode-tab" id="game-tab-duel"    onclick="switchGameMode('duel')">⚔️ Duel</button>
+    <!-- Games grid -->
+    <div class="games-grid" id="games-grid">
+      <div class="game-grid-card predict" onclick="switchGameMode('predict')">
+        <div class="game-grid-icon">🔮</div>
+        <div class="game-grid-name">Predictions</div>
+        <div class="game-grid-desc">Make picks on tonight's events</div>
+      </div>
+      <div class="game-grid-card trivia" onclick="switchGameMode('trivia')">
+        <div class="game-grid-icon">🧠</div>
+        <div class="game-grid-name">Trivia</div>
+        <div class="game-grid-desc">SLO bar knowledge quiz</div>
+      </div>
+      <div class="game-grid-card duel" onclick="switchGameMode('duel')">
+        <div class="game-grid-icon">⚔️</div>
+        <div class="game-grid-name">Trivia Duel</div>
+        <div class="game-grid-desc">Challenge someone head to head</div>
+      </div>
+      <div class="game-grid-card bingo" onclick="switchGameMode('bingo')">
+        <div class="game-grid-icon">🎱</div>
+        <div class="game-grid-name">Bar Bingo</div>
+        <div class="game-grid-desc">Check off what you see tonight</div>
+      </div>
+      <div class="game-grid-card spinner" onclick="switchGameMode('spinner')">
+        <div class="game-grid-icon">🌀</div>
+        <div class="game-grid-name">Spinner</div>
+        <div class="game-grid-desc">Spin for your drinking fate</div>
+      </div>
+      <div class="game-grid-card dice" onclick="switchGameMode('dice')">
+        <div class="game-grid-icon">🎲</div>
+        <div class="game-grid-name">Dice</div>
+        <div class="game-grid-desc">Classic &amp; dare dice games</div>
+      </div>
     </div>
 
     <!-- ══ TRIVIA ══ -->
     <div class="game-panel" id="game-panel-trivia">
+      <button class="game-back-btn" onclick="backToGamesGrid()">← Back to Games</button>
       <div class="game-card">
         <div class="trivia-header">
           <div>
@@ -615,6 +641,7 @@
 
     <!-- ══ SPINNER ══ -->
     <div class="game-panel" id="game-panel-spinner">
+      <button class="game-back-btn" onclick="backToGamesGrid()">← Back to Games</button>
       <div class="game-card">
         <div class="game-card-title">Drinking Game Spinner</div>
         <div class="game-card-sub">Spin to see your fate for the night</div>
@@ -639,6 +666,7 @@
 
     <!-- ══ BAR BINGO ══ -->
     <div class="game-panel" id="game-panel-bingo">
+      <button class="game-back-btn" onclick="backToGamesGrid()">← Back to Games</button>
       <div class="game-card">
         <div class="bingo-header">
           <div>
@@ -663,10 +691,21 @@
           <button class="btn btn-gold" id="bingo-claim-btn" style="flex:1;padding:12px;border-radius:12px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;border:none;display:none" onclick="claimBingo()">🎉 BINGO!</button>
         </div>
       </div>
+      <!-- Bingo multiplayer invite -->
+      <div class="game-card" style="margin-top:12px">
+        <div class="game-card-title" style="margin-bottom:10px">👥 Play with Friends</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Invite friends — everyone gets their own card. First to bingo wins bonus XP.</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input class="duel-input" id="bingo-invite-input" placeholder="Enter username to invite…" style="margin-bottom:0">
+          <button style="flex-shrink:0;padding:10px 14px;border-radius:12px;background:var(--neon-green);border:none;color:#000;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer" onclick="sendBingoInvite()">Invite</button>
+        </div>
+        <div id="bingo-invite-list"></div>
+      </div>
     </div>
 
     <!-- ══ TRIVIA DUEL ══ -->
     <div class="game-panel" id="game-panel-duel">
+      <button class="game-back-btn" onclick="backToGamesGrid()">← Back to Games</button>
       <div class="duel-hero">
         <div class="duel-hero-emoji">⚔️</div>
         <div class="duel-hero-title">Trivia Duel</div>
@@ -711,6 +750,7 @@
 
     <!-- ══ PREDICTIONS ══ -->
     <div class="game-panel active" id="game-panel-predict">
+      <button class="game-back-btn" onclick="backToGamesGrid()">← Back to Games</button>
       <div class="pred-lock-banner" id="pred-countdown">🔒 Predictions lock tonight at 9:00 PM</div>
 
       <!-- Entry type -->
@@ -784,6 +824,19 @@
       </div>
     </div>
 
+
+    <!-- ══ DICE ══ -->
+    <div class="game-panel" id="game-panel-dice">
+      <button class="game-back-btn" onclick="backToGamesGrid()">← Back to Games</button>
+      <div id="dice-game-inner">
+        <!-- Rendered by dice.js initDice() -->
+        <div style="text-align:center;padding:40px 20px;color:var(--text2)">
+          <div style="font-size:40px;margin-bottom:12px">🎲</div>
+          <div style="font-size:14px;font-weight:700">Loading dice...</div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- end games page -->
 
 <div class="toast" id="toast"></div>
@@ -798,6 +851,7 @@
 <script src="missions.js"></script>
 <script src="missed_connections.js"></script>
 <script src="games.js"></script>
+<script src="dice.js"></script>
 <script src="achievements.js"></script>
 <script src="onboarding.js"></script>
 <script src="auth.js"></script>

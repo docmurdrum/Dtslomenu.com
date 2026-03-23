@@ -21,6 +21,74 @@ const bars = [
   { name: "The Carrisa",             emoji: '🏨', address: 'Downtown SLO', reports: [], color: '#d4a855', headcountAvg: 0 },
 ];
 
+
+// ── LOCATION VERIFICATION ──
+const BAR_COORDS = {
+  "Black Sheep Bar & Grill":   { lat: 35.2802, lng: -120.6615 },
+  "Bull's Tavern":             { lat: 35.2800, lng: -120.6614 },
+  "Frog & Peach Pub":          { lat: 35.2797, lng: -120.6609 },
+  "High Bar":                  { lat: 35.2790, lng: -120.6600 },
+  "Nightcap":                  { lat: 35.2796, lng: -120.6612 },
+  "Feral Kitchen & Lounge":    { lat: 35.2803, lng: -120.6617 },
+  "The Library":               { lat: 35.2801, lng: -120.6613 },
+  "The Mark":                  { lat: 35.2798, lng: -120.6610 },
+  "McCarthy's Irish Pub":      { lat: 35.2799, lng: -120.6611 },
+  "Sidecar SLO":               { lat: 35.2795, lng: -120.6608 },
+  "Eureka!":                   { lat: 35.2793, lng: -120.6605 },
+  "Finney's Crafthouse":       { lat: 35.2804, lng: -120.6618 },
+  "Novo Restaurant & Lounge":  { lat: 35.2791, lng: -120.6602 },
+  "BA Start Arcade Bar":       { lat: 35.2792, lng: -120.6604 },
+  "The Carrisa":               { lat: 35.2805, lng: -120.6620 },
+};
+const GPS_RADIUS_METERS = 50;
+
+function isGPSBypassed() {
+  try { return localStorage.getItem('gps_bypass') === 'true'; } catch(e) { return false; }
+}
+
+function haversineDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2)
+    + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180)
+    * Math.sin(dLng/2) * Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function verifyLocation(barName, callback) {
+  if (isGPSBypassed()) { callback(true); return; }
+
+  const barCoord = BAR_COORDS[barName];
+  if (!barCoord) { callback(true); return; } // unknown bar — allow
+
+  if (!navigator.geolocation) {
+    showToast('📍 Location not supported on this device');
+    callback(false); return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const dist = haversineDistance(
+        pos.coords.latitude, pos.coords.longitude,
+        barCoord.lat, barCoord.lng
+      );
+      if (dist <= GPS_RADIUS_METERS) {
+        callback(true);
+      } else {
+        showToast(`📍 You need to be at ${barName} to report`);
+        callback(false);
+      }
+    },
+    (err) => {
+      if (err.code === 1) showToast('📍 Location access is required to report');
+      else showToast('📍 Could not get your location — try again');
+      callback(false);
+    },
+    { timeout: 8000, maximumAge: 30000 }
+  );
+}
+
 // ── LINES STATE ──
 let currentView = 'list';
 let refreshTimer = null;
@@ -264,7 +332,7 @@ function renderBars() {
       : null;
 
     const el = document.createElement('div');
-    el.className = `bar-card-v2${isPacked ? ' v2-packed' : isBusy ? ' v2-busy' : isCollapsed ? ' v2-collapsed' : ''}`;
+    el.className = `bar-card-v2${isPacked ? ' v2-packed' : isBusy ? ' v2-busy' : isCollapsed ? ' v2-collapsed' : ''}`;  // v3: no emoji-shake
 
     // Build checkin strip separately to avoid nested template literal issues
     const _ci = activeCheckins[bar.name];
@@ -288,10 +356,9 @@ function renderBars() {
       <!-- Photo area -->
       <div class="bar-photo-v2 ${isCollapsed ? 'photo-collapsed' : ''}">
         <div class="bar-photo-gradient-v2" style="background:linear-gradient(135deg,${bar.color}22,${bar.color}44,#030308)">
-          <span class="bar-emoji-v2 ${isPacked ? 'emoji-shake' : ''}" style="filter:drop-shadow(0 0 18px ${bar.color}aa)">${bar.emoji}</span>
+          <span class="bar-emoji-v2" style="filter:drop-shadow(0 0 18px ${bar.color}aa)">${bar.emoji}</span>
         </div>
         <div class="bar-photo-overlay-v2"></div>
-        ${buildCrowdParticles(status, bar.color)}
         <div class="bar-status-badge-v2 status-badge-${status.replace(' ','')}">
           ${text}
         </div>
@@ -474,9 +541,12 @@ function handleVote(event, i, status) {
 async function report(i, status, headcount) {
   if (!currentUser) { showToast('⚠️ Please sign in to report'); return; }
   const bar = bars[i];
-  bar.reports = bar.reports.filter(r => !(r.user_id === currentUser.id && r.time > Date.now() - 30*60*1000));
-  bar.reports.unshift({ status, time: Date.now(), user_id: currentUser.id, headcount: headcount || null });
-  renderBars();
+  // Verify location before submitting
+  verifyLocation(bar.name, async (allowed) => {
+    if (!allowed) return;
+    bar.reports = bar.reports.filter(r => !(r.user_id === currentUser.id && r.time > Date.now() - 30*60*1000));
+    bar.reports.unshift({ status, time: Date.now(), user_id: currentUser.id, headcount: headcount || null });
+    renderBars();
   try {
     await supabaseClient.from('reports').insert([{
       bar: bar.name, status, user_id: currentUser.id,
@@ -485,6 +555,7 @@ async function report(i, status, headcount) {
     gainXP(10); reportCount++;
     showToast(`✅ ${bar.name} — ${status} · +10 XP`);
   } catch (e) { showToast('❌ Failed to submit'); }
+  }); // end verifyLocation
 }
 
 // ══════════════════════════════════════════════
@@ -553,6 +624,9 @@ function ciSkipHeadcount() {
 async function confirmCheckin(type, status, headcount) {
   closeCheckinModal();
 
+  verifyLocation(ciBarName, async (allowed) => {
+    if (!allowed) return;
+
   const now = Date.now();
   activeCheckins[ciBarName] = {
     type, barName: ciBarName, barIndex: ciBarIndex,
@@ -579,6 +653,7 @@ async function confirmCheckin(type, status, headcount) {
 
   if (type === 'line') startNudgeTimer();
   startDurationTicker();
+  }); // end verifyLocation
 }
 
 function startNudgeTimer() {

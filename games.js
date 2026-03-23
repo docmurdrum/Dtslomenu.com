@@ -4,23 +4,35 @@
 
 // ── GAME MODE SWITCHING ──
 function switchGameMode(mode) {
+  // Hide grid, show panel
+  const grid = document.getElementById('games-grid');
+  if (grid) grid.style.display = 'none';
+
   document.querySelectorAll('.game-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.game-mode-tab').forEach(b => b.classList.remove('active'));
   const panel = document.getElementById('game-panel-' + mode);
-  const tab   = document.getElementById('game-tab-' + mode);
   if (panel) panel.classList.add('active');
-  if (tab)   tab.classList.add('active');
 
   // Init each mode when first opened
   if (mode === 'trivia' && !triviaInitialized) initTrivia();
   if (mode === 'bingo'  && !bingoInitialized)  initBingo();
-  if (mode === 'predict') renderPredictions();
+  if (mode === 'predict') { loadPropositions(); renderPredictions(); }
+  if (mode === 'dice') initDice();
+}
+
+function backToGamesGrid() {
+  document.querySelectorAll('.game-panel').forEach(p => p.classList.remove('active'));
+  const grid = document.getElementById('games-grid');
+  if (grid) grid.style.display = 'grid';
+  // Reset trivia so next open starts fresh
+  triviaInitialized = false;
+  bingoInitialized  = false;
 }
 
 // ══════════════════════════════════════════════
 // TRIVIA
 // ══════════════════════════════════════════════
-const TRIVIA_QUESTIONS = [
+// Trivia questions loaded from Supabase (fallback to hardcoded if offline)
+let TRIVIA_QUESTIONS = [
   { q: "What street is the main bar strip in downtown SLO?", opts: ["Higuera Street","Marsh Street","Monterey Street","Garden Street"], a: 0 },
   { q: "What college is in San Luis Obispo?", opts: ["UC Santa Barbara","Cuesta College","Cal Poly SLO","UC Davis"], a: 2 },
   { q: "What is Thursday night in SLO known as?", opts: ["Thirsty Thursday","SLO Night","College Night","Bar Night"], a: 0 },
@@ -37,6 +49,23 @@ const TRIVIA_QUESTIONS = [
   { q: "What highway runs through downtown SLO?", opts: ["Highway 1","Highway 101","Highway 1 and 101","Route 66"], a: 2 },
   { q: "What does XP stand for in DTSLO?", opts: ["Extra Points","Experience Points","Extra Plays","Exchange Points"], a: 1 },
 ];
+
+// ── LOAD TRIVIA FROM SUPABASE ──
+async function loadTriviaQuestions() {
+  try {
+    const { data, error } = await supabaseClient
+      .from('trivia_questions')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error || !data || !data.length) return;
+    TRIVIA_QUESTIONS = data.map(r => ({
+      q: r.question,
+      opts: [r.option_a, r.option_b, r.option_c, r.option_d],
+      a: r.correct_answer, // 0-3
+      category: r.category
+    }));
+  } catch(e) { /* silent — use fallback */ }
+}
 
 let triviaInitialized = false;
 let triviaQIdx = 0;
@@ -734,7 +763,7 @@ function getDuelPanelHTML() {
 // ══════════════════════════════════════════════
 // PREDICTIONS
 // ══════════════════════════════════════════════
-const PRED_PROPOSITIONS = [
+let PRED_PROPOSITIONS = [
   { text: "Frog and Peach will have a line out the door", diff: "easy", confirm: "auto" },
   { text: "Someone in the group will lose something tonight", diff: "medium", confirm: "vote" },
   { text: "It will rain before midnight", diff: "easy", confirm: "auto" },
@@ -748,6 +777,28 @@ const PRED_PROPOSITIONS = [
   { text: "A stranger joins your group for at least one bar", diff: "medium", confirm: "vote" },
   { text: "The last bar you visit is still packed at 1:30am", diff: "hard", confirm: "auto" },
 ];
+
+// ── LOAD PROPOSITIONS FROM SUPABASE ──
+async function loadPropositions() {
+  try {
+    const now = new Date().toISOString();
+    const { data, error } = await supabaseClient
+      .from('propositions')
+      .select('*')
+      .eq('active', true)
+      .or(`end_at.is.null,end_at.gt.${now}`)
+      .order('created_at', { ascending: true });
+    if (error || !data || !data.length) return;
+    PRED_PROPOSITIONS = data.map(r => ({
+      id: r.id,
+      text: r.text,
+      diff: r.difficulty || 'medium',
+      confirm: r.confirm_method || 'vote'
+    }));
+    predState.picks = {};
+    renderPredictions();
+  } catch(e) { /* silent — use fallback */ }
+}
 
 let predState = {
   entryType: 'power',  // 'power' or 'flex'
@@ -952,6 +1003,11 @@ function getLockCountdown() {
 
 // ── INIT GAMES PAGE ──
 function initGamesPage() {
+  // Show grid, hide all panels
+  backToGamesGrid();
+  // Pre-load data in background
+  loadTriviaQuestions();
+  loadPropositions();
   // Update lock countdown
   const countdownEl = document.getElementById('pred-countdown');
   const countdown = getLockCountdown();
@@ -960,8 +1016,6 @@ function initGamesPage() {
       ? `🔒 Predictions lock in ${countdown}`
       : '🔒 Predictions are locked for tonight';
   }
-  // Start trivia immediately since it's the default tab
-  initTrivia();
 }
 
 // ── GROUP PREDICTION PLAYER MANAGEMENT ──
@@ -991,4 +1045,39 @@ function renderGroupPlayers() {
       ${p}
       <span onclick="removeGroupPlayer('${p}')" style="cursor:pointer;color:var(--neon-pink);margin-left:2px">×</span>
     </div>`).join('');
+}
+
+// ── BINGO MULTIPLAYER ──
+let bingoPendingInvites = [];
+
+async function sendBingoInvite() {
+  const input = document.getElementById('bingo-invite-input');
+  const username = input ? input.value.trim() : '';
+  if (!username) { showToast('⚠️ Enter a username'); return; }
+  if (!currentUser) { showToast('⚠️ Sign in to invite friends'); return; }
+  try {
+    const { data, error } = await supabaseClient
+      .from('profiles').select('id,username').eq('username', username).single();
+    if (error || !data) { showToast('❌ Player not found'); return; }
+    if (data.id === currentUser.id) { showToast('❌ That is you!'); return; }
+    await supabaseClient.from('bingo_games').insert({
+      host_id: currentUser.id,
+      guest_id: data.id,
+      status: 'invited',
+      created_at: new Date().toISOString(),
+    });
+    bingoPendingInvites.push(username);
+    if (input) input.value = '';
+    showToast(`🎱 Invite sent to ${username}!`);
+    renderBingoInviteList();
+  } catch(e) { showToast('❌ ' + e.message); }
+}
+
+function renderBingoInviteList() {
+  const el = document.getElementById('bingo-invite-list');
+  if (!el) return;
+  if (!bingoPendingInvites.length) { el.innerHTML = ''; return; }
+  el.innerHTML = bingoPendingInvites.map(u =>
+    `<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--neon-green);margin:3px">${u} ✓</div>`
+  ).join('');
 }
