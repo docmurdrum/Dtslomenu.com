@@ -265,7 +265,6 @@ function renderBars() {
 
     const el = document.createElement('div');
     el.className = `bar-card-v2${isPacked ? ' v2-packed' : isBusy ? ' v2-busy' : isCollapsed ? ' v2-collapsed' : ''}`;
-
     el.innerHTML = `
       <!-- Photo area -->
       <div class="bar-photo-v2 ${isCollapsed ? 'photo-collapsed' : ''}">
@@ -345,26 +344,7 @@ function renderBars() {
       })()}
     `;
 
-    if (rank === 0 && status !== 'No Data') {
-      const wrap = document.createElement('div');
-      wrap.className = 'flame-wrap';
-      wrap.style.position = 'relative';
-      wrap.style.marginTop = '18px';
-      const jackpot = document.createElement('div');
-      jackpot.className = 'jackpot-label';
-      jackpot.textContent = '🔥 HOTTEST SPOT';
-      wrap.appendChild(jackpot);
-      wrap.appendChild(el);
-      c.appendChild(wrap);
-    } else {
-      c.appendChild(el);
-    }
-
-    const _rank = rank;
-    setTimeout(() => {
-      const track = document.getElementById(`vibe-${i}`);
-      if (track) buildVibeSegments(track, vibe, barColor);
-    }, 80 + (_rank * 40));
+    c.appendChild(el);
   });
 
   updateSummaryStrip();
