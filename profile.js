@@ -43,7 +43,7 @@ const CHARACTERS = [
     { action: "confidently bluffing their way past a distracted bouncer", bg: "crowded bar entrance with people lined up behind them" },
     { action: "celebrating inside the bar in disbelief they made it", bg: "loud packed bar interior with colorful lights and happy crowd" },
   ]},
-  { id: 3, name: "The Pre-Game Prophet", scenes: [
+  { id: 3, name: "The Pre-Game Goblin", scenes: [
     { action: "dramatically predicting how the night will go to a skeptical group", bg: "dorm room pre-game with bottles and red cups everywhere" },
     { action: "making everyone do a group shot before leaving", bg: "apartment kitchen with bottles and sticky countertops" },
     { action: "arriving at the bar having already predicted every detail correctly", bg: "busy SLO bar entrance at night with a crowd" },
@@ -85,7 +85,7 @@ const CHARACTERS = [
     { action: "arriving at a packed bar and somehow getting a table immediately", bg: "crowded bar interior with no seats but one mysteriously open table" },
     { action: "walking into the VIP section like they own the place", bg: "elevated VIP area of a SLO bar with bottle service below" },
   ]},
-  { id: 9, name: "The Karaoke Demon", scenes: [
+  { id: 9, name: "Karaoke Karen", scenes: [
     { action: "grabbing the mic before anyone else can and owning the stage", bg: "karaoke bar stage with a frozen stunned audience" },
     { action: "performing with terrifying intensity to a pop song", bg: "small karaoke room with friends covering their ears and laughing" },
     { action: "refusing to give up the mic despite finishing their song", bg: "karaoke stage with the next performer waiting awkwardly" },
