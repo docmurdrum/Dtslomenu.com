@@ -436,6 +436,57 @@ function renderProfile() {
     ? `${userXP} XP · Max level reached!`
     : `${userXP} XP · ${toNext} XP to next level`;
   setTimeout(() => { document.getElementById('xp-fill').style.width = progress + '%'; }, 60);
+
+  // Load extra stats
+  loadProfileExtras();
+}
+
+async function loadProfileExtras() {
+  if (!currentUser) return;
+
+  // Streak
+  const streak = await getCheckinStreak();
+  const streakEl = document.getElementById('stat-streak');
+  if (streakEl) streakEl.textContent = streak;
+
+  // Update streak pill on lines page
+  const streakPill = document.getElementById('streak-pill');
+  const streakCount = document.getElementById('streak-count');
+  if (streakPill && streakCount) {
+    streakCount.textContent = streak;
+    streakPill.style.display = streak > 0 ? 'inline-flex' : 'none';
+  }
+
+  // Duel wins
+  const duelWins = await getDuelWins();
+  const duelEl = document.getElementById('stat-duel-wins');
+  if (duelEl) duelEl.textContent = duelWins;
+
+  // Prediction accuracy
+  try {
+    const { data } = await supabaseClient
+      .from('predictions')
+      .select('correct_count, pick_count')
+      .eq('user_id', currentUser.id)
+      .not('correct_count', 'is', null);
+    if (data && data.length > 0) {
+      const totalPicks = data.reduce((s, r) => s + (r.pick_count || 0), 0);
+      const totalRight = data.reduce((s, r) => s + (r.correct_count || 0), 0);
+      const acc = totalPicks > 0 ? Math.round((totalRight / totalPicks) * 100) + '%' : '—';
+      const accEl = document.getElementById('stat-pred-acc');
+      if (accEl) accEl.textContent = acc;
+    }
+  } catch(e) { /* silent */ }
+
+  // Recent badges
+  renderRecentBadges();
+
+  // Update ach modal count
+  const countEl = document.getElementById('ach-modal-count');
+  if (countEl) countEl.textContent = earnedAchievements.size + ' earned';
+
+  // Activity feed
+  loadActivityFeed();
 }
 
 // ── RENDER CHARACTER CARD — auto-loads from storage ──
@@ -679,4 +730,38 @@ async function devToggleGender() {
 function updateDevGenderLabel() {
   const el = document.getElementById('dev-gender-label');
   if (el) el.textContent = currentUser?.user_metadata?.gender || '—';
+}
+
+// ── ACTIVITY FEED ──
+async function loadActivityFeed() {
+  const container = document.getElementById('activity-feed-list');
+  if (!container || !currentUser) return;
+
+  try {
+    const [reports, posts, checkins] = await Promise.all([
+      supabaseClient.from('reports').select('bar_name,status,created_at').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(5),
+      supabaseClient.from('lost_found').select('title,type,created_at').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(3),
+      supabaseClient.from('checkins').select('bar_name,created_at').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(3),
+    ]);
+
+    const items = [
+      ...(reports.data || []).map(r => ({ icon: '📍', text: `Reported ${r.bar_name} as ${r.status}`, time: r.created_at })),
+      ...(posts.data   || []).map(p => ({ icon: p.type === 'lost' ? '🔴' : '🟢', text: `Posted ${p.title} on L&F`, time: p.created_at })),
+      ...(checkins.data || []).map(c => ({ icon: '✅', text: `Checked in at ${c.bar_name}`, time: c.created_at })),
+    ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 8);
+
+    if (items.length === 0) {
+      container.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:12px 0">No recent activity yet</div>';
+      return;
+    }
+
+    container.innerHTML = items.map(item => `
+      <div class="activity-item">
+        <div class="activity-icon">${item.icon}</div>
+        <div class="activity-text">${item.text}</div>
+        <div class="activity-time">${timeAgo(new Date(item.time).getTime())}</div>
+      </div>`).join('');
+  } catch(e) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:12px 0">Could not load activity</div>';
+  }
 }

@@ -85,7 +85,7 @@ async function doSignup() {
     if (error) throw error;
 
     if (data.session) {
-      await onLogin(data.user);
+      await onLogin(data.user, true); // true = new user
       return;
     }
 
@@ -107,17 +107,22 @@ async function doSignup() {
 }
 
 // ── ON LOGIN ──
-async function onLogin(user) {
+async function onLogin(user, isNewUser = false) {
   currentUser = user;
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   renderAvatar();
+  updateUsernameBar();
   await loadUserStats();
   renderProducts();
   loadReports();
   loadLostItems();
   checkThursdayMode();
   setInterval(checkThursdayMode, 60 * 60 * 1000);
+  // Load achievements silently
+  await loadAchievements();
+  await checkAchievements();
+  if (isNewUser) maybeShowOnboarding(true);
 }
 
 // ── SIGN OUT ──

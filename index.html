@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="lost.css">
 <link rel="stylesheet" href="profile.css">
 <link rel="stylesheet" href="games.css">
+<link rel="stylesheet" href="achievements.css">
 </head>
 <body>
 
@@ -79,6 +80,7 @@
 <!-- ══════════════════ MAIN APP ══════════════════ -->
 <div id="app">
 
+  <div class="username-bar" id="username-bar"></div>
   <nav class="navbar">
     <button class="nav-btn active" id="nav-line" onclick="showPage('line')">
       <span class="icon">📍</span><span class="label">Lines</span>
@@ -100,6 +102,7 @@
 
   <!-- ── LINES PAGE ── -->
   <div id="line" class="page active">
+    <div class="streak-pill" id="streak-pill" style="display:none"><span class="streak-fire">🔥</span><span id="streak-count">0</span> week streak</div>
     <div class="lines-header">
       <div>
         <div class="section-title" style="margin-bottom:2px">DTSLO Tonight</div>
@@ -242,6 +245,41 @@
       </div>
     </div>
 
+    <!-- Extra stats row -->
+    <div class="profile-stat-row">
+      <div class="profile-stat-pill">
+        <div class="profile-stat-pill-val" id="stat-streak">0</div>
+        <div class="profile-stat-pill-label">🔥 Streak</div>
+      </div>
+      <div class="profile-stat-pill">
+        <div class="profile-stat-pill-val" id="stat-duel-wins">0</div>
+        <div class="profile-stat-pill-label">⚔️ Duel Wins</div>
+      </div>
+      <div class="profile-stat-pill">
+        <div class="profile-stat-pill-val" id="stat-pred-acc">—</div>
+        <div class="profile-stat-pill-label">🔮 Pred Acc</div>
+      </div>
+    </div>
+
+    <!-- Recent badges -->
+    <div class="badges-section">
+      <div class="badges-header">
+        <div class="badges-title">🏅 Recent Badges</div>
+        <button class="badges-see-all" onclick="openAchievementsModal()">See All →</button>
+      </div>
+      <div class="recent-badges" id="recent-badges">
+        <div style="font-size:12px;color:var(--text2);text-align:center;padding:16px 0;grid-column:1/-1">Loading badges...</div>
+      </div>
+    </div>
+
+    <!-- Activity feed -->
+    <div class="activity-feed">
+      <div class="activity-feed-title">Recent Activity</div>
+      <div id="activity-feed-list">
+        <div style="font-size:12px;color:var(--text2);padding:12px 0">No recent activity</div>
+      </div>
+    </div>
+
     <div class="profile-section-label">Account</div>
 
     <button class="profile-action" onclick="toggleChangePw()">
@@ -355,6 +393,39 @@
     </div>
   </div>
 
+
+  <!-- ── ACHIEVEMENTS MODAL ── -->
+  <div id="achievements-modal" class="achievements-modal" onclick="if(event.target===this)closeAchievementsModal()">
+    <div class="achievements-modal-inner">
+      <div class="ach-modal-handle"></div>
+      <div class="ach-modal-header">
+        <div class="ach-modal-title">🏅 Achievements</div>
+        <div class="ach-modal-count" id="ach-modal-count">0 earned</div>
+      </div>
+      <div class="ach-modal-scroll">
+        <div id="achievements-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ONBOARDING MODAL ── -->
+  <div id="onboarding-modal" class="onboarding-modal">
+    <div class="onboarding-box">
+      <div class="ob-content" id="ob-content">
+        <span class="ob-icon" id="ob-icon">🌃</span>
+        <div class="ob-title" id="ob-title">Welcome to DTSLO</div>
+        <div class="ob-body" id="ob-body">Your guide to downtown San Luis Obispo nightlife.</div>
+        <div class="ob-dots">
+          <div class="ob-dot active"></div>
+          <div class="ob-dot"></div>
+          <div class="ob-dot"></div>
+          <div class="ob-dot"></div>
+        </div>
+        <button class="ob-cta" id="ob-cta" onclick="onboardingNext()">Next →</button>
+        <button class="ob-skip" onclick="closeOnboarding()">Skip</button>
+      </div>
+    </div>
+  </div>
 </div><!-- /#app -->
 
 <!-- ── CHECKOUT MODAL ── -->
@@ -401,15 +472,15 @@
 
     <!-- Mode tabs -->
     <div class="game-mode-tabs">
-      <button class="game-mode-tab active" id="game-tab-trivia"  onclick="switchGameMode('trivia')">🧠 Trivia</button>
+  <button class="game-mode-tab active" id="game-tab-predict" onclick="switchGameMode('predict')">🔮 Predict</button>
+      <button class="game-mode-tab" id="game-tab-trivia"  onclick="switchGameMode('trivia')">🧠 Trivia</button>
       <button class="game-mode-tab" id="game-tab-spinner" onclick="switchGameMode('spinner')">🌀 Spinner</button>
       <button class="game-mode-tab" id="game-tab-bingo"   onclick="switchGameMode('bingo')">🎱 Bingo</button>
       <button class="game-mode-tab" id="game-tab-duel"    onclick="switchGameMode('duel')">⚔️ Duel</button>
-      <button class="game-mode-tab" id="game-tab-predict" onclick="switchGameMode('predict')">🔮 Predict</button>
     </div>
 
     <!-- ══ TRIVIA ══ -->
-    <div class="game-panel active" id="game-panel-trivia">
+    <div class="game-panel" id="game-panel-trivia">
       <div class="game-card">
         <div class="trivia-header">
           <div>
@@ -528,7 +599,7 @@
     </div>
 
     <!-- ══ PREDICTIONS ══ -->
-    <div class="game-panel" id="game-panel-predict">
+    <div class="game-panel active" id="game-panel-predict">
       <div class="pred-lock-banner" id="pred-countdown">🔒 Predictions lock tonight at 9:00 PM</div>
 
       <!-- Entry type -->
@@ -551,11 +622,12 @@
         <button class="pred-picks-btn" id="pred-picks-5" onclick="setPredPickCount(5)">5 Picks</button>
       </div>
 
-      <!-- Multiplier -->
+      <!-- Multiplier + XP cost -->
       <div class="pred-multiplier-bar">
         <div>
           <div class="pred-multiplier-label">XP Multiplier</div>
           <div class="pred-multiplier-sub" id="pred-multiplier-sub">Power: all 3 must be correct</div>
+          <div style="font-size:11px;color:var(--gold);font-weight:700;margin-top:4px" id="pred-xp-cost">Entry costs 30 XP · win 90 XP</div>
         </div>
         <div class="pred-multiplier-val" id="pred-multiplier-val">3x</div>
       </div>
@@ -565,6 +637,21 @@
         <button class="pred-mode-btn active" id="pred-mode-solo" onclick="setPredMode('solo')">👤 Solo</button>
         <button class="pred-mode-btn" id="pred-mode-duel" onclick="setPredMode('duel')">⚔️ Duel</button>
         <button class="pred-mode-btn" id="pred-mode-group" onclick="setPredMode('group')">👥 Group</button>
+      </div>
+
+      <!-- Duel opponent input (shown when duel mode active) -->
+      <div id="pred-duel-row" style="display:none;margin-bottom:14px">
+        <input class="pred-custom-input" id="pred-duel-opponent" placeholder="Enter username to duel…" style="width:100%;margin-bottom:8px">
+        <div style="font-size:11px;color:var(--text2);font-weight:600">Whoever gets more predictions right wins the pot</div>
+      </div>
+
+      <!-- Group invite row (shown when group mode active) -->
+      <div id="pred-group-row" style="display:none;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:800;margin-bottom:8px">Invite players (2–10)</div>
+        <input class="pred-custom-input" id="pred-group-input" placeholder="Enter username and tap Add…" style="width:100%;margin-bottom:8px">
+        <button class="btn btn-ghost" style="padding:9px 16px;border-radius:12px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px" onclick="addGroupPlayer()">+ Add Player</button>
+        <div id="pred-group-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        <div style="font-size:11px;color:var(--text2);font-weight:600;margin-top:6px">Winner takes the entire XP pot</div>
       </div>
 
       <!-- Props list -->
@@ -598,6 +685,8 @@
 <script src="delivery.js"></script>
 <script src="lost.js"></script>
 <script src="games.js"></script>
+<script src="achievements.js"></script>
+<script src="onboarding.js"></script>
 <script src="auth.js"></script>
 
 </body>

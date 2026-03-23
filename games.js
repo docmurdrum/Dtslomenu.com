@@ -102,16 +102,80 @@ function answerTrivia(btn, chosen, correct) {
   if (chosen !== correct && opts[correct]) opts[correct].classList.add('correct');
 
   if (chosen === correct) {
-    const speedBonus = timeLeft > 15 ? 5 : timeLeft > 8 ? 3 : 0;
-    triviaScore += 10 + speedBonus;
+    triviaScore++;
     document.getElementById('trivia-score').textContent = triviaScore;
-    if (currentUser) awardXP(10 + speedBonus, 'trivia_correct');
+  }
+
+  // Check if finished (after last question)
+  const total = Math.min(TRIVIA_QUESTIONS.length, 10);
+  if ((triviaQIdx % total) === total - 1) {
+    // Last question — show result after delay
+    setTimeout(() => {
+      triviaQIdx++;
+      showTriviaResult();
+    }, 1200);
+    return;
   }
 
   setTimeout(() => {
     triviaQIdx++;
     renderTriviaQuestion();
   }, 1200);
+}
+
+function showTriviaResult() {
+  const card = document.querySelector('#game-panel-trivia .game-card');
+  if (!card) return;
+  const correct = triviaScore;
+  const qualified = correct >= 7;
+  const xpEarned = qualified ? 10 : 0;
+
+  if (qualified && currentUser) {
+    awardXP(10, 'trivia_complete');
+    if (correct === 10) recordTriviaPerfect();
+    else recordTrivia7Plus();
+    checkAchievements();
+  }
+
+  card.innerHTML = `
+    <div style="text-align:center;padding:20px 10px">
+      <div style="font-size:52px;margin-bottom:12px">${correct >= 8 ? '🧠' : correct >= 7 ? '⚡' : '💪'}</div>
+      <div style="font-size:26px;font-weight:900;margin-bottom:6px">${correct} / 10</div>
+      <div style="font-size:14px;color:var(--text2);margin-bottom:16px;line-height:1.5">
+        ${qualified
+          ? `✅ You scored 7+! <strong style="color:var(--gold)">+10 XP earned</strong>`
+          : `Score 7 or more to earn 10 XP. You got ${correct} — try again!`}
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:14px;border-radius:14px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;border:none" onclick="restartTrivia()">🔄 Play Again</button>
+    </div>`;
+}
+
+function restartTrivia() {
+  triviaQIdx = 0;
+  triviaScore = 0;
+  triviaAnswered = false;
+  clearInterval(triviaTimer);
+  const card = document.querySelector('#game-panel-trivia .game-card');
+  if (!card) return;
+  card.innerHTML = `
+    <div class="trivia-header">
+      <div>
+        <div class="game-card-title">SLO Bar Trivia</div>
+        <div style="font-size:11px;color:var(--text2)" id="trivia-counter">Question 1 of 10</div>
+      </div>
+      <div>
+        <div class="trivia-xp" id="trivia-score">0</div>
+        <div class="trivia-xp-label">correct</div>
+      </div>
+    </div>
+    <div class="trivia-progress"><div class="trivia-progress-fill" id="trivia-fill" style="width:10%"></div></div>
+    <div class="trivia-question" id="trivia-question">Loading...</div>
+    <div class="trivia-options" id="trivia-options"></div>
+    <div class="trivia-footer">
+      <div class="trivia-timer" id="trivia-timer">20</div>
+      <div class="xp-pill">⚡ Score 7+ to earn 10 XP</div>
+    </div>`;
+  renderTriviaQuestion();
 }
 
 function triviaTimeout() {
@@ -197,9 +261,24 @@ function initBingo() {
 }
 
 function generateBingoCard() {
+  // Check if we have a saved card for tonight
+  const savedNight = safeStore.get('bingo_night');
+  const tonight = new Date().toISOString().slice(0, 10);
+  const saved = safeStore.get('bingo_board');
+
+  if (savedNight === tonight && saved) {
+    try {
+      bingoBoard = JSON.parse(saved);
+      renderBingoGrid();
+      return;
+    } catch(e) { /* fall through to new card */ }
+  }
+
   const shuffled = [...BINGO_SQUARES].sort(() => Math.random() - 0.5).slice(0, 24);
   shuffled.splice(12, 0, 'FREE');
   bingoBoard = shuffled.map((text, i) => ({ text, checked: i === 12, free: i === 12 }));
+  safeStore.set('bingo_night', tonight);
+  safeStore.set('bingo_board', JSON.stringify(bingoBoard));
   renderBingoGrid();
 }
 
@@ -226,6 +305,7 @@ function renderBingoGrid() {
 function toggleBingoCell(i) {
   if (bingoBoard[i].free) return;
   bingoBoard[i].checked = !bingoBoard[i].checked;
+  safeStore.set('bingo_board', JSON.stringify(bingoBoard));
   renderBingoGrid();
 }
 
@@ -242,9 +322,14 @@ function checkBingoWin() {
 
 function claimBingo() {
   showToast('🎉 BINGO! +50 XP earned!');
-  if (currentUser) awardXP(50, 'bingo_win');
+  if (currentUser) {
+    awardXP(50, 'bingo_win');
+    recordBingoWin();
+  }
   const claimBtn = document.getElementById('bingo-claim-btn');
   if (claimBtn) claimBtn.style.display = 'none';
+  // Clear saved card so they get a fresh one
+  safeStore.set('bingo_night', '');
 }
 
 // ══════════════════════════════════════════════
@@ -703,13 +788,25 @@ function setPredMode(mode) {
   document.querySelectorAll('.pred-mode-btn').forEach(b => b.classList.remove('active'));
   const el = document.getElementById('pred-mode-' + mode);
   if (el) el.classList.add('active');
+
+  const duelRow = document.getElementById('pred-duel-row');
+  const groupRow = document.getElementById('pred-group-row');
+  if (duelRow) duelRow.style.display = mode === 'duel' ? 'block' : 'none';
+  if (groupRow) groupRow.style.display = mode === 'group' ? 'block' : 'none';
 }
 
 function updatePredMultiplier() {
   const mult = PRED_MULTIPLIERS[predState.entryType][predState.pickCount];
   const el = document.getElementById('pred-multiplier-val');
   const sub = document.getElementById('pred-multiplier-sub');
+  const costEl = document.getElementById('pred-xp-cost');
+
   if (el) el.textContent = mult + 'x';
+
+  // XP cost = 10 XP per pick as the wager
+  const cost = predState.pickCount * 10;
+  if (costEl) costEl.textContent = `Entry costs ${cost} XP · win ${Math.round(cost * mult)} XP`;
+
   if (sub) {
     if (predState.entryType === 'flex') {
       const partialMult = predState.pickCount === 3 ? '1.5x if 2/3' : '2x if 4/5 · 0.5x if 3/5';
@@ -865,4 +962,33 @@ function initGamesPage() {
   }
   // Start trivia immediately since it's the default tab
   initTrivia();
+}
+
+// ── GROUP PREDICTION PLAYER MANAGEMENT ──
+let groupPlayers = [];
+
+function addGroupPlayer() {
+  const input = document.getElementById('pred-group-input');
+  const val = input ? input.value.trim() : '';
+  if (!val) return;
+  if (groupPlayers.length >= 9) { showToast('⚠️ Max 10 players (including you)'); return; }
+  if (groupPlayers.includes(val)) { showToast('⚠️ Already added'); return; }
+  groupPlayers.push(val);
+  input.value = '';
+  renderGroupPlayers();
+}
+
+function removeGroupPlayer(name) {
+  groupPlayers = groupPlayers.filter(p => p !== name);
+  renderGroupPlayers();
+}
+
+function renderGroupPlayers() {
+  const list = document.getElementById('pred-group-list');
+  if (!list) return;
+  list.innerHTML = groupPlayers.map(p => `
+    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(180,79,255,0.1);border:1px solid var(--accent);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700">
+      ${p}
+      <span onclick="removeGroupPlayer('${p}')" style="cursor:pointer;color:var(--neon-pink);margin-left:2px">×</span>
+    </div>`).join('');
 }

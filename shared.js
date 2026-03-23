@@ -73,6 +73,14 @@ function renderAvatar() {
   if (el) el.textContent = initial;
 }
 
+function updateUsernameBar() {
+  const el = document.getElementById('username-bar');
+  if (!el || !currentUser) return;
+  const username = getUsername();
+  el.innerHTML = `<span class="username-bar-text">👋 ${username}</span>`;
+  el.style.display = 'flex';
+}
+
 // ── TIME HELPER ──
 function timeAgo(t) {
   const s = Math.floor((Date.now() - t) / 1000);
