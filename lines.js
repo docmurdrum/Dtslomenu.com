@@ -67,7 +67,7 @@ function renderHotStrip() {
   const medals = ['🥇','🥈','🥉','4️⃣'];
   cards.innerHTML = active.map(({ bar, i, status, count }, rank) => {
     const { text, barColor } = statusLabel(status);
-    return `<div class="hot-card" onclick="document.querySelectorAll('.bar-card')[${i}]?.scrollIntoView({behavior:'smooth',block:'center'})">
+    return `<div class="hot-card" onclick="document.querySelectorAll('.bar-card-v2')[${i}]?.scrollIntoView({behavior:'smooth',block:'center'})">
       <div class="hot-card-flood" style="background:${barColor}"></div>
       <div class="hot-card-top">
         <span class="hot-card-emoji">${bar.emoji}</span>
@@ -265,6 +265,25 @@ function renderBars() {
 
     const el = document.createElement('div');
     el.className = `bar-card-v2${isPacked ? ' v2-packed' : isBusy ? ' v2-busy' : isCollapsed ? ' v2-collapsed' : ''}`;
+
+    // Build checkin strip separately to avoid nested template literal issues
+    const _ci = activeCheckins[bar.name];
+    const _checkedInCount = Object.values(activeCheckins).filter(c => c.barName === bar.name).length;
+    let checkinStripHTML = '<div class="checkin-strip">';
+    if (_ci) {
+      const _escapedName = bar.name.replace(/'/g, "&#39;");
+      checkinStripHTML += '<div class="checkin-active-banner" style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0">'
+        + '<span style="font-size:13px;font-weight:700">' + (_ci.type === 'line' ? '🚶 In line' : '🎉 Inside') + ' at ' + bar.name + ' &middot; <span class="checkin-timer">' + getCheckinDuration(_ci.checkedInAt) + '</span></span>'
+        + '<button class="checkin-leave-btn" onclick="leaveCheckin(&#39;' + _escapedName + '&#39;)">Leave</button>'
+        + '</div>';
+    } else {
+      checkinStripHTML += '<button class="checkin-btn" onclick="openCheckinModal(' + i + ')">'
+        + '<span class="checkin-btn-icon">📍</span>'
+        + '<span class="checkin-btn-label">Check In · +20 XP</span>'
+        + '</button>';
+    }
+    checkinStripHTML += '</div>';
+
     el.innerHTML = `
       <!-- Photo area -->
       <div class="bar-photo-v2 ${isCollapsed ? 'photo-collapsed' : ''}">
@@ -318,30 +337,7 @@ function renderBars() {
         </button>
       </div>
 
-      ${(() => {
-        const ci = activeCheckins[bar.name];
-        const avgWait = getAvgWaitTime(bar.name);
-        const checkedInCount = Object.values(activeCheckins).filter(c => c.barName === bar.name).length;
-        return `
-        <div class="bar-stats-row" style="padding: 0 18px 8px;">
-          ${checkedInCount > 0 ? `<div class="bar-stat">📍 <span class="bar-stat-val">${checkedInCount}</span> checked in</div>` : ''}
-          ${avgWait > 0 ? `<div class="bar-stat">⏱ avg wait <span class="bar-stat-val">${avgWait}m</span></div>` : ''}
-          ${bar.headcountAvg > 0 ? `<div class="bar-stat">👥 ~<span class="bar-stat-val">${bar.headcountAvg}</span> in line</div>` : ''}
-        </div>
-        <div class="checkin-strip">
-          ${ci ? `
-            <div class="checkin-active-banner" style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0">
-              <span style="font-size:13px;font-weight:700">${ci.type === 'line' ? '🚶 In line' : '🎉 Inside'} at ${bar.name} · <span class="checkin-timer">${getCheckinDuration(ci.checkedInAt)}</span></span>
-              <button class="checkin-leave-btn" onclick="leaveCheckin('${bar.name}')">Leave</button>
-            </div>
-          ` : `
-            <button class="checkin-btn" onclick="openCheckinModal(${i})">
-              <span class="checkin-btn-icon">📍</span>
-              <span class="checkin-btn-label">Check In</span>
-            </button>
-          `}
-        </div>`;
-      })()}
+      ${checkinStripHTML}
     `;
 
     c.appendChild(el);
@@ -362,7 +358,7 @@ function scrollToBar(targetIdx) {
     const sorted = [...bars].map((bar, idx) => ({ bar, idx }))
       .sort((a, b) => (order[getStatus(a.bar)] ?? 3) - (order[getStatus(b.bar)] ?? 3));
     const pos = sorted.findIndex(s => s.idx === targetIdx);
-    const cards = document.querySelectorAll('.bar-card');
+    const cards = document.querySelectorAll('.bar-card-v2');
     if (cards[pos]) cards[pos].scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 150);
 }
@@ -382,7 +378,7 @@ function renderMapView() {
     const count = getRecentCount(bar);
     const el = document.createElement('div');
     el.className = 'map-card';
-    el.onclick = () => { setView('list'); setTimeout(() => document.querySelectorAll('.bar-card')[i]?.scrollIntoView({ behavior:'smooth', block:'center' }), 100); };
+    el.onclick = () => { setView('list'); setTimeout(() => document.querySelectorAll('.bar-card-v2')[i]?.scrollIntoView({ behavior:'smooth', block:'center' }), 100); };
     el.innerHTML = `
       <div class="map-card-top" style="background:${barColor}"></div>
       <div class="map-card-emoji">${bar.emoji}</div>
@@ -427,12 +423,18 @@ function renderFeedView() {
 
 function setView(v) {
   currentView = v;
-  document.getElementById('bars-list').style.display  = v === 'list' ? 'block' : 'none';
-  document.getElementById('bars-map').style.display   = v === 'map'  ? 'block' : 'none';
-  document.getElementById('bars-feed').style.display  = v === 'feed' ? 'block' : 'none';
-  document.getElementById('view-list-btn').classList.toggle('active', v === 'list');
-  document.getElementById('view-map-btn').classList.toggle('active', v === 'map');
-  document.getElementById('view-feed-btn').classList.toggle('active', v === 'feed');
+  const bList = document.getElementById('bars-list');
+  const bMap  = document.getElementById('bars-map');
+  const bFeed = document.getElementById('bars-feed');
+  if (bList) bList.style.display = v === 'list' ? 'block' : 'none';
+  if (bMap)  bMap.style.display  = v === 'map'  ? 'block' : 'none';
+  if (bFeed) bFeed.style.display = v === 'feed' ? 'block' : 'none';
+  const btnList = document.getElementById('view-list-btn');
+  const btnMap  = document.getElementById('view-map-btn');
+  const btnFeed = document.getElementById('view-feed-btn');
+  if (btnList) btnList.classList.toggle('active', v === 'list');
+  if (btnMap)  btnMap.classList.toggle('active',  v === 'map');
+  if (btnFeed) btnFeed.classList.toggle('active', v === 'feed');
   if (v === 'map')  renderMapView();
   if (v === 'feed') renderFeedView();
 }
@@ -464,7 +466,7 @@ async function loadReports() {
 // ── VOTE / REPORT ──
 function handleVote(event, i, status) {
   popVoteBtn(event.currentTarget);
-  const card = event.currentTarget.closest('.bar-card');
+  const card = event.currentTarget.closest('.bar-card-v2');
   if (card) spawnBarParticles(card, status);
   report(i, status);
 }
