@@ -2,6 +2,84 @@
    PROFILE.CSS — Profile, XP, Character Card, Level Up
    ══════════════════════════════════════════ */
 
+
+/* ── PROFILE HERO V2 ── */
+.profile-hero-v2 {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 24px 16px 20px; margin-bottom: 16px;
+  position: relative;
+}
+
+/* Username · Archetype title */
+.profile-char-title {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; justify-content: center;
+  margin-bottom: 20px;
+}
+.profile-username-display {
+  font-size: 22px; font-weight: 900; letter-spacing: -0.5px;
+  background: linear-gradient(90deg, var(--neon-cyan), var(--accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.profile-title-dot {
+  font-size: 18px; color: var(--text2); font-weight: 300;
+  -webkit-text-fill-color: var(--text2);
+}
+.profile-archetype-display {
+  font-size: 22px; font-weight: 900; letter-spacing: -0.5px;
+  background: linear-gradient(90deg, var(--gold2), var(--gold), var(--neon-pink));
+  background-size: 200% auto;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: sweep 4s linear infinite;
+}
+@keyframes sweep { 0%{background-position:0%} 100%{background-position:200%} }
+
+/* Portrait */
+.profile-portrait-wrap {
+  position: relative; margin-bottom: 14px;
+}
+.profile-portrait-glow {
+  position: absolute; inset: -12px; border-radius: 30px;
+  background: radial-gradient(ellipse, rgba(180,79,255,0.25) 0%, transparent 70%);
+  z-index: 0;
+  animation: portrait-pulse 3s ease-in-out infinite;
+}
+@keyframes portrait-pulse {
+  0%,100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.03); }
+}
+.profile-portrait {
+  width: 200px; height: 200px; border-radius: 22px;
+  background: var(--surface); border: 2px solid var(--border);
+  overflow: hidden; position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+  transition: border-color 0.3s;
+}
+.profile-portrait.has-char {
+  border-color: rgba(180,79,255,0.5);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 24px rgba(180,79,255,0.2);
+}
+
+/* Level badge */
+.profile-level-badge {
+  position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, var(--gold2), var(--gold));
+  color: #000; font-size: 12px; font-weight: 900;
+  padding: 4px 14px; border-radius: 20px; z-index: 2;
+  box-shadow: 0 0 14px rgba(255,215,0,0.4);
+  white-space: nowrap;
+}
+
+/* Info row */
+.profile-info-row {
+  text-align: center; margin-top: 8px;
+}
+.profile-info-row .profile-email  { font-size: 12px; color: var(--text2); margin-bottom: 3px; }
+.profile-info-row .profile-joined { font-size: 11px; color: var(--text2); }
+
 /* ── PROFILE PAGE ── */
 .profile-hero {
   background: var(--surface);
