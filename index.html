@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>DTSLO</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.js"></script>
+
+<!-- ── STYLES ── -->
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="auth.css">
+<link rel="stylesheet" href="lines.css">
+<link rel="stylesheet" href="delivery.css">
+<link rel="stylesheet" href="lost.css">
+<link rel="stylesheet" href="profile.css">
+</head>
+<body>
+
+<!-- ══════════════════ AUTH SCREEN ══════════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">DTSLO</div>
+    <div class="auth-tagline">Downtown SLO — your night out, sorted.</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- DEV LOGIN -->
+    <button class="btn-primary" onclick="devLogin()" style="margin-bottom:16px;background:#22c55e;font-size:13px;padding:10px">
+      🛠️ Dev Login (Temp)
+    </button>
+
+    <!-- LOGIN -->
+    <div id="login-form" class="auth-form">
+      <div class="input-group">
+        <label class="input-label">Email</label>
+        <input id="login-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Password</label>
+        <input id="login-password" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div id="login-error" class="auth-error"></div>
+      <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign In</button>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="signup-form" class="auth-form" style="display:none">
+      <div class="input-group">
+        <label class="input-label">Username</label>
+        <input id="signup-username" class="form-input" type="text" placeholder="nightowl42" autocomplete="username">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Email</label>
+        <input id="signup-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="input-group">
+        <label class="input-label">I am</label>
+        <select id="signup-gender" class="form-input" style="cursor:pointer">
+          <option value="">Select...</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other / Prefer not to say</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Password</label>
+        <input id="signup-password" class="form-input" type="password" placeholder="Min 6 characters" autocomplete="new-password">
+      </div>
+      <div id="signup-error" class="auth-error"></div>
+      <button class="btn-primary" id="signup-btn" onclick="doSignup()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MAIN APP ══════════════════ -->
+<div id="app">
+
+  <nav class="navbar">
+    <button class="nav-btn active" id="nav-line" onclick="showPage('line')">
+      <span class="icon">📍</span><span class="label">Lines</span>
+    </button>
+    <button class="nav-btn" id="nav-delivery" onclick="showPage('delivery')">
+      <span class="icon">🛒</span><span class="label">Deliver</span>
+    </button>
+    <button class="nav-btn" id="nav-lost" onclick="showPage('lost')">
+      <span class="icon">🔍</span><span class="label">Lost</span>
+    </button>
+    <button class="nav-btn" id="nav-profile" onclick="showPage('profile')">
+      <span class="icon" id="avatar-btn">👤</span><span class="label">Profile</span>
+    </button>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+  </nav>
+
+  <!-- ── LINES PAGE ── -->
+  <div id="line" class="page active">
+    <div class="lines-header">
+      <div>
+        <div class="section-title" style="margin-bottom:2px">DTSLO Tonight</div>
+        <div id="lines-subtitle" style="font-size:13px;color:var(--text2)">Loading...</div>
+      </div>
+      <div class="lines-view-toggle">
+        <button class="view-btn active" id="view-list-btn" onclick="setView('list')">≡ List</button>
+        <button class="view-btn" id="view-map-btn" onclick="setView('map')">⊠ Grid</button>
+        <button class="view-btn" id="view-feed-btn" onclick="setView('feed')">⚡ Feed</button>
+      </div>
+    </div>
+
+    <div id="thursday-banner" style="display:none" class="thursday-banner">
+      🔥 Thursday Night Mode — SLO's biggest night is live!
+    </div>
+
+    <div class="hot-strip" id="hot-strip" style="display:none">
+      <div class="hot-strip-title">🔥 Hottest Right Now</div>
+      <div class="hot-cards" id="hot-cards"></div>
+    </div>
+
+    <div class="summary-strip">
+      <div class="summary-chip">
+        <div class="summary-chip-num" id="sum-packed" style="color:var(--red)">—</div>
+        <div class="summary-chip-lbl">Packed</div>
+      </div>
+      <div class="summary-chip">
+        <div class="summary-chip-num" id="sum-busy" style="color:var(--yellow)">—</div>
+        <div class="summary-chip-lbl">Busy</div>
+      </div>
+      <div class="summary-chip">
+        <div class="summary-chip-num" id="sum-reports" style="color:var(--accent)">—</div>
+        <div class="summary-chip-lbl">Reports</div>
+      </div>
+    </div>
+
+    <div class="hottest-strip" id="hottest-strip" style="display:none">
+      <div class="hottest-label">🔥 Hottest Right Now</div>
+      <div class="hottest-scroll" id="hottest-scroll"></div>
+    </div>
+
+    <div class="live-ticker">
+      <span class="live-dot"></span>
+      <div class="ticker-track" id="ticker-track">Loading reports...</div>
+    </div>
+
+    <!-- LIST VIEW -->
+    <div id="bars-list">
+      <div id="bars"></div>
+    </div>
+
+    <!-- GRID VIEW -->
+    <div id="bars-map" style="display:none">
+      <div class="map-grid" id="map-grid"></div>
+    </div>
+
+    <!-- LIVE FEED VIEW -->
+    <div id="bars-feed" style="display:none">
+      <div id="feed-entries"></div>
+      <div class="empty" id="feed-empty" style="display:none">
+        <div class="empty-icon">📡</div>
+        <div class="empty-msg">No reports yet tonight</div>
+      </div>
+    </div>
+
+    <div class="refresh-row">
+      <div id="refresh-status" style="font-size:12px;color:var(--text2)">Auto-refreshing every 60s</div>
+      <button onclick="loadReports()" style="font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:700">↺ Refresh</button>
+    </div>
+  </div>
+
+  <!-- ── DELIVERY PAGE ── -->
+  <div id="delivery" class="page">
+    <div class="section-title">Quick Delivery</div>
+    <div id="product-grid" class="product-grid"></div>
+    <button class="cart-fab" id="cart-fab" onclick="openCheckout()" style="display:none">
+      🛒 Cart <span class="cart-badge" id="cart-count">0</span>
+    </button>
+  </div>
+
+  <!-- ── LOST & FOUND PAGE ── -->
+  <div id="lost" class="page">
+    <div class="lf-header">
+      <div class="section-title" style="margin:0">Lost & Found</div>
+      <button class="post-btn" onclick="openLostModal()">+ Post Item</button>
+    </div>
+    <div id="lost-feed"></div>
+  </div>
+
+  <!-- ── PROFILE PAGE ── -->
+  <div id="profile" class="page">
+    <div class="section-title">Profile</div>
+
+    <div class="profile-hero">
+      <div class="profile-avatar" id="profile-avatar">?</div>
+      <div class="profile-info">
+        <div class="profile-username" id="profile-username">—</div>
+        <div class="profile-email" id="profile-email">—</div>
+        <div class="profile-joined" id="profile-joined">Joined —</div>
+      </div>
+    </div>
+
+    <!-- CHARACTER CARD — full image fills the card -->
+    <div class="char-card" id="char-card">
+      <div class="char-img-placeholder" id="char-placeholder">
+        <div>🎭</div>
+        <span>Earn XP to unlock your character</span>
+      </div>
+      <img id="char-img" style="display:none" src="" alt="Your character">
+      <!-- Hidden elements kept for JS compatibility -->
+      <div id="char-tier-badge" style="display:none"></div>
+      <div id="char-name" style="display:none"></div>
+      <div id="char-archetype" style="display:none"></div>
+      <div id="char-traits" style="display:none"></div>
+      <div id="char-gen-btn" style="display:none"></div>
+      <div id="char-share-btn" style="display:none"></div>
+    </div>
+
+    <div class="xp-card">
+      <div class="xp-top">
+        <div class="xp-title">🏆 Experience Points</div>
+        <div class="xp-level" id="xp-level-badge">Level 0</div>
+      </div>
+      <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+      <div class="xp-sub" id="xp-sub">0 XP · 100 XP to next level</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-xp">0</div>
+        <div class="stat-lbl">Total XP</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-reports">0</div>
+        <div class="stat-lbl">Reports</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-posts">0</div>
+        <div class="stat-lbl">L&F Posts</div>
+      </div>
+    </div>
+
+    <div class="profile-section-label">Account</div>
+
+    <button class="profile-action" onclick="toggleChangePw()">
+      <span class="pa-icon">🔑</span>
+      <span class="pa-label">Change Password</span>
+      <span class="pa-arrow">›</span>
+    </button>
+
+    <div class="change-pw-box" id="change-pw-box">
+      <div class="change-pw-title">Set a new password</div>
+      <input id="new-pw" class="form-input" type="password" placeholder="New password (min 6 chars)" style="margin-bottom:8px">
+      <input id="new-pw2" class="form-input" type="password" placeholder="Confirm new password" style="margin-bottom:12px">
+      <button class="btn-primary" onclick="doChangePassword()" style="font-size:14px;padding:11px">Update Password</button>
+    </div>
+
+    <div class="profile-section-label">🛠️ Developer Tools</div>
+
+    <button class="profile-action" onclick="devAddXP()">
+      <span class="pa-icon">⚡</span>
+      <span class="pa-label">Add 100 XP</span>
+      <span class="pa-arrow">›</span>
+    </button>
+
+    <button class="profile-action" onclick="devResetXP()">
+      <span class="pa-icon">🔄</span>
+      <span class="pa-label">Reset to Level 0</span>
+      <span class="pa-arrow">›</span>
+    </button>
+
+    <button class="profile-action" onclick="devToggleGender()">
+      <span class="pa-icon">🔀</span>
+      <span class="pa-label">Toggle Gender: <span id="dev-gender-label">—</span></span>
+      <span class="pa-arrow">›</span>
+    </button>
+
+    <button class="profile-action danger" onclick="doSignout()">
+      <span class="pa-icon">🚪</span>
+      <span class="pa-label">Sign Out</span>
+      <span class="pa-arrow">›</span>
+    </button>
+  </div>
+
+  <!-- ── LEVEL UP OVERLAY ── -->
+  <div id="levelup-overlay" class="levelup-overlay">
+    <div class="levelup-box">
+      <div class="levelup-glow"></div>
+      <div class="levelup-badge">⚡ LEVEL <span id="lu-level">2</span></div>
+      <div class="levelup-img-wrap" id="lu-img-wrap">
+        <div class="spinner"></div>
+      </div>
+      <div class="levelup-char-name" id="lu-char-name">The Freshman</div>
+      <div class="levelup-msg" id="lu-msg">You're doing great!</div>
+      <button class="levelup-close" onclick="closeLevelUp()">Let's Go! 🎉</button>
+    </div>
+  </div>
+
+  <!-- ── CHECK-IN MODAL ── -->
+  <div id="checkin-modal" class="modal">
+    <div class="modal-box">
+      <div class="modal-handle"></div>
+
+      <div class="checkin-modal-step active" id="ci-step-1">
+        <div class="modal-title" id="ci-bar-name">Check In</div>
+        <p style="font-size:14px;color:var(--text2);margin-bottom:20px">Where are you right now?</p>
+        <div style="display:flex;gap:10px">
+          <button onclick="ciChooseType('line')" style="flex:1;padding:20px 10px;border-radius:16px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;transition:all 0.15s" onmouseover="this.style.borderColor='var(--yellow)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="font-size:28px;margin-bottom:8px">🚶</div>
+            <div style="font-size:15px;font-weight:800;color:var(--text)">In Line</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:4px">Waiting outside</div>
+          </button>
+          <button onclick="ciChooseType('inside')" style="flex:1;padding:20px 10px;border-radius:16px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;transition:all 0.15s" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="font-size:28px;margin-bottom:8px">🎉</div>
+            <div style="font-size:15px;font-weight:800;color:var(--text)">Inside</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:4px">Already in</div>
+          </button>
+        </div>
+        <button class="btn-secondary" onclick="closeCheckinModal()" style="width:100%;margin-top:12px">Cancel</button>
+      </div>
+
+      <div class="checkin-modal-step" id="ci-step-2">
+        <div class="modal-title">How's the line?</div>
+        <p style="font-size:14px;color:var(--text2);margin-bottom:16px">Help others know what to expect</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="vote-btn dead" onclick="ciChooseStatus('Dead')" style="flex:1;padding:14px 0;border-radius:12px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700">🟢 No Line</button>
+          <button class="vote-btn busy" onclick="ciChooseStatus('Busy')" style="flex:1;padding:14px 0;border-radius:12px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700">🟡 Short Wait</button>
+          <button class="vote-btn packed" onclick="ciChooseStatus('Packed')" style="flex:1;padding:14px 0;border-radius:12px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700">🔴 Long Wait</button>
+        </div>
+        <button class="btn-secondary" onclick="closeCheckinModal()" style="width:100%">Cancel</button>
+      </div>
+
+      <div class="checkin-modal-step" id="ci-step-3">
+        <div class="modal-title">How many people in line?</div>
+        <p style="font-size:14px;color:var(--text2);margin-bottom:4px">Earn +20 XP for the headcount!</p>
+        <div class="headcount-grid" id="headcount-grid"></div>
+        <button class="btn-secondary" onclick="ciSkipHeadcount()" style="width:100%;margin-top:4px">Skip headcount</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STILL IN LINE NUDGE ── -->
+  <div id="nudge-modal" class="modal">
+    <div class="nudge-modal-box">
+      <div class="modal-handle"></div>
+      <div style="font-size:18px;font-weight:800;margin-bottom:8px" id="nudge-title">Still in line?</div>
+      <div style="font-size:14px;color:var(--text2);margin-bottom:20px" id="nudge-sub">You checked in 10 minutes ago</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn-primary" onclick="nudgeStillInLine()">Yes, still waiting</button>
+        <button class="btn-primary" onclick="nudgeNowInside()" style="background:var(--green)">I'm inside now 🎉</button>
+        <button class="btn-secondary" onclick="nudgeLeft()">I left</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+<!-- ── CHECKOUT MODAL ── -->
+<div id="checkout-modal" class="modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Your Order</div>
+    <div id="order-summary"></div>
+    <div class="order-total"><span>Total</span><span id="order-total">$0.00</span></div>
+    <br>
+    <input id="checkout-name"  class="form-input" placeholder="Your name" style="margin-bottom:10px">
+    <input id="checkout-phone" class="form-input" placeholder="Phone number" type="tel">
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="placeOrder()">Place Order</button>
+      <button class="btn-secondary" onclick="closeCheckout()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── LOST MODAL ── -->
+<div id="lost-modal" class="modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Post an Item</div>
+    <select id="lf-type" class="form-select" style="margin-bottom:10px">
+      <option value="lost">🔴 Lost something</option>
+      <option value="found">🟢 Found something</option>
+    </select>
+    <input id="lf-title"    class="form-input" placeholder="Item name"    style="margin-bottom:10px">
+    <input id="lf-location" class="form-input" placeholder="Location"     style="margin-bottom:10px">
+    <input id="lf-contact"  class="form-input" placeholder="Contact info" style="margin-bottom:10px">
+    <textarea id="lf-description" class="form-textarea" placeholder="Additional details..."></textarea>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="submitLostItem()">Post Item</button>
+      <button class="btn-secondary" onclick="closeLostModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════ SCRIPTS ══════════════════ -->
+<!-- Load order matters: shared first, then pages -->
+<script src="shared.js"></script>
+<script src="profile.js"></script>
+<script src="lines.js"></script>
+<script src="delivery.js"></script>
+<script src="lost.js"></script>
+<script src="auth.js"></script>
+
+</body>
+</html>
