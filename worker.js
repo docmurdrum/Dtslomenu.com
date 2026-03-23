@@ -33,6 +33,7 @@ export default {
 // ══════════════════════════════════════════════
 // IMAGE GENERATION via Gemini 2.5 Flash Image
 // ══════════════════════════════════════════════
+
 async function handleGenerate(request, key) {
   const body = await request.json();
   const prompt = body.inputs || body.prompt || '';
