@@ -290,6 +290,15 @@
   <div id="friends" class="page">
     <div class="section-title">👥 Friends</div>
 
+    <!-- Bump to Add -->
+    <div id="bump-section" style="margin-bottom:16px">
+      <button class="bump-btn" onclick="activateBumpMode()">
+        <span style="font-size:28px">✊</span>
+        <span style="font-size:13px;font-weight:800;margin-top:4px">Bump to Add Friend</span>
+        <span style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:2px">Bump phones 3× together</span>
+      </button>
+    </div>
+
     <!-- Search / Add -->
     <div class="friends-search-row">
       <input class="friends-search-input" id="friend-search-input" placeholder="Search by username…" onkeydown="if(event.key==='Enter')sendFriendRequest()">
