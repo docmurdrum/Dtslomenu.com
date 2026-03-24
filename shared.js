@@ -38,12 +38,13 @@ function showPage(p) {
   if (pageEl) pageEl.classList.add('active');
   const nb = document.getElementById('nav-' + p);
   if (nb) nb.classList.add('active');
-  if (p === 'profile')  { renderProfile(); renderCharacterCard(); }
+  if (p === 'profile')  { renderProfile(); renderCharacterCard(); initAppSettings(); }
   if (p === 'games')    { initGamesPage(); }
   if (p === 'missions') { initMissionsPage(); }
   if (p === 'resources'){ renderResources(); }
   if (p === 'missed')   { initMissedConnections(); }
   if (p === 'friends')  { try { initFriends(); } catch(e) {} }
+  if (p === 'events')   { try { initEvents(); } catch(e) {} }
   if (p === 'line')     { if (typeof loadReports === 'function') loadReports(); }
 }
 
@@ -241,3 +242,41 @@ const safeStore = {
   set(k, v) { try { localStorage.setItem(k, v); } catch(e) { _memStore[k] = v; } }
 };
 const _memStore = {};
+
+// ── INVITE FRIENDS ──
+function inviteFriends() {
+  const username = getUsername();
+  const link = 'https://dtslomenu.com?ref=' + encodeURIComponent(username);
+  const text = 'Join me on DTSLO — the best way to navigate downtown SLO nightlife! ' + link;
+  if (navigator.share) {
+    navigator.share({ title: 'Join DTSLO', text, url: link }).catch(() => {});
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(text);
+    showToast('📋 Invite link copied!');
+  } else {
+    showToast('Share: ' + link);
+  }
+}
+
+// ── DONATION ──
+function openDonation() {
+  // Opens Venmo/PayPal/Ko-fi — placeholder URL for now
+  window.open('https://ko-fi.com/dtslomenu', '_blank');
+}
+
+// ── GPS BYPASS (in-app settings) ──
+function initAppSettings() {
+  const bypass = localStorage.getItem('gps_bypass') === 'true';
+  const toggle = document.getElementById('gps-bypass-app-toggle');
+  const status = document.getElementById('gps-bypass-status-app');
+  if (toggle) toggle.checked = bypass;
+  if (status) status.textContent = bypass ? '⚠️ Location check bypassed' : '✅ Location check active';
+}
+
+function toggleGPSBypassApp(enabled) {
+  localStorage.setItem('gps_bypass', enabled ? 'true' : 'false');
+  const status = document.getElementById('gps-bypass-status-app');
+  if (status) status.textContent = enabled ? '⚠️ Location check bypassed' : '✅ Location check active';
+  showToast(enabled ? '⚠️ GPS bypass ON' : '✅ GPS bypass OFF');
+}
+

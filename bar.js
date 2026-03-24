@@ -69,6 +69,8 @@ function openBarPage(barIndex) {
 
   // Friends at this bar
   renderBarFriends(bar.name);
+  // Lost & Found at this bar
+  renderBarLostFound(bar.name);
 
   // Show bar page
   showPage('bar');
@@ -164,4 +166,30 @@ function completeMissionFromDetail() {
   const mission = (typeof SAMPLE_MISSIONS !== 'undefined' ? SAMPLE_MISSIONS : [])
     .find(m => m.title === titleEl.textContent);
   if (mission && typeof completeMission === 'function') completeMission(mission.id);
+}
+
+// ── BAR LOST & FOUND FEED ──
+async function renderBarLostFound(barName) {
+  const el = document.getElementById('bar-page-lostfound');
+  if (!el) return;
+  try {
+    const { data } = await supabaseClient
+      .from('lost_found')
+      .select('*')
+      .eq('location', barName)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    if (!data || !data.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:8px 0">No lost & found posts for this bar</div>';
+      return;
+    }
+    el.innerHTML = data.map(item => `
+      <div class="bar-report-row">
+        <span class="bar-report-icon">${item.type === 'lost' ? '🔴' : '🟢'}</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">${item.title}</div>
+          <div style="font-size:11px;color:var(--text2)">${item.type === 'lost' ? 'Lost' : 'Found'} · ${timeAgo(new Date(item.created_at).getTime())}</div>
+        </div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div style="font-size:12px;color:var(--text2)">Could not load</div>'; }
 }

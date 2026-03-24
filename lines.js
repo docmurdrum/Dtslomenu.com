@@ -384,7 +384,7 @@ function renderBars() {
       <div class="bar-body-v2">
         <div class="bar-top-v2">
           <div>
-            <div class="bar-name-v2">${bar.name}</div>
+            <button onclick="openBarPage(${i})" style="background:none;border:none;padding:0;font-family:inherit;font-size:17px;font-weight:900;letter-spacing:-0.3px;color:var(--text);text-align:left;cursor:pointer;margin-bottom:2px;-webkit-tap-highlight-color:transparent">${bar.name} <span style="color:${bar.color}">›</span></button>
             <div class="bar-address-v2">📍 ${bar.address}</div>
           </div>
           <div class="bar-report-meta-v2">
@@ -422,12 +422,7 @@ function renderBars() {
       <!-- Friends at this bar -->
       ${buildFriendsAtBarRow(bar.name)}
 
-      <!-- Bar page button -->
-      <div style="padding:0 16px 14px">
-        <button onclick="openBarPage(${i})" style="width:100%;padding:11px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
-          🏠 ${bar.name} Page ›
-        </button>
-      </div>
+
 
       ${checkinStripHTML}
     `;

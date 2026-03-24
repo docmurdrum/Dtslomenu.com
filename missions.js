@@ -320,6 +320,14 @@ const RESOURCES = [
     action: null,
     coming: true,
   },
+  {
+    id: 'events',
+    icon: '🎵',
+    name: 'Events & Concerts',
+    desc: 'SLO live music, bar events & more',
+    cls: 'events',
+    action: () => showPage('events'),
+  },
 ];
 
 function renderResources() {
@@ -338,3 +346,65 @@ function resourceAction(id) {
   const r = RESOURCES.find(x => x.id === id);
   if (r && r.action) r.action();
 }
+
+// ══════════════════════════════════════════════
+// EVENTS
+// ══════════════════════════════════════════════
+let eventsData    = [];
+let eventsFilter  = 'all';
+
+async function initEvents() {
+  await loadEvents();
+  renderEvents();
+}
+
+async function loadEvents() {
+  try {
+    const now = new Date().toISOString();
+    const { data } = await supabaseClient
+      .from('events')
+      .select('*')
+      .gte('event_date', now.split('T')[0])
+      .order('event_date', { ascending: true });
+    eventsData = data || [];
+  } catch(e) { eventsData = []; }
+}
+
+function filterEvents(cat, btn) {
+  eventsFilter = cat;
+  document.querySelectorAll('.missions-filter-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderEvents();
+}
+
+function renderEvents() {
+  const el = document.getElementById('events-feed');
+  if (!el) return;
+  const filtered = eventsFilter === 'all' ? eventsData
+    : eventsData.filter(e => e.category === eventsFilter);
+  if (!filtered.length) {
+    el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text2)">
+      <div style="font-size:32px;margin-bottom:8px">🎵</div>
+      <div style="font-size:14px;font-weight:700">No events found</div>
+      <div style="font-size:12px;margin-top:4px">Check back soon</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = filtered.map(ev => {
+    const date = new Date(ev.event_date);
+    const dateStr = date.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    const timeStr = ev.event_time || '';
+    return `
+    <div class="event-card">
+      ${ev.image_url ? `<div class="event-img"><img src="${ev.image_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.display='none'"></div>` : ''}
+      <div class="event-body">
+        <div class="event-date-badge">${dateStr}${timeStr ? ' · ' + timeStr : ''}</div>
+        <div class="event-title">${ev.title}</div>
+        <div class="event-venue">📍 ${ev.venue || 'Downtown SLO'}</div>
+        ${ev.price ? `<div class="event-price">${ev.price === '0' || ev.price === 'free' ? '🎟 Free' : '🎟 ' + ev.price}</div>` : ''}
+        ${ev.ticket_url ? `<a href="${ev.ticket_url}" target="_blank" class="event-ticket-btn">Get Tickets →</a>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
