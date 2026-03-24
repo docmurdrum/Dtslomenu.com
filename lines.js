@@ -276,7 +276,7 @@ function buildVibeSegs(vibe, status) {
   return `<div class="vibe-row-new">
     <div class="vibe-label-new">Vibe</div>
     <div class="vibe-segs-wrap">${segs}</div>
-    ${showFlames ? `<div class="vibe-flames-new">🔥</div>` : `<div class="vibe-pct-new" style="color:${color}">${vibe}%</div>`}
+    ${showFlames ? `<div class="vibe-flames-v2"><div class="flame flame-1"></div><div class="flame flame-2"></div><div class="flame flame-3"></div></div>` : `<div class="vibe-pct-new" style="color:${color}">${vibe}%</div>`}
   </div>`;
 }
 

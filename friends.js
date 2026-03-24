@@ -404,243 +404,69 @@ function escapeHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+
 // ══════════════════════════════════════════════
-// FIST BUMP FRIEND ADD
+// QR CODE FRIEND ADD
 // ══════════════════════════════════════════════
 
-let bumpMode        = false;
-let bumpTimer       = null;
-let bumpCountdown   = null;
-let bumpImpacts     = [];
-let bumpSessionId   = null;
-let bumpSub         = null;
-const BUMP_WINDOW   = 30;   // seconds
-const BUMP_COUNT    = 3;    // impacts needed
-const BUMP_INTERVAL = 2000; // ms window for 3 impacts
-const BUMP_PROX_M   = 10;   // metres
+function showMyQR() {
+  if (!currentUser) { showToast('⚠️ Sign in first'); return; }
 
-// ── ACTIVATE BUMP MODE ──
-async function activateBumpMode() {
-  if (!currentUser) { showToast('⚠️ Sign in to use Bump'); return; }
+  const username = getUsername();
+  const userId   = currentUser.id;
+  const refCode  = username.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);
+  const qrData   = 'https://dtslomenu.com?add=' + encodeURIComponent(userId) + '&ref=' + encodeURIComponent(refCode);
 
-  // Request motion permission on iOS
-  if (typeof DeviceMotionEvent !== 'undefined' &&
-      typeof DeviceMotionEvent.requestPermission === 'function') {
-    try {
-      const perm = await DeviceMotionEvent.requestPermission();
-      if (perm !== 'granted') { showToast('⚠️ Motion access required for Bump'); return; }
-    } catch(e) { showToast('⚠️ Motion access required for Bump'); return; }
+  document.getElementById('qr-username-display').textContent = username;
+  document.getElementById('qr-ref-code').textContent = refCode;
+  document.getElementById('qr-modal').style.display = 'flex';
+
+  // Generate QR using QR Server API (no library needed)
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(qrData) + '&bgcolor=ffffff&color=000000&qzone=2';
+  const display = document.getElementById('qr-code-display');
+  const qrImg = document.createElement('img');
+  qrImg.src = qrUrl;
+  qrImg.style.width = '200px';
+  qrImg.style.height = '200px';
+  qrImg.style.borderRadius = '8px';
+  qrImg.onerror = function() { display.textContent = 'QR generation failed'; };
+  display.innerHTML = '';
+  display.appendChild(qrImg);
+}
+
+function closeQRModal() {
+  document.getElementById('qr-modal').style.display = 'none';
+}
+
+function scanQR() {
+  // Use native camera/QR scanner via URL scheme — works on most Android/iOS
+  // Falls back to instructions if not supported
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    showToast('📷 Open your camera to scan a QR code');
+  } else {
+    showToast('📷 Open your camera to scan a QR code');
   }
-
-  // Get GPS
-  if (!navigator.geolocation) { showToast('📍 Location required for Bump'); return; }
-
-  navigator.geolocation.getCurrentPosition(async (pos) => {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-
-    // Create bump session in Supabase
-    try {
-      const { data, error } = await supabaseClient.from('bump_sessions').insert({
-        user_id:    currentUser.id,
-        username:   getUsername(),
-        lat, lng,
-        active:     true,
-        created_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + BUMP_WINDOW * 1000).toISOString()
-      }).select().single();
-      if (error) throw error;
-      bumpSessionId = data.id;
-    } catch(e) { showToast('❌ ' + e.message); return; }
-
-    bumpMode    = true;
-    bumpImpacts = [];
-    renderBumpUI(BUMP_WINDOW);
-    startBumpCountdown(lat, lng);
-    startBumpAccelerometer();
-    subscribeToBumpSessions(lat, lng);
-    showToast('✊ Bump Mode ON — bump 3 times!');
-
-  }, () => { showToast('📍 Location required for Bump'); }, { timeout: 8000 });
 }
 
-// ── COUNTDOWN ──
-function startBumpCountdown(lat, lng) {
-  let secs = BUMP_WINDOW;
-  bumpCountdown = setInterval(() => {
-    secs--;
-    renderBumpUI(secs);
-    if (secs <= 0) deactivateBumpMode();
-  }, 1000);
-}
+// Handle incoming QR scan (called when app loads with ?add= param)
+function handleIncomingQR() {
+  const params = new URLSearchParams(window.location.search);
+  const addUserId = params.get('add');
+  if (!addUserId || !currentUser) return;
+  if (addUserId === currentUser.id) return;
 
-// ── ACCELEROMETER ──
-function startBumpAccelerometer() {
-  window._bumpMotionHandler = (e) => {
-    if (!bumpMode) return;
-    const acc = e.accelerationIncludingGravity;
-    if (!acc) return;
-    const mag = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
-    if (mag > 28) { // sharp impact threshold
-      const now = Date.now();
-      // Clear old impacts outside window
-      bumpImpacts = bumpImpacts.filter(t => now - t < BUMP_INTERVAL);
-      bumpImpacts.push(now);
-      // Vibrate feedback per impact
-      if (navigator.vibrate) navigator.vibrate(50);
-      if (bumpImpacts.length >= BUMP_COUNT) {
-        bumpImpacts = [];
-        onBumpDetected();
+  // Auto-send friend request
+  supabaseClient.from('profiles').select('username').eq('id', addUserId).single()
+    .then(({ data }) => {
+      if (data) {
+        supabaseClient.from('friendships').insert({
+          requester_id: currentUser.id,
+          addressee_id: addUserId,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        }).then(({ error }) => {
+          if (!error) showToast('✅ Friend request sent to ' + data.username + '!');
+        });
       }
-    }
-  };
-  window.addEventListener('devicemotion', window._bumpMotionHandler);
-}
-
-// ── BUMP DETECTED ──
-async function onBumpDetected() {
-  if (!bumpMode) return;
-  if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
-  showToast('✊ Bump detected! Finding nearby players…');
-
-  // Get current location
-  navigator.geolocation.getCurrentPosition(async (pos) => {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-    await findNearbyBumpers(lat, lng);
-  }, () => { showToast('📍 Could not confirm location'); });
-}
-
-// ── FIND NEARBY BUMPERS ──
-async function findNearbyBumpers(lat, lng) {
-  try {
-    const cutoff = new Date(Date.now() - 5000).toISOString(); // bumped in last 5s
-    const { data } = await supabaseClient
-      .from('bump_sessions')
-      .select('*')
-      .eq('active', true)
-      .neq('user_id', currentUser.id)
-      .gte('created_at', cutoff);
-
-    if (!data || !data.length) { showToast('No one nearby detected — try again together'); return; }
-
-    // Filter by proximity
-    const nearby = (data || []).filter(s => {
-      const dist = haversineDistance(lat, lng, s.lat, s.lng);
-      return dist <= BUMP_PROX_M;
     });
-
-    if (!nearby.length) { showToast('📍 No one within range — move closer and try again'); return; }
-
-    if (nearby.length === 1) {
-      // Auto add
-      await confirmBumpFriend(nearby[0].user_id, nearby[0].username);
-    } else {
-      // Show picker
-      showBumpPicker(nearby);
-    }
-  } catch(e) { showToast('❌ ' + e.message); }
-}
-
-// ── CONFIRM BUMP FRIEND ──
-async function confirmBumpFriend(userId, username) {
-  try {
-    // Check not already friends
-    if (friendsList.find(f => f.id === userId)) {
-      showToast(`👊 Already friends with ${username}!`);
-      deactivateBumpMode(); return;
-    }
-    const { error } = await supabaseClient.from('friendships').insert({
-      requester_id: currentUser.id,
-      addressee_id: userId,
-      status: 'pending',
-      created_at: new Date().toISOString()
-    });
-    if (error && !error.message.includes('unique')) throw error;
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    showToast(`✊ Friend request sent to ${username}!`);
-    deactivateBumpMode();
-  } catch(e) { showToast('❌ ' + e.message); }
-}
-
-// ── BUMP PICKER (multiple people) ──
-function showBumpPicker(players) {
-  const el = document.getElementById('bump-picker');
-  if (!el) return;
-  el.style.display = 'block';
-  document.getElementById('bump-picker-list').innerHTML = players.map(p => `
-    <button class="friend-row" style="width:100%;background:none;border:none;border-bottom:1px solid var(--border);cursor:pointer;text-align:left;padding:12px 0"
-      onclick="confirmBumpFriend('${p.user_id}','${p.username}')">
-      <div class="friend-av" style="background:${stringToColor(p.username)}">${p.username[0].toUpperCase()}</div>
-      <div class="friend-info">
-        <div class="friend-name">${p.username}</div>
-        <div class="friend-status">Tap to add</div>
-      </div>
-    </button>`).join('');
-}
-
-// ── SUBSCRIBE TO BUMP SESSIONS ──
-function subscribeToBumpSessions(lat, lng) {
-  if (bumpSub) bumpSub.unsubscribe();
-  bumpSub = supabaseClient
-    .channel('bump-watch')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bump_sessions' }, async (payload) => {
-      if (!bumpMode) return;
-      const s = payload.new;
-      if (s.user_id === currentUser?.id) return;
-      const dist = haversineDistance(lat, lng, s.lat, s.lng);
-      if (dist <= BUMP_PROX_M) {
-        // Someone nearby just activated bump mode — pulse the UI
-        const pill = document.getElementById('bump-nearby-pill');
-        if (pill) { pill.style.display = 'flex'; pill.textContent = `👊 ${s.username} is nearby!`; }
-      }
-    })
-    .subscribe();
-}
-
-// ── DEACTIVATE ──
-async function deactivateBumpMode() {
-  bumpMode = false;
-  clearInterval(bumpCountdown);
-  bumpCountdown = null;
-  bumpImpacts   = [];
-  if (window._bumpMotionHandler) {
-    window.removeEventListener('devicemotion', window._bumpMotionHandler);
-    window._bumpMotionHandler = null;
-  }
-  if (bumpSub) { bumpSub.unsubscribe(); bumpSub = null; }
-  if (bumpSessionId) {
-    try { await supabaseClient.from('bump_sessions').update({ active: false }).eq('id', bumpSessionId); } catch(e) {}
-    bumpSessionId = null;
-  }
-  renderBumpUI(0);
-}
-
-// ── RENDER BUMP UI ──
-function renderBumpUI(secs) {
-  const el = document.getElementById('bump-section');
-  if (!el) return;
-  if (!bumpMode || secs <= 0) {
-    el.innerHTML = `
-      <button class="bump-btn" onclick="activateBumpMode()">
-        <span style="font-size:28px">✊</span>
-        <span style="font-size:13px;font-weight:800;margin-top:4px">Bump to Add Friend</span>
-        <span style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:2px">Bump phones 3× together</span>
-      </button>`;
-    return;
-  }
-  el.innerHTML = `
-    <div class="bump-active">
-      <div class="bump-pulse-ring"></div>
-      <div style="font-size:36px;position:relative;z-index:2">✊</div>
-      <div style="font-size:14px;font-weight:800;margin-top:8px">Bump Mode Active</div>
-      <div style="font-size:12px;color:var(--text2);margin-top:4px">Bump phones 3× together</div>
-      <div style="font-size:22px;font-weight:900;color:${secs <= 10 ? 'var(--neon-pink)' : 'var(--gold)'};margin-top:8px">${secs}s</div>
-      <div id="bump-nearby-pill" style="display:none;margin-top:8px;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;color:var(--neon-green)"></div>
-      <div id="bump-picker" style="display:none;margin-top:12px;width:100%">
-        <div style="font-size:11px;font-weight:800;color:var(--text2);margin-bottom:8px">Who did you bump?</div>
-        <div id="bump-picker-list"></div>
-      </div>
-      <button onclick="deactivateBumpMode()" style="margin-top:12px;background:none;border:1px solid var(--border);border-radius:10px;padding:6px 16px;color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">Cancel</button>
-    </div>`;
 }

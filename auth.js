@@ -122,7 +122,39 @@ async function onLogin(user, isNewUser = false) {
   // Load achievements silently
   await loadAchievements();
   await checkAchievements();
-  if (isNewUser) maybeShowOnboarding(true);
+  if (isNewUser) {
+    maybeShowOnboarding(true);
+    // Preload The Freshman as starter character
+    await unlockFreshmanStarter(user);
+  }
+}
+
+
+// ── UNLOCK FRESHMAN STARTER CHARACTER ──
+async function unlockFreshmanStarter(user) {
+  if (!user) return;
+  try {
+    // Check if already unlocked
+    const { data } = await supabaseClient
+      .from('character_progress')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('character_id', 1)
+      .single();
+    if (data) return; // already has it
+    // Unlock The Freshman
+    await supabaseClient.from('character_progress').insert({
+      user_id:            user.id,
+      character_id:       1,
+      completed_missions: [],
+      completion_pct:     0,
+      unlocked_at:        new Date().toISOString()
+    });
+    showToast('🎭 The Freshman unlocked!');
+  } catch(e) {
+    // Silent — may fail if table not ready
+    console.warn('Starter character unlock:', e.message);
+  }
 }
 
 // ── SIGN OUT ──

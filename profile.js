@@ -501,28 +501,45 @@ async function loadCharacterImage(level) {
   const img = document.getElementById('char-img');
   if (!placeholder || !img) return;
 
-  const storageUrl = getCharacterStorageUrl(level);
+  const gender = getGender() || 'male';
+  const urls = [
+    getCharacterStorageUrl(level, gender),       // new gender format
+    getCharacterStorageUrl(level, gender === 'male' ? 'female' : 'male'), // other gender
+    getCharacterStorageUrlFallback(level),        // old format
+  ];
 
-  // Try loading from storage
-  const testImg = new Image();
-  testImg.onload = () => {
-    placeholder.style.display = 'none';
-    img.src = storageUrl + '?t=' + Date.now();
-    img.style.display = 'block';
-  };
-  testImg.onerror = () => {
-    // No image yet — show placeholder
-    img.style.display = 'none';
-    placeholder.style.display = 'flex';
-    placeholder.innerHTML = '<div>🎭</div><span>Image coming soon</span>';
-  };
-  testImg.src = storageUrl + '?t=' + Date.now();
+  for (const url of urls) {
+    const found = await new Promise(resolve => {
+      const t = new Image();
+      t.onload = () => resolve(url);
+      t.onerror = () => resolve(null);
+      t.src = url + '?t=' + Date.now();
+    });
+    if (found) {
+      placeholder.style.display = 'none';
+      img.src = found + '?t=' + Date.now();
+      img.style.display = 'block';
+      return;
+    }
+  }
+  // Nothing found
+  img.style.display = 'none';
+  placeholder.style.display = 'flex';
+  placeholder.innerHTML = '<div>🎭</div><span>Image coming soon</span>';
 }
 
 // ── SUPABASE STORAGE BASE URL ──
 const CHAR_STORAGE_BASE = 'https://jwgwufggptpdmgcmmqes.supabase.co/storage/v1/object/public/characters';
 
-function getCharacterStorageUrl(level) {
+function getCharacterStorageUrl(level, gender) {
+  const padded = String(level).padStart(3, '0');
+  const g = gender || getGender() || 'male';
+  // Try slot 1 by default — falls back to old format if not found
+  return `${CHAR_STORAGE_BASE}/level_${padded}_${g}_1.jpg`;
+}
+
+function getCharacterStorageUrlFallback(level) {
+  // Old format fallback
   const padded = String(level).padStart(3, '0');
   return `${CHAR_STORAGE_BASE}/level_${padded}.jpg`;
 }

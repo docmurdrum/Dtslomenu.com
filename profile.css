@@ -22,6 +22,10 @@
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+.profile-username-display {
+  -webkit-text-fill-color: white !important;
+  color: white;
+}
 .profile-title-dot {
   font-size: 18px; color: var(--text2); font-weight: 300;
   -webkit-text-fill-color: var(--text2);
@@ -51,7 +55,7 @@
   50%      { opacity: 1;   transform: scale(1.03); }
 }
 .profile-portrait {
-  width: 200px; height: 200px; border-radius: 22px;
+  width: 260px; height: 260px; border-radius: 22px;
   background: var(--surface); border: 2px solid var(--border);
   overflow: hidden; position: relative; z-index: 1;
   display: flex; align-items: center; justify-content: center;

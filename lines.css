@@ -614,7 +614,7 @@
 .bar-top-v2 {
   display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;
 }
-.bar-name-v2    { font-size: 17px; font-weight: 900; letter-spacing: -0.3px; margin-bottom: 2px; }
+.bar-name-v2    { font-size: 20px; font-weight: 900; letter-spacing: -0.3px; margin-bottom: 2px; }
 .bar-address-v2 { font-size: 11px; color: var(--text2); font-weight: 600; }
 .bar-report-meta-v2 { text-align: right; flex-shrink: 0; margin-left: 10px; }
 .bar-report-time-v2 { font-size: 10px; color: var(--text2); font-weight: 700; }
@@ -678,3 +678,28 @@
 
 .bar-no-data-label { font-size: 11px; color: var(--text2); font-weight: 600; margin-bottom: 8px; }
 .user-report-label { font-size: 11px; color: var(--text2); font-weight: 600; margin-bottom: 8px; }
+
+/* ── ANIMATED FLAMES ── */
+.vibe-flames-v2 {
+  position: relative; width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.flame {
+  position: absolute; bottom: 0;
+  width: 8px; border-radius: 50% 50% 20% 20%;
+  animation: flame-dance 0.6s ease-in-out infinite alternate;
+  transform-origin: bottom center;
+}
+.flame-1 { height: 20px; background: linear-gradient(#ff2d78, #ff9500); left: 2px; animation-delay: 0s; }
+.flame-2 { height: 28px; background: linear-gradient(#ff2d78, #ffd700); left: 50%; transform: translateX(-50%); animation-delay: 0.15s; }
+.flame-3 { height: 18px; background: linear-gradient(#ff6b00, #ffd700); right: 2px; animation-delay: 0.3s; }
+@keyframes flame-dance {
+  0%   { transform: scaleX(1)   scaleY(1)   rotate(-3deg); }
+  100% { transform: scaleX(0.8) scaleY(1.15) rotate(3deg); }
+}
+.flame-2 { animation-name: flame-dance-center; }
+@keyframes flame-dance-center {
+  0%   { transform: translateX(-50%) scaleX(1)   scaleY(1)   rotate(-2deg); }
+  100% { transform: translateX(-50%) scaleX(0.85) scaleY(1.2) rotate(2deg); }
+}

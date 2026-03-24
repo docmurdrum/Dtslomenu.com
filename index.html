@@ -314,12 +314,17 @@
   <div id="friends" class="page">
     <div class="section-title">👥 Friends</div>
 
-    <!-- Bump to Add -->
-    <div id="bump-section" style="margin-bottom:16px">
-      <button class="bump-btn" onclick="activateBumpMode()">
-        <span style="font-size:28px">✊</span>
-        <span style="font-size:13px;font-weight:800;margin-top:4px">Bump to Add Friend</span>
-        <span style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:2px">Bump phones 3× together</span>
+    <!-- QR Code Add -->
+    <div style="margin-bottom:16px;display:flex;gap:10px">
+      <button class="bump-btn" onclick="showMyQR()" style="flex:1">
+        <span style="font-size:28px">📱</span>
+        <span style="font-size:13px;font-weight:800;margin-top:4px">My QR Code</span>
+        <span style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:2px">Show to add you</span>
+      </button>
+      <button class="bump-btn" onclick="scanQR()" style="flex:1;background:linear-gradient(135deg,var(--neon-cyan),var(--accent))">
+        <span style="font-size:28px">📷</span>
+        <span style="font-size:13px;font-weight:800;margin-top:4px">Scan QR</span>
+        <span style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:2px">Add a friend</span>
       </button>
     </div>
 
@@ -784,6 +789,21 @@
       <div style="font-size:12px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Story Missions</div>
       <div id="cs-modal-missions"></div>
       <button class="btn-secondary" style="width:100%;margin-top:16px" onclick="closeCharStoryModal()">Close</button>
+    </div>
+  </div>
+
+
+  <!-- ── QR CODE MODAL ── -->
+  <div id="qr-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:7000;display:none;align-items:center;justify-content:center;padding:24px" onclick="if(event.target===this)closeQRModal()">
+    <div style="background:var(--surface);border-radius:24px;padding:28px;width:100%;max-width:320px;text-align:center">
+      <div style="font-size:18px;font-weight:900;margin-bottom:6px">My QR Code</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:20px">Friends scan this to add you instantly</div>
+      <div id="qr-code-display" style="display:flex;align-items:center;justify-content:center;margin-bottom:20px;background:white;padding:16px;border-radius:16px;min-height:200px">
+        <div style="color:#333;font-size:12px">Generating QR...</div>
+      </div>
+      <div style="font-size:13px;font-weight:800;margin-bottom:4px" id="qr-username-display"></div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:20px">Referral code: <span id="qr-ref-code" style="font-weight:800;color:var(--accent)"></span></div>
+      <button class="btn-secondary" onclick="closeQRModal()" style="width:100%">Close</button>
     </div>
   </div>
 
