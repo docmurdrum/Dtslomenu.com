@@ -213,6 +213,24 @@
     <div class="resources-grid" id="resources-grid"></div>
   </div>
 
+
+  <!-- ── EVENTS PAGE (accessed from Resources) ── -->
+  <div id="events" class="page">
+    <button style="background:none;border:none;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:0;margin-bottom:16px;display:flex;align-items:center;gap:6px" onclick="showPage('resources')">← Back to Resources</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="section-title" style="margin:0">🎵 Events</div>
+    </div>
+    <!-- Category filter -->
+    <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px">
+      <button class="missions-filter-tab active" onclick="filterEvents('all',this)">All</button>
+      <button class="missions-filter-tab" onclick="filterEvents('music',this)">🎵 Music</button>
+      <button class="missions-filter-tab" onclick="filterEvents('bar',this)">🍺 Bar Events</button>
+      <button class="missions-filter-tab" onclick="filterEvents('calpoly',this)">🐎 Cal Poly</button>
+      <button class="missions-filter-tab" onclick="filterEvents('general',this)">📅 General</button>
+    </div>
+    <div id="events-feed"></div>
+  </div>
+
   <!-- ── DELIVERY PAGE (accessed from Resources) ── -->
   <div id="delivery" class="page">
     <button style="background:none;border:none;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:0;margin-bottom:16px;display:flex;align-items:center;gap:6px" onclick="showPage('resources')">← Back to Resources</button>
@@ -277,6 +295,12 @@
     <div class="bar-section">
       <div class="bar-section-title">👥 Friends Here</div>
       <div id="bar-page-friends"></div>
+    </div>
+
+    <!-- Lost & Found at this bar -->
+    <div class="bar-section">
+      <div class="bar-section-title">🔍 Lost & Found Here</div>
+      <div id="bar-page-lostfound"></div>
     </div>
 
     <!-- Vibe History placeholder -->
@@ -476,6 +500,37 @@
       <input id="new-pw" class="form-input" type="password" placeholder="New password (min 6 chars)" style="margin-bottom:8px">
       <input id="new-pw2" class="form-input" type="password" placeholder="Confirm new password" style="margin-bottom:12px">
       <button class="btn-primary" onclick="doChangePassword()" style="font-size:14px;padding:11px">Update Password</button>
+    </div>
+
+    <!-- Invite + Donation -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+      <button class="profile-action" onclick="inviteFriends()" style="flex-direction:column;align-items:center;padding:16px;text-align:center;background:linear-gradient(135deg,var(--accent),var(--neon-pink));border:none;color:white">
+        <span class="pa-icon" style="font-size:24px;margin-bottom:6px">👋</span>
+        <span style="font-size:13px;font-weight:800">Invite Friends</span>
+        <span style="font-size:10px;opacity:0.8;margin-top:2px">Spread the word</span>
+      </button>
+      <button class="profile-action" onclick="openDonation()" style="flex-direction:column;align-items:center;padding:16px;text-align:center;background:linear-gradient(135deg,var(--gold2),var(--gold));border:none;color:#000">
+        <span class="pa-icon" style="font-size:24px;margin-bottom:6px">❤️</span>
+        <span style="font-size:13px;font-weight:800">Support MENU</span>
+        <span style="font-size:10px;opacity:0.7;margin-top:2px">Buy us a drink</span>
+      </button>
+    </div>
+
+    <div class="profile-section-label">⚙️ Settings</div>
+
+    <!-- GPS Bypass -->
+    <div class="profile-action" style="justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="pa-icon">📍</span>
+        <div>
+          <div class="pa-label">Bypass Location Check</div>
+          <div style="font-size:10px;color:var(--text2)" id="gps-bypass-status-app">Dev mode off</div>
+        </div>
+      </div>
+      <label class="toggle-switch-sm">
+        <input type="checkbox" id="gps-bypass-app-toggle" onchange="toggleGPSBypassApp(this.checked)">
+        <span class="toggle-slider-sm"></span>
+      </label>
     </div>
 
     <div class="profile-section-label">🛠️ Developer Tools</div>

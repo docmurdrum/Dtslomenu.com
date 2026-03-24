@@ -394,3 +394,11 @@
   background: var(--accent); color: white; font-family: inherit;
   font-size: 11px; font-weight: 800; cursor: pointer; flex-shrink: 0;
 }
+
+/* ── SMALL TOGGLE (settings) ── */
+.toggle-switch-sm { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }
+.toggle-switch-sm input { opacity:0; width:0; height:0; }
+.toggle-slider-sm { position:absolute; cursor:pointer; inset:0; background:var(--border); border-radius:24px; transition:0.3s; }
+.toggle-slider-sm::before { content:''; position:absolute; width:16px; height:16px; left:4px; bottom:4px; background:white; border-radius:50%; transition:0.3s; }
+input:checked + .toggle-slider-sm { background:var(--green); }
+input:checked + .toggle-slider-sm::before { transform:translateX(20px); }
