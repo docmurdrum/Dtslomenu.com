@@ -385,6 +385,16 @@ function showFriendsAtBar(barIndex, event) {
 function renderBars() {
   const c = document.getElementById('bars');
   if (!c) return;
+  // DEBUG: wrap entire function body
+  try {
+    _renderBarsInner(c);
+  } catch(e) {
+    c.innerHTML = '<div style="color:#ff2d78;padding:20px;font-size:13px;font-weight:700;background:rgba(255,45,120,0.1);border-radius:12px;margin:12px">⚠️ Bar render error:<br>' + e.message + '<br><small style=\"opacity:0.6\">' + (e.stack||'').split('\n')[1] + '</small></div>';
+    console.error('renderBars crash:', e);
+  }
+}
+function _renderBarsInner(c) {
+  if (!c) return;
   c.innerHTML = '';
 
   const tb = document.getElementById('thursday-banner');
