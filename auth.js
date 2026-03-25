@@ -192,6 +192,7 @@ async function doChangePassword() {
 
 // ── SESSION INIT ──
 window.onload = async function () {
+  try { checkMenuIntro(); } catch(e) {}
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session?.user) await onLogin(session.user);

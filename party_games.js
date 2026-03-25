@@ -315,3 +315,317 @@ function waiGuessed() {
   waiCard = null;
   renderWhoAmI();
 }
+
+// ══════════════════════════════════════════════
+// HOT TAKES
+// ══════════════════════════════════════════════
+const HOT_TAKES = [
+  "Tequila is better than vodka",
+  "Beer before liquor never been sicker is a myth",
+  "Cover charges are never worth it",
+  "DJ sets are better than live bands at bars",
+  "Thursday is the best night out in SLO",
+  "The bar scene peaks before midnight",
+  "Shots should always be taken together",
+  "Open bars ruin the vibe",
+  "Karaoke bars are the most fun",
+  "The best conversations happen at closing time",
+  "Dive bars beat trendy bars every time",
+  "You should always close your tab immediately",
+  "Drinking games bring people together",
+  "The line outside means it's worth going in",
+  "House music is better than hip hop at bars",
+  "Splitting the bill equally is fair even if you drank less",
+  "Leaving early ruins the night",
+  "You can tell a lot about someone by what they order",
+  "Bar food hits different after midnight",
+  "The best nights are unplanned",
+];
+
+let hottakesIndex = 0;
+let hottakesShuffled = [];
+let hottakesVotes = { agree: 0, disagree: 0 };
+let hottakesUserVoted = false;
+
+function initHotTakes() {
+  hottakesShuffled = [...HOT_TAKES].sort(() => Math.random() - 0.5);
+  hottakesIndex = 0;
+  hottakesShowCard();
+}
+
+function hottakesShowCard() {
+  const card     = document.getElementById('hottakes-card');
+  const progress = document.getElementById('hottakes-progress');
+  const btns     = document.getElementById('hottakes-btns');
+  const votes    = document.getElementById('hottakes-votes');
+  const nextBtn  = document.getElementById('hottakes-next-btn');
+  if (!card) return;
+
+  hottakesVotes = { agree: 0, disagree: 0 };
+  hottakesUserVoted = false;
+
+  card.textContent = hottakesShuffled[hottakesIndex] || 'Out of takes!';
+  if (progress) progress.textContent = (hottakesIndex + 1) + ' / ' + hottakesShuffled.length;
+  if (btns) btns.style.display = 'flex';
+  if (votes) votes.style.display = 'none';
+  if (nextBtn) nextBtn.style.display = 'none';
+
+  // Reset button styles
+  document.querySelectorAll('.hottakes-vote-btn').forEach(b => b.classList.remove('selected'));
+}
+
+function hottakesVote(side) {
+  if (hottakesUserVoted) return;
+  hottakesUserVoted = true;
+  hottakesVotes[side]++;
+
+  // Simulate group votes
+  const otherSide = side === 'agree' ? 'disagree' : 'agree';
+  hottakesVotes[otherSide] += Math.floor(Math.random() * 4) + 1;
+  hottakesVotes[side]      += Math.floor(Math.random() * 3);
+
+  const btn = document.querySelector('.hottakes-vote-btn.' + side);
+  if (btn) btn.classList.add('selected');
+
+  hottakesRevealVotes();
+}
+
+function hottakesRevealVotes() {
+  if (!hottakesUserVoted) return;
+  const votes   = document.getElementById('hottakes-votes');
+  const btns    = document.getElementById('hottakes-btns');
+  const nextBtn = document.getElementById('hottakes-next-btn');
+  const total   = hottakesVotes.agree + hottakesVotes.disagree || 1;
+  const agreePct   = Math.round(hottakesVotes.agree / total * 100);
+  const disagreePct = 100 - agreePct;
+
+  if (votes) {
+    votes.style.display = 'block';
+    votes.innerHTML = `
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;margin-bottom:4px">
+          <span style="color:#ff2d78">🔥 Agree ${agreePct}%</span>
+          <span style="color:#00f5ff">❄️ Disagree ${disagreePct}%</span>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;overflow:hidden;height:10px">
+          <div style="height:100%;background:linear-gradient(90deg,#ff2d78,#b44fff);width:${agreePct}%;transition:width 0.6s;border-radius:8px"></div>
+        </div>
+      </div>`;
+  }
+  if (btns) btns.style.display = 'none';
+  if (nextBtn) nextBtn.style.display = 'block';
+}
+
+function hottakesNext() {
+  hottakesIndex++;
+  if (hottakesIndex >= hottakesShuffled.length) {
+    hottakesIndex = 0;
+    hottakesShuffled = [...HOT_TAKES].sort(() => Math.random() - 0.5);
+  }
+  hottakesShowCard();
+}
+
+// ══════════════════════════════════════════════
+// ICE BREAKERS
+// ══════════════════════════════════════════════
+const ICE_BREAKERS = [
+  "What's the most embarrassing thing that's happened to you at a bar?",
+  "What's your go-to karaoke song?",
+  "If you had to drink one thing all night what would it be?",
+  "What's the worst hangover story you have?",
+  "Who in this group would last longest in a dance battle?",
+  "What's your unpopular opinion about going out?",
+  "Best bar you've ever been to and why?",
+  "What's a skill nobody in this group knows you have?",
+  "What song instantly gets you on the dance floor?",
+  "What's the most SLO thing you've ever done?",
+  "Rate your tolerance on a scale of 1 to 10 honestly",
+  "What's your drunk food order?",
+  "Would you rather: open bar all night or VIP section?",
+  "What's the best night out you've ever had?",
+  "Who do you always text when you're drunk?",
+  "What's your bar alter ego name?",
+  "Funniest thing you've witnessed at a bar?",
+  "What's your biggest green flag in someone you meet at a bar?",
+  "If this group had a band what would it be called?",
+  "What would you do with $1000 to spend tonight?",
+];
+
+let icebreakerIndex = 0;
+let icebreakerShuffled = [];
+
+function initIceBreakers() {
+  icebreakerShuffled = [...ICE_BREAKERS].sort(() => Math.random() - 0.5);
+  icebreakerIndex = 0;
+  icebreakerShowCard();
+}
+
+function icebreakerShowCard() {
+  const text     = document.getElementById('icebreaker-text');
+  const progress = document.getElementById('icebreaker-progress');
+  if (text)     text.textContent = icebreakerShuffled[icebreakerIndex] || 'Out of questions!';
+  if (progress) progress.textContent = (icebreakerIndex + 1) + ' of ' + icebreakerShuffled.length;
+}
+
+function icebreakerNext() {
+  icebreakerIndex++;
+  if (icebreakerIndex >= icebreakerShuffled.length) {
+    icebreakerIndex = 0;
+    icebreakerShuffle();
+    return;
+  }
+  icebreakerShowCard();
+}
+
+function icebreakerShuffle() {
+  icebreakerShuffled = [...ICE_BREAKERS].sort(() => Math.random() - 0.5);
+  icebreakerIndex = 0;
+  icebreakerShowCard();
+}
+
+// ══════════════════════════════════════════════
+// THE RANKING
+// ══════════════════════════════════════════════
+const RANKING_PROMPTS = [
+  "Most likely to text their ex tonight",
+  "Most likely to be the last one standing",
+  "Most likely to challenge a stranger to a game",
+  "Most likely to end up on a bar's Instagram",
+  "Best dancer in the group",
+  "Most likely to make a new best friend tonight",
+  "Most likely to lose their phone",
+  "Most likely to convince everyone to stay out later",
+  "Most likely to order the weirdest drink",
+  "Biggest lightweight",
+  "Most likely to start a conversation with anyone",
+  "Most likely to be remembered by the bartender",
+  "Who would survive a zombie apocalypse longest",
+  "Most likely to wake up with a great story",
+  "Best wingman/wingwoman",
+];
+
+let rankingPrompt   = '';
+let rankingPlayers  = [];
+let rankingVoterIdx = 0;
+let rankingAllVotes = [];
+let rankingCurrentOrder = [];
+
+function initRanking() {
+  rankingNewPrompt();
+}
+
+function rankingNewPrompt() {
+  const p = RANKING_PROMPTS[Math.floor(Math.random() * RANKING_PROMPTS.length)];
+  rankingPrompt = p;
+  const display = document.getElementById('ranking-prompt-display');
+  if (display) display.textContent = '"' + p + '"';
+}
+
+function rankingStart() {
+  const input = document.getElementById('ranking-players-input');
+  if (!input) return;
+  rankingPlayers = input.value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (rankingPlayers.length < 2) { showToast('⚠️ Enter at least 2 players'); return; }
+
+  rankingVoterIdx  = 0;
+  rankingAllVotes  = [];
+  rankingCurrentOrder = [...rankingPlayers];
+
+  document.getElementById('ranking-setup').style.display        = 'none';
+  document.getElementById('ranking-vote-section').style.display = 'block';
+  document.getElementById('ranking-results-section').style.display = 'none';
+  rankingShowVoter();
+}
+
+function rankingShowVoter() {
+  const voterLabel  = document.getElementById('ranking-voter-label');
+  const promptLabel = document.getElementById('ranking-prompt-label');
+  const list        = document.getElementById('ranking-player-list');
+  if (!list) return;
+
+  const voter = rankingPlayers[rankingVoterIdx];
+  if (voterLabel)  voterLabel.textContent  = voter + "'s turn to rank:";
+  if (promptLabel) promptLabel.textContent = rankingPrompt;
+
+  rankingCurrentOrder = [...rankingPlayers].sort(() => Math.random() - 0.5);
+
+  list.innerHTML = rankingCurrentOrder.map((p, i) => `
+    <div class="ranking-player-row" id="rrow-${i}" draggable="true"
+      ondragstart="rankingDragStart(${i})" ondragover="rankingDragOver(event,${i})" ondrop="rankingDrop(${i})">
+      <div class="ranking-rank-num">${i + 1}</div>
+      <div class="ranking-player-name">${p}</div>
+      <div class="ranking-drag-handle">⠿</div>
+    </div>`).join('');
+}
+
+let rankingDragSrc = null;
+function rankingDragStart(i) { rankingDragSrc = i; }
+function rankingDragOver(e, i) { e.preventDefault(); }
+function rankingDrop(i) {
+  if (rankingDragSrc === null || rankingDragSrc === i) return;
+  const tmp = rankingCurrentOrder[rankingDragSrc];
+  rankingCurrentOrder.splice(rankingDragSrc, 1);
+  rankingCurrentOrder.splice(i, 0, tmp);
+  rankingShowVoterOrder();
+  rankingDragSrc = null;
+}
+function rankingShowVoterOrder() {
+  const list = document.getElementById('ranking-player-list');
+  if (!list) return;
+  list.innerHTML = rankingCurrentOrder.map((p, i) => `
+    <div class="ranking-player-row" id="rrow-${i}" draggable="true"
+      ondragstart="rankingDragStart(${i})" ondragover="rankingDragOver(event,${i})" ondrop="rankingDrop(${i})">
+      <div class="ranking-rank-num">${i + 1}</div>
+      <div class="ranking-player-name">${p}</div>
+      <div class="ranking-drag-handle">⠿</div>
+    </div>`).join('');
+}
+
+function rankingSubmitVote() {
+  rankingAllVotes.push([...rankingCurrentOrder]);
+  rankingVoterIdx++;
+  if (rankingVoterIdx >= rankingPlayers.length) {
+    rankingShowResults();
+  } else {
+    rankingShowVoter();
+  }
+}
+
+function rankingShowResults() {
+  document.getElementById('ranking-vote-section').style.display    = 'none';
+  document.getElementById('ranking-results-section').style.display = 'block';
+
+  const titleEl = document.getElementById('ranking-results-title');
+  const listEl  = document.getElementById('ranking-results-list');
+  if (titleEl) titleEl.textContent = 'Results: "' + rankingPrompt + '"';
+
+  // Tally scores — lower rank = better
+  const scores = {};
+  rankingPlayers.forEach(p => scores[p] = 0);
+  rankingAllVotes.forEach(vote => {
+    vote.forEach((p, i) => { scores[p] += i + 1; });
+  });
+
+  const sorted = [...rankingPlayers].sort((a, b) => scores[a] - scores[b]);
+  const medals = ['👑','🥈','🥉'];
+  const colors = ['var(--gold)','#c0c0c0','#cd7f32'];
+
+  if (listEl) {
+    listEl.innerHTML = sorted.map((p, i) => `
+      <div class="ranking-result-row">
+        <div style="font-size:20px;width:28px">${medals[i] || '#' + (i+1)}</div>
+        <div style="flex:1;font-size:15px;font-weight:800;color:${colors[i]||'var(--text)'}">${p}</div>
+        <div style="font-size:12px;color:var(--text2)">${rankingAllVotes.length} votes</div>
+      </div>`).join('');
+  }
+}
+
+function rankingReset() {
+  rankingPlayers  = [];
+  rankingVoterIdx = 0;
+  rankingAllVotes = [];
+  document.getElementById('ranking-setup').style.display           = 'block';
+  document.getElementById('ranking-vote-section').style.display    = 'none';
+  document.getElementById('ranking-results-section').style.display = 'none';
+  rankingNewPrompt();
+}

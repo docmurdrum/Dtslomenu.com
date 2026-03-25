@@ -19,7 +19,10 @@ function switchGameMode(mode) {
   if (mode === 'dice')     { initDice(); }
   if (mode === 'beerpong') { initBeerPong(); }
   if (mode === 'nhie')     { initNHIE(); }
-  if (mode === 'whoami')   { initWhoAmI(); }
+  if (mode === 'whoami')      { initWhoAmI(); }
+  if (mode === 'hottakes')    { initHotTakes(); }
+  if (mode === 'icebreakers') { initIceBreakers(); }
+  if (mode === 'ranking')     { initRanking(); }
 }
 
 function backToGamesGrid() {

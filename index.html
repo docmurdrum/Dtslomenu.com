@@ -18,10 +18,54 @@
 <link rel="stylesheet" href="missions.css">
 <link rel="stylesheet" href="bar.css">
 <link rel="stylesheet" href="friends.css">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
+
+  <!-- ── MENU INTRO SEQUENCE (shows once) ── -->
+  <div id="menu-intro" style="display:none">
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"><\/script>
+    <style>
+      #menu-intro { position:fixed;inset:0;z-index:9999;background:#000;font-family:'Georgia',serif; }
+      #mi-wordmark { position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center; }
+      .mi-logo { font-size:clamp(72px,20vw,120px);font-weight:700;letter-spacing:-4px;color:white;opacity:0;transform:translateY(12px);transition:opacity 0.9s ease,transform 0.9s ease; }
+      .mi-logo.in { opacity:1;transform:translateY(0); }
+      .mi-tag { font-size:12px;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:10px;font-family:'Helvetica Neue',sans-serif;opacity:0;transition:opacity 0.7s ease 0.5s; }
+      .mi-tag.in { opacity:1; }
+      .mi-city { font-size:11px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-top:6px;font-family:'Helvetica Neue',sans-serif;opacity:0;transition:opacity 0.6s ease 0.9s; }
+      .mi-city.in { opacity:1; }
+      #mi-map-stage { position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity 1.2s ease; }
+      #mi-map { position:absolute;inset:0; }
+      #mi-map-overlay { position:absolute;inset:0;z-index:2;background:#000;opacity:1;transition:opacity 2s ease;pointer-events:none; }
+      #mi-map-logo { position:absolute;top:52px;left:0;right:0;z-index:10;text-align:center;font-family:'Georgia',serif;font-size:28px;font-weight:700;color:white;letter-spacing:-1px;text-shadow:0 2px 16px rgba(0,0,0,0.6);opacity:0;transition:opacity 0.6s ease; }
+      .mi-hub-pin { display:flex;flex-direction:column;align-items:center;cursor:pointer; }
+      .mi-hub-dot { width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid rgba(255,255,255,0.2);box-shadow:0 4px 20px rgba(0,0,0,0.4);animation:mi-float 3s ease-in-out infinite; }
+      @keyframes mi-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+      .mi-hub-label { margin-top:4px;font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:white;text-shadow:0 1px 6px rgba(0,0,0,0.8);white-space:nowrap; }
+      #mi-skip { position:absolute;top:52px;right:20px;z-index:100;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.6);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Helvetica Neue',sans-serif;backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s ease; }
+    </style>
+
+    <!-- Wordmark stage -->
+    <div id="mi-wordmark">
+      <div class="mi-logo" id="mi-logo">MENU</div>
+      <div class="mi-tag"  id="mi-tag">Your city. Your way.</div>
+      <div class="mi-city" id="mi-city">San Luis Obispo</div>
+    </div>
+
+    <!-- Map stage -->
+    <div id="mi-map-stage">
+      <div id="mi-map"></div>
+      <div id="mi-map-overlay"></div>
+      <div id="mi-map-logo">MENU</div>
+    </div>
+
+    <button id="mi-skip" onclick="menuIntroFinish()">Skip</button>
+  </div>
+
 
 <!-- ══════════════════ AUTH SCREEN ══════════════════ -->
 <div id="auth-screen">
@@ -1053,6 +1097,21 @@
         <div class="game-grid-name">Who Am I?</div>
         <div class="game-grid-desc">Guess your card with yes/no</div>
       </div>
+      <div class="game-grid-card" style="--card-color:#ff2d78" onclick="switchGameMode('hottakes')">
+        <div class="game-grid-icon">🔥</div>
+        <div class="game-grid-name">Hot Takes</div>
+        <div class="game-grid-desc">Agree or disagree — no fence sitting</div>
+      </div>
+      <div class="game-grid-card" style="--card-color:#00f5ff" onclick="switchGameMode('icebreakers')">
+        <div class="game-grid-icon">🧊</div>
+        <div class="game-grid-name">Ice Breakers</div>
+        <div class="game-grid-desc">Break the ice with your crew</div>
+      </div>
+      <div class="game-grid-card" style="--card-color:#ffd700" onclick="switchGameMode('ranking')">
+        <div class="game-grid-icon">🏅</div>
+        <div class="game-grid-name">The Ranking</div>
+        <div class="game-grid-desc">Secretly rank each other — then reveal</div>
+      </div>
     </div>
 
     <!-- ══ TRIVIA ══ -->
@@ -1291,6 +1350,75 @@
     <!-- ══ WHO AM I ══ -->
     <div class="game-panel" id="game-panel-whoami">
       <!-- Rendered by party_games.js -->
+    </div>
+
+    <!-- ══ HOT TAKES ══ -->
+    <div class="game-panel" id="game-panel-hottakes">
+      <button class="game-back-btn" onclick="backToGamesGrid()">← Back to Games</button>
+      <div class="game-panel-title">🔥 Hot Takes</div>
+      <div class="game-panel-desc">Vote agree or disagree. No fence sitting allowed.</div>
+      <div id="hottakes-card-wrap" style="margin:20px 0">
+        <div id="hottakes-card" class="hottakes-card" onclick="hottakesRevealVotes()"></div>
+      </div>
+      <div id="hottakes-votes" style="display:none;margin-bottom:16px">
+        <div id="hottakes-vote-bars"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px" id="hottakes-btns">
+        <button class="hottakes-vote-btn agree" onclick="hottakesVote('agree')">🔥 Agree</button>
+        <button class="hottakes-vote-btn disagree" onclick="hottakesVote('disagree')">❄️ Disagree</button>
+      </div>
+      <div id="hottakes-progress" style="text-align:center;font-size:11px;color:var(--text2)"></div>
+      <button class="game-action-btn" onclick="hottakesNext()" id="hottakes-next-btn" style="display:none">Next Take →</button>
+    </div>
+
+    <!-- ══ ICE BREAKERS ══ -->
+    <div class="game-panel" id="game-panel-icebreakers">
+      <button class="game-back-btn" onclick="backToGamesGrid()">← Back to Games</button>
+      <div class="game-panel-title">🧊 Ice Breakers</div>
+      <div class="game-panel-desc">Take turns answering. Get to know your crew.</div>
+      <div id="icebreaker-card-wrap" style="margin:20px 0">
+        <div id="icebreaker-card" class="icebreaker-card" onclick="icebreakerNext()">
+          <div id="icebreaker-text" style="font-size:18px;font-weight:800;line-height:1.4;text-align:center"></div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:12px">Tap for next</div>
+        </div>
+      </div>
+      <div id="icebreaker-progress" style="text-align:center;font-size:11px;color:var(--text2);margin-bottom:16px"></div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button class="game-action-btn" onclick="icebreakerShuffle()" style="flex:0">🔀 Shuffle</button>
+        <button class="game-action-btn" onclick="icebreakerNext()">Next →</button>
+      </div>
+    </div>
+
+    <!-- ══ THE RANKING ══ -->
+    <div class="game-panel" id="game-panel-ranking">
+      <button class="game-back-btn" onclick="backToGamesGrid()">← Back to Games</button>
+      <div class="game-panel-title">🏅 The Ranking</div>
+      <div id="ranking-setup" class="ranking-section">
+        <div class="game-panel-desc">Everyone secretly ranks the group on a prompt. Then reveal.</div>
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Players (one per line)</div>
+          <textarea id="ranking-players-input" class="field-input" rows="4" placeholder="Alex&#10;Jordan&#10;Sam&#10;Taylor" style="width:100%;resize:none"></textarea>
+        </div>
+        <div id="ranking-prompt-display" style="padding:14px;background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);border-radius:14px;font-size:14px;font-weight:700;color:var(--gold);text-align:center;margin-bottom:16px"></div>
+        <div style="display:flex;gap:8px">
+          <button class="game-action-btn" onclick="rankingNewPrompt()" style="flex:0">🔀 New Prompt</button>
+          <button class="game-action-btn" onclick="rankingStart()">Start Ranking →</button>
+        </div>
+      </div>
+      <div id="ranking-vote-section" class="ranking-section" style="display:none">
+        <div style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:6px" id="ranking-voter-label"></div>
+        <div style="font-size:16px;font-weight:800;text-align:center;margin-bottom:20px;color:var(--gold)" id="ranking-prompt-label"></div>
+        <div id="ranking-player-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        <button class="game-action-btn" onclick="rankingSubmitVote()" style="margin-top:16px">Submit Rankings →</button>
+      </div>
+      <div id="ranking-results-section" class="ranking-section" style="display:none">
+        <div style="font-size:14px;font-weight:800;text-align:center;color:var(--gold);margin-bottom:16px" id="ranking-results-title"></div>
+        <div id="ranking-results-list"></div>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="game-action-btn" onclick="rankingReset()" style="flex:0">↺ New Game</button>
+          <button class="game-action-btn" onclick="rankingNewPrompt();rankingStart()">Next Prompt →</button>
+        </div>
+      </div>
     </div>
 
   </div><!-- end games page -->
