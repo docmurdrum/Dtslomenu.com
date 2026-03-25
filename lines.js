@@ -22,6 +22,38 @@ const bars = [
 ];
 
 
+// ── LOAD BARS FROM SUPABASE ──
+async function loadBarsFromDB() {
+  try {
+    const { data, error } = await supabaseClient
+      .from('bars')
+      .select('*')
+      .eq('published', true)
+      .eq('hidden', false)
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    if (data && data.length) {
+      // Merge Supabase data into bars array
+      data.forEach(row => {
+        const idx = bars.findIndex(b => b.name === row.name);
+        if (idx > -1) {
+          bars[idx].color       = row.color   || bars[idx].color;
+          bars[idx].emoji       = row.emoji   || bars[idx].emoji;
+          bars[idx].address     = row.address || bars[idx].address;
+          bars[idx].emblem_url  = row.emblem_url || null;
+          bars[idx].emblem_size = row.emblem_size || 48;
+          bars[idx].hours       = row.hours || '';
+          bars[idx].phone       = row.phone || '';
+          bars[idx].tags        = row.tags  || [];
+          bars[idx].db_id       = row.id;
+        }
+      });
+    }
+  } catch(e) {
+    console.warn('loadBarsFromDB:', e.message);
+  }
+}
+
 // ── LOCATION VERIFICATION ──
 const BAR_COORDS = {
   "Black Sheep Bar & Grill":   { lat: 35.2802, lng: -120.6615 },
@@ -528,6 +560,7 @@ function setView(v) {
 
 // ── LOAD REPORTS ──
 async function loadReports() {
+  await loadBarsFromDB();
   if (!document.getElementById('bars')) return;
   document.getElementById('bars').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
