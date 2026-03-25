@@ -5,14 +5,28 @@
 let miMap = null;
 
 function checkMenuIntro() {
-  if (localStorage.getItem('menu_intro_seen')) return;
-  const el = document.getElementById('menu-intro');
-  if (!el) return;
-  el.style.display = 'block';
-  runMenuIntro();
+  try {
+    if (localStorage.getItem('menu_intro_seen')) return;
+    const el = document.getElementById('menu-intro');
+    if (!el) return;
+    el.style.display = 'block';
+    // Ensure intro is on top and visible
+    el.style.position = 'fixed';
+    el.style.inset = '0';
+    el.style.zIndex = '9999';
+    el.style.background = '#000';
+    runMenuIntro().catch(e => {
+      console.warn('Intro sequence error:', e);
+      menuIntroFinish();
+    });
+  } catch(e) {
+    console.warn('checkMenuIntro error:', e);
+    menuIntroFinish();
+  }
 }
 
 async function runMenuIntro() {
+  try {
   // Show skip after 1s
   await miDelay(1000);
   const skip = document.getElementById('mi-skip');
@@ -28,6 +42,8 @@ async function runMenuIntro() {
   await miDelay(1800);
 
   // Step 2: init map + fade wordmark out
+  } catch(e) { menuIntroFinish(); return; }
+  try {
   miInitMap();
   const mapStage = document.getElementById('mi-map-stage');
   if (mapStage) { mapStage.style.opacity = '1'; mapStage.style.pointerEvents = 'all'; }
@@ -43,6 +59,7 @@ async function runMenuIntro() {
 
   await miDelay(3000);
   menuIntroFinish();
+  } catch(e) { menuIntroFinish(); }
 }
 
 function miInitMap() {
