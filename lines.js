@@ -403,7 +403,7 @@ function renderBars() {
       <!-- Photo area -->
       <div class="bar-photo-v2 ${isCollapsed ? 'photo-collapsed' : ''}">
         <div class="bar-photo-gradient-v2" style="background:linear-gradient(135deg,${bar.color}22,${bar.color}44,#030308)">
-          ${bar.emblem_url ? `<img src="${bar.emblem_url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">` : `<span class="bar-emoji-v2" style="filter:drop-shadow(0 0 18px ${bar.color}aa)">${bar.emoji}</span>`}
+          ${bar.emblem_url ? `<img src="${bar.emblem_url}" style="width:${bar.emblem_size||48}px;height:${bar.emblem_size||48}px;object-fit:cover;border-radius:8px;display:block">` : `<span class="bar-emoji-v2" style="filter:drop-shadow(0 0 18px ${bar.color}aa)">${bar.emoji}</span>`}
         </div>
         <div class="bar-photo-overlay-v2"></div>
         <div class="bar-status-badge-v2 status-badge-${status.replace(' ','')}">
