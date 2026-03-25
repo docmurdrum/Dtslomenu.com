@@ -505,7 +505,7 @@ function renderBars() {
 
         ${hasMission ? `<div class="bar-mission-badge"><div class="mission-blink-dot"></div>Active Mission</div>` : ''}
 
-        ${!isCollapsed ? buildVibeSegs(vibe, status) : ''}
+
 
         ${!isCollapsed ? `<div class="bar-meta-pills">
           ${waitText ? `<span class="wait-pill-v2 ${waitText.cls}">⏱ ${waitText.t}</span>` : ''}

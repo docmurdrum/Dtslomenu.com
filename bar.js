@@ -1,3 +1,26 @@
+
+// ── UBER BUTTON ──
+function openUberToBar() {
+  if (currentBarIndex === null) return;
+  const bar  = bars[currentBarIndex];
+  const meta = BAR_META[bar.name] || {};
+  const dest = encodeURIComponent((meta.address || bar.address) + ', San Luis Obispo, CA');
+
+  // Try Uber deep link first (opens app if installed)
+  // Falls back to uber.com
+  const uberDeepLink = `uber://?action=setPickup&pickup=my_location&dropoff[nickname]=${encodeURIComponent(bar.name)}&dropoff[formatted_address]=${dest}`;
+  const uberWebLink  = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[nickname]=${encodeURIComponent(bar.name)}&dropoff[formatted_address]=${dest}`;
+
+  // Try deep link — if it doesn't open in 1.5s, fall back to web
+  const start = Date.now();
+  window.location.href = uberDeepLink;
+  setTimeout(() => {
+    if (Date.now() - start < 2000) {
+      window.open(uberWebLink, '_blank');
+    }
+  }, 1500);
+}
+
 // ══════════════════════════════════════════════
 // BAR.JS — Full Venue Hub Page
 // ══════════════════════════════════════════════
@@ -50,21 +73,7 @@ function openBarPage(barIndex) {
     `<span class="bar-page-tag">${t}</span>`
   ).join('');
 
-  // Vibe meter
-  const vibeEl = document.getElementById('bar-page-vibe');
-  if (vibeEl) {
-    const color = status === 'Packed' ? '#ff2d78' : status === 'Busy' ? '#f59e0b' : '#22c55e';
-    const segs  = Array.from({length:12}, (_,i) => {
-      const active = i < Math.round(vibe/100*12);
-      return `<div class="vibe-seg-new ${active?'active':''}" style="${active?`background:${color}`:''}"></div>`;
-    }).join('');
-    vibeEl.innerHTML = `
-      <div class="vibe-row-new">
-        <div class="vibe-label-new">Vibe</div>
-        <div class="vibe-segs-wrap">${segs}</div>
-        <div style="font-size:13px;font-weight:800;color:${color}">${vibe >= 80 ? '🔥' : vibe + '%'}</div>
-      </div>`;
-  }
+  // Vibe meter removed
 
   // Reports feed
   renderBarReports(bar);
