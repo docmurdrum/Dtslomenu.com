@@ -53,6 +53,12 @@ async function loadBarsFromDB() {
           bars[idx].glow_busy_intensity  = row.glow_busy_intensity  ?? 50;
           bars[idx].glow_packed_color    = row.glow_packed_color    || bars[idx].color;
           bars[idx].glow_packed_intensity= row.glow_packed_intensity?? 90;
+          bars[idx].glow_nodata_color    = row.glow_nodata_color     || bars[idx].color;
+          bars[idx].glow_nodata_intensity= row.glow_nodata_intensity ?? 10;
+          bars[idx].effects_nodata = JSON.parse(row.effects_nodata || '{}');
+          bars[idx].effects_empty  = JSON.parse(row.effects_empty  || '{}');
+          bars[idx].effects_busy   = JSON.parse(row.effects_busy   || '{}');
+          bars[idx].effects_packed = JSON.parse(row.effects_packed || '{}');
         }
       });
     }
@@ -420,7 +426,16 @@ function renderBars() {
       : null;
 
     const el = document.createElement('div');
-    el.className = `bar-card-v2${isPacked ? ' v2-packed' : isBusy ? ' v2-busy' : isCollapsed ? ' v2-collapsed' : ''}`;  // v3: no emoji-shake
+    const fx = glowSettings[status]?.effects || {};
+    let cardClasses = 'bar-card-v2';
+    if (isPacked) cardClasses += ' v2-packed';
+    else if (isBusy) cardClasses += ' v2-busy';
+    else if (isCollapsed) cardClasses += ' v2-collapsed';
+    if (fx.pulse)  cardClasses += ' emblem-effect-pulse';
+    if (fx.bounce) cardClasses += ' emblem-effect-bounce';
+    if (fx.shake)  cardClasses += ' emblem-effect-shake';
+    if (fx.dim)    cardClasses += ' card-effect-dim';
+    el.className = cardClasses;
 
     // Build checkin strip separately to avoid nested template literal issues
     const _ci = activeCheckins[bar.name];
@@ -440,12 +455,12 @@ function renderBars() {
     }
     checkinStripHTML += '</div>';
 
-    // Glow settings per status
+    // Glow + effects per status
     const glowSettings = {
-      Dead:    { color: bar.glow_empty_color  || bar.color, intensity: bar.glow_empty_intensity  ?? 20 },
-      Busy:    { color: bar.glow_busy_color   || bar.color, intensity: bar.glow_busy_intensity   ?? 50 },
-      Packed:  { color: bar.glow_packed_color || bar.color, intensity: bar.glow_packed_intensity ?? 90 },
-      'No Data': { color: bar.color, intensity: 10 },
+      Dead:     { color: bar.glow_empty_color  || bar.color, intensity: bar.glow_empty_intensity  ?? 20, effects: bar.effects_empty  || {} },
+      Busy:     { color: bar.glow_busy_color   || bar.color, intensity: bar.glow_busy_intensity   ?? 50, effects: bar.effects_busy   || {} },
+      Packed:   { color: bar.glow_packed_color || bar.color, intensity: bar.glow_packed_intensity ?? 90, effects: bar.effects_packed || {} },
+      'No Data':{ color: bar.glow_nodata_color || bar.color, intensity: bar.glow_nodata_intensity ?? 10, effects: bar.effects_nodata || {} },
     };
     const glow = glowSettings[status] || glowSettings['No Data'];
     const glowAlpha = Math.round(glow.intensity * 2.55).toString(16).padStart(2,'0');
@@ -543,6 +558,28 @@ function renderBars() {
     `;
 
     c.appendChild(el);
+
+    // Apply border glow effect
+    if (fx.borderGlow) {
+      const glowC = glow.color;
+      const intens = glow.intensity / 100;
+      el.style.boxShadow = `0 0 0 1.5px ${glowC}${Math.round(intens*200).toString(16).padStart(2,'0')}, 0 0 ${Math.round(20*intens)}px ${glowC}${Math.round(intens*100).toString(16).padStart(2,'0')}`;
+      el.style.borderColor = glowC + Math.round(intens*180).toString(16).padStart(2,'0');
+    }
+
+    // Inject particle elements
+    if (fx.particles) {
+      const pContainer = document.createElement('div');
+      pContainer.className = 'bar-card-particles';
+      for (let p = 0; p < 6; p++) {
+        const dot = document.createElement('div');
+        dot.className = 'bar-particle';
+        const size = 3 + Math.random() * 5;
+        dot.style.cssText = `width:${size}px;height:${size}px;background:${glow.color};left:${Math.random()*90+5}%;bottom:0;animation-duration:${2+Math.random()*2}s;animation-delay:${Math.random()*2}s`;
+        pContainer.appendChild(dot);
+      }
+      el.appendChild(pContainer);
+    }
   });
 
   updateSummaryStrip();

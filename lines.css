@@ -724,11 +724,8 @@
 }
 .bar-emblem-disc {
   position: relative; z-index: 2; border-radius: 50%;
-  background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  border: 1.5px solid rgba(255,255,255,0.15);
+  background: transparent;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.12) inset;
   overflow: hidden;
 }
 
@@ -757,4 +754,59 @@
   display: flex; align-items: center; justify-content: center;
   font-size: 9px; font-weight: 800; color: white;
   border: 1.5px solid var(--bg); margin-right: -6px; flex-shrink: 0;
+}
+
+/* ── BAR CARD EFFECTS ── */
+
+/* Emblem pulse */
+.emblem-effect-pulse .bar-emblem-glow {
+  animation: emblem-glow-pulse 1.5s ease-in-out infinite !important;
+}
+.emblem-effect-pulse .bar-emblem-disc {
+  animation: emblem-pulse-disc 1.5s ease-in-out infinite;
+}
+@keyframes emblem-pulse-disc {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+
+/* Emblem shake/bounce */
+.emblem-effect-bounce .bar-emblem-disc {
+  animation: emblem-bounce 0.8s ease-in-out infinite;
+}
+@keyframes emblem-bounce {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+.emblem-effect-shake .bar-emblem-disc {
+  animation: emblem-shake 0.4s ease-in-out infinite;
+}
+@keyframes emblem-shake {
+  0%,100% { transform: translateX(0) rotate(-2deg); }
+  50%      { transform: translateX(4px) rotate(2deg); }
+}
+
+/* Card border glow */
+.card-effect-border-glow {
+  /* Set via JS with inline style */
+}
+
+/* Card dim */
+.card-effect-dim { opacity: 0.55 !important; }
+
+/* Particles container */
+.bar-card-particles {
+  position: absolute; inset: 0; pointer-events: none;
+  overflow: hidden; z-index: 1; border-radius: 22px;
+}
+.bar-particle {
+  position: absolute; border-radius: 50%;
+  animation: particle-float linear infinite;
+  opacity: 0;
+}
+@keyframes particle-float {
+  0%   { transform: translateY(100%) scale(0); opacity: 0; }
+  20%  { opacity: 0.8; }
+  80%  { opacity: 0.4; }
+  100% { transform: translateY(-60px) scale(0.3); opacity: 0; }
 }
