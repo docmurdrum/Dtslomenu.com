@@ -192,8 +192,16 @@ async function doChangePassword() {
 
 // ── SESSION INIT ──
 window.onload = async function () {
-  // MENU intro sequence
-  try { if (typeof initIntro === "function") initIntro(); } catch(e) {}
+  // MENU intro sequence — if skipped, go straight to hub screen
+  try {
+    if (typeof initIntro === "function") {
+      if (localStorage.getItem('menu_skip_intro') === '1') {
+        if (typeof menuHomeInit === 'function') menuHomeInit();
+      } else {
+        initIntro();
+      }
+    }
+  } catch(e) {}
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session?.user) await onLogin(session.user);

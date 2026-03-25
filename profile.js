@@ -9,6 +9,15 @@ function loadSkipIntroPref() {
   if (toggle) toggle.checked = localStorage.getItem('menu_skip_intro') === '1';
 }
 
+function saveSkipToDTSLOPref(on) {
+  localStorage.setItem('menu_skip_to_dtslo', on ? '1' : '0');
+}
+
+function loadSkipToDTSLOPref() {
+  const toggle = document.getElementById('pref-skip-to-dtslo');
+  if (toggle) toggle.checked = localStorage.getItem('menu_skip_to_dtslo') === '1';
+}
+
 // ══════════════════════════════════════════════
 // PROFILE.JS — Profile, XP, Character System, Level Up
 // ══════════════════════════════════════════════

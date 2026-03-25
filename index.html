@@ -750,10 +750,20 @@
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--surface2);border-radius:14px;margin-bottom:10px;border:1px solid var(--border)">
       <div>
         <div style="font-size:14px;font-weight:700">Skip Intro</div>
-        <div style="font-size:11px;color:var(--text2)">Go straight to DTSLO on open</div>
+        <div style="font-size:11px;color:var(--text2)">Skip the MENU intro on open</div>
       </div>
       <label class="toggle-switch">
         <input type="checkbox" id="pref-skip-intro" onchange="skipIntroToggle(this.checked);saveSkipIntroPref(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--surface2);border-radius:14px;margin-bottom:10px;border:1px solid var(--border)">
+      <div>
+        <div style="font-size:14px;font-weight:700">Skip to DTSLO</div>
+        <div style="font-size:11px;color:var(--text2)">Skip hub screen, go straight to DTSLO</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="pref-skip-to-dtslo" onchange="menuHomeSkipToggle(this.checked);saveSkipToDTSLOPref(this.checked)">
         <span class="toggle-slider"></span>
       </label>
     </div>
@@ -1508,6 +1518,7 @@
 <script src="achievements.js"></script>
 <script src="onboarding.js"></script>
 <script src="intro.js"></script>
+  <script src="menu_home.js"></script>
   <script src="auth.js"></script>
 
 </body>

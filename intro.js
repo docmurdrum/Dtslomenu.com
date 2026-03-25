@@ -86,11 +86,14 @@
         setTimeout(function() {
           el.style.display = 'none';
           if (introMap) { try { introMap.remove(); } catch(e) {} introMap = null; }
+          // Launch hub screen
+          try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
         }, 550);
       }
     } catch(e) {
       var el2 = document.getElementById('menu-intro');
       if (el2) el2.style.display = 'none';
+      try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
     }
   }
 
@@ -106,10 +109,10 @@
 
     introMap = new maplibregl.Map({
       container:        'mi-map',
-      style:            'https://api.maptiler.com/maps/dataviz-dark/style.json?key=' + MAPTILER_KEY,
+      style:            'https://api.maptiler.com/maps/streets-v2-dark/style.json?key=' + MAPTILER_KEY,
       center:           [-120.6650, 35.2803],
-      zoom:             15.5,
-      pitch:            55,
+      zoom:             15.0,
+      pitch:            62,
       bearing:          -25,
       antialias:        true,
       attributionControl: false
@@ -130,13 +133,13 @@
           id: 'mi-3d-buildings',
           source: 'openmaptiles',
           'source-layer': 'building',
-          filter: ['==', 'extrude', 'true'],
+          
           type: 'fill-extrusion',
           minzoom: 14,
           paint: {
             'fill-extrusion-color': [
               'interpolate', ['linear'], ['get', 'render_height'],
-              0, '#0f1729', 20, '#162040', 50, '#1e2d55'
+              0, '#111827', 15, '#1a2540', 40, '#1e3060', 80, '#243570'
             ],
             'fill-extrusion-height':  ['get', 'render_height'],
             'fill-extrusion-base':    ['get', 'render_min_height'],
@@ -149,8 +152,8 @@
       try {
         var hubs = [
           { coords: [-120.6650, 35.2803], icon: '🌃', label: 'DTSLO',    color: 'linear-gradient(135deg,#ff2d78,#b44fff)' },
-          { coords: [-120.6580, 35.3050], icon: '🎓', label: 'CAL POLY', color: 'linear-gradient(135deg,#6366f1,#06b6d4)' },
-          { coords: [-120.6590, 35.2830], icon: '🏛',  label: 'CITY',     color: 'linear-gradient(135deg,#00f5ff,#00ff88)' },
+          { coords: [-120.6620, 35.2840], icon: '🎓', label: 'CAL POLY', color: 'linear-gradient(135deg,#6366f1,#06b6d4)' },
+          { coords: [-120.6680, 35.2770], icon: '🏛',  label: 'CITY',     color: 'linear-gradient(135deg,#00f5ff,#00ff88)' },
         ];
         hubs.forEach(function(hub) {
           var el = document.createElement('div');
