@@ -34,6 +34,8 @@ async function devLogin() {
     if (data.session) {
       await onLogin(data.user);
       showToast('🛠️ Dev login active — temp account');
+      // Show hub screen after dev login
+      try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
       return;
     }
     throw new Error('No session returned');
@@ -204,7 +206,7 @@ window.onload = async function () {
   } catch(e) {}
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session?.user) await onLogin(session.user);
+    if (session?.user) { await onLogin(session.user); try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {} }
   } catch (e) {
     console.log('Session check failed:', e);
     document.getElementById('auth-screen').style.display = 'flex';
