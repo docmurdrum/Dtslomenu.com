@@ -105,25 +105,29 @@
       beach: {
         name: 'Beach Hub', emoji: '🏖', color: 'linear-gradient(135deg,#06b6d4,#0ea5e9)',
         tagline: 'Surf conditions, beach cams, coastal trails and more',
-        features: ['🌊 Live surf cams & conditions','🚗 Beach traffic & parking','🥾 Coastal hiking trails','🏄 Rental & activity bookings','📍 Beach geo caches','🌅 Sunset alerts']
+        features: ['🌊 Live surf cams & conditions','🚗 Beach traffic & parking','🥾 Coastal hiking trails','🏄 Rental & activity bookings','📍 Beach geo caches','🌅 Sunset alerts'],
+        suggestions: ['Surf conditions','Beach parking','Rentals','Events','Tide charts','Other']
       },
       calpoly: {
         name: 'Cal Poly Hub', emoji: '🎓', color: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
         tagline: 'Campus life, events, sports and student resources',
-        features: ['🏈 Mustang sports & tickets','📅 Campus events calendar','🍕 Dining & late night food','🎭 Performing Arts Center','📚 Study spots & library','🎓 Campus tours']
+        features: ['🏈 Mustang sports & tickets','📅 Campus events calendar','🍕 Dining & late night food','🎭 Performing Arts Center','📚 Study spots & library','🎓 Campus tours'],
+        suggestions: ['Sports & events','Dining','Study spots','Campus map','Student deals','Other']
       },
       city: {
         name: 'City Hub', emoji: '🏛', color: 'linear-gradient(135deg,#00f5ff,#00ff88)',
         tagline: 'Community marketplace, civic events and local services',
-        features: ['🛒 Local marketplace','💼 Gig work & odd jobs','📅 City events & permits','🌳 Parks & recreation','🗳 Community board','🤝 Volunteer opportunities']
+        features: ['🛒 Local marketplace','💼 Gig work & odd jobs','📅 City events & permits','🌳 Parks & recreation','🗳 Community board','🤝 Volunteer opportunities'],
+        suggestions: ['Marketplace','Gig work','City events','Parks','Community board','Other']
       }
     };
     var hub = hubs[id];
     if (!hub) return;
 
-    // Inject preview sheet
     var existing = document.getElementById('mh-hub-preview');
     if (existing) existing.remove();
+
+    var selectedTags = [];
 
     var sheet = document.createElement('div');
     sheet.id = 'mh-hub-preview';
@@ -132,33 +136,26 @@
         '<div class="mh-sheet-handle" id="mh-preview-handle"></div>',
         '<div style="width:56px;height:56px;border-radius:16px;background:' + hub.color + ';display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:12px">' + hub.emoji + '</div>',
         '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif;margin-bottom:6px">' + hub.name + '</div>',
-        '<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:20px;line-height:1.5">' + hub.tagline + '</div>',
-        '<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:12px">COMING SOON</div>',
+        '<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:16px;line-height:1.5">' + hub.tagline + '</div>',
+        '<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:10px">COMING SOON</div>',
         hub.features.map(function(f) {
-          return '<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;color:rgba(255,255,255,0.7)">' + f + '</div>';
+          return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;color:rgba(255,255,255,0.7)">' + f + '</div>';
         }).join(''),
-        '<button id="mh-preview-close-btn" style="width:100%;margin-top:20px;padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.4);font-size:14px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer">Notify Me When It Launches</button>',
+        // Suggestion section
+        '<div style="margin-top:20px;padding:16px;background:rgba(255,255,255,0.03);border-radius:16px;border:1px solid rgba(255,255,255,0.08)">',
+          '<div style="font-size:13px;font-weight:800;margin-bottom:4px">💬 What do YOU want to see?</div>',
+          '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:12px">Your input shapes what we build first</div>',
+          '<div id="mh-suggestion-tags" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">',
+            hub.suggestions.map(function(s) {
+              return '<div class="mh-suggestion-tag" data-tag="' + s + '" onclick="menuHomeToggleSuggestionTag(this)">' + s + '</div>';
+            }).join(''),
+          '</div>',
+          '<textarea id="mh-suggestion-text" placeholder="What would you love to see here..." style="width:100%;padding:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:white;font-size:13px;font-family:Helvetica Neue,sans-serif;resize:none;height:80px;outline:none"></textarea>',
+          '<button id="mh-suggestion-submit" onclick="menuHomeSubmitSuggestion(this.dataset.hub)" data-hub="' + id + '" style="width:100%;margin-top:10px;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,rgba(255,255,255,0.1),rgba(255,255,255,0.05));color:white;font-size:14px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer">Send Feedback →</button>',
+          '<div id="mh-suggestion-thanks" style="display:none;text-align:center;padding:12px;font-size:13px;color:#22c55e;font-weight:700">✅ Thanks! Your input helps us build better.</div>',
+        '</div>',
+        '<button id="mh-preview-close-btn" style="width:100%;margin-top:12px;padding:13px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer">Close</button>',
       '</div>',
-      '.mh-plan-btn{width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,215,0,0.3);background:linear-gradient(135deg,rgba(255,215,0,0.12),rgba(180,79,255,0.12));color:#ffd700;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:16px;font-family:Helvetica Neue,sans-serif;text-align:center}',
-      '.mh-section-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.25);margin:14px 0 8px}',
-      '.mh-tour-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}',
-      '.mh-tour-card{padding:12px 8px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);cursor:pointer;text-align:center;transition:all 0.15s}',
-      '.mh-tour-card:active{transform:scale(0.97)}',
-      '.mh-tour-icon{font-size:22px;margin-bottom:4px}',
-      '.mh-tour-name{font-size:11px;font-weight:800;color:#fff;margin-bottom:2px}',
-      '.mh-tour-meta{font-size:9px;color:rgba(255,255,255,0.3)}',
-      '.mh-venue-list{display:flex;flex-direction:column;gap:0;margin-bottom:4px}',
-      '.mh-venue-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer}',
-      '.mh-venue-emoji{font-size:20px;flex-shrink:0}',
-      '.mh-venue-info{flex:1}',
-      '.mh-venue-name{font-size:13px;font-weight:800;color:#fff}',
-      '.mh-venue-sub{font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px}',
-      '.mh-tool-icon{font-size:22px;margin-bottom:4px}',
-      '.mh-hub-card-soon{opacity:0.7;cursor:pointer}',
-      '.mh-hub-card-soon:active{transform:scale(0.98)}',
-      '#mh-hub-preview{position:absolute;inset:0;z-index:25;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;backdrop-filter:blur(4px);opacity:0;transition:opacity 0.3s}',
-      '#mh-hub-preview.show{opacity:1}',
-      '#mh-hub-preview-inner{width:100%;background:rgba(8,8,20,0.97);border-radius:24px 24px 0 0;padding:16px 20px 48px;border-top:1px solid rgba(255,255,255,0.08);max-height:80vh;overflow-y:auto}',
     ].join('');
 
     document.getElementById('menu-home').appendChild(sheet);
@@ -171,7 +168,60 @@
       if (closeBtn) closeBtn.addEventListener('click', closeSheet);
     }, 50);
   }
+
   window.menuHomeHubPreview = hubPreview;
+  function toggleSuggestionTag(el) {
+    el.classList.toggle('mh-suggestion-tag-sel');
+  }
+  window.menuHomeToggleSuggestionTag = toggleSuggestionTag;
+
+  async function submitSuggestion(hubId) {
+    var tags = [];
+    document.querySelectorAll('.mh-suggestion-tag-sel').forEach(function(t) {
+      tags.push(t.dataset.tag);
+    });
+    var text = document.getElementById('mh-suggestion-text');
+    var textVal = text ? text.value.trim() : '';
+    var submitBtn = document.getElementById('mh-suggestion-submit');
+    var thanks = document.getElementById('mh-suggestion-thanks');
+
+    if (!tags.length && !textVal) {
+      text.style.borderColor = 'rgba(255,45,120,0.5)';
+      setTimeout(function() { text.style.borderColor = 'rgba(255,255,255,0.1)'; }, 1500);
+      return;
+    }
+
+    if (submitBtn) submitBtn.disabled = true;
+    if (submitBtn) submitBtn.textContent = 'Sending...';
+
+    try {
+      var payload = {
+        hub_id: hubId,
+        tags: tags,
+        suggestion: textVal,
+        created_at: new Date().toISOString()
+      };
+
+      // Try Supabase insert
+      if (window.supabaseClient) {
+        await window.supabaseClient.from('hub_suggestions').insert([payload]);
+      }
+
+      if (submitBtn) submitBtn.style.display = 'none';
+      if (thanks) thanks.style.display = 'block';
+      // Clear tags
+      document.querySelectorAll('.mh-suggestion-tag-sel').forEach(function(t) {
+        t.classList.remove('mh-suggestion-tag-sel');
+      });
+      if (text) text.value = '';
+    } catch(e) {
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Send Feedback →'; }
+      console.warn('[Suggestion]', e);
+    }
+  }
+  window.menuHomeSubmitSuggestion = submitSuggestion;
+
+
 
   function closeThenShowPlanIt() {
     closeDrawer();
@@ -547,6 +597,8 @@
       '.mh-skip-btn{width:100%;padding:15px;border-radius:14px;border:none;font-size:15px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer;margin-bottom:10px}',
       '.mh-skip-yes{background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000}',
       '.mh-skip-no{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.1)!important}',
+      '.mh-suggestion-tag{padding:7px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:Helvetica Neue,sans-serif}',
+      '.mh-suggestion-tag-sel{background:rgba(0,245,255,0.12);border-color:rgba(0,245,255,0.4);color:#00f5ff}',
     ].join('');
     document.head.appendChild(s);
   }
