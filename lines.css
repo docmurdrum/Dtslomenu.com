@@ -703,3 +703,58 @@
   0%   { transform: translateX(-50%) scaleX(1)   scaleY(1)   rotate(-2deg); }
   100% { transform: translateX(-50%) scaleX(0.85) scaleY(1.2) rotate(2deg); }
 }
+
+/* ── FLOATING EMBLEM ── */
+.bar-card-v2 { overflow: visible !important; }
+
+.bar-emblem-float {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  z-index: 10; display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.bar-emblem-glow {
+  position: absolute; border-radius: 50%;
+  filter: blur(22px);
+  animation: emblem-glow-pulse 2.5s ease-in-out infinite;
+  transition: opacity 0.5s, background 0.5s;
+}
+@keyframes emblem-glow-pulse {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.2); }
+}
+.bar-emblem-disc {
+  position: relative; z-index: 2; border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.12) inset;
+  overflow: hidden;
+}
+
+/* Corner badges */
+.bar-corner-badge {
+  position: absolute; top: 10px; z-index: 4;
+  background: rgba(0,0,0,0.65); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 800; color: white;
+}
+.bar-corner-left  { left: 10px; }
+.bar-corner-right { right: 10px; }
+
+/* Friends button */
+.bar-friends-btn {
+  width: 100%; padding: 10px 16px; background: rgba(0,255,136,0.06);
+  border: none; border-top: 1px solid rgba(255,255,255,0.05);
+  color: var(--neon-green); font-family: inherit; font-size: 12px;
+  font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;
+  transition: background 0.15s;
+}
+.bar-friends-btn:active { background: rgba(0,255,136,0.12); }
+.bar-friend-av-sm {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 800; color: white;
+  border: 1.5px solid var(--bg); margin-right: -6px; flex-shrink: 0;
+}

@@ -45,7 +45,14 @@ async function loadBarsFromDB() {
           bars[idx].hours       = row.hours || '';
           bars[idx].phone       = row.phone || '';
           bars[idx].tags        = row.tags  || [];
-          bars[idx].db_id       = row.id;
+          bars[idx].db_id                = row.id;
+          bars[idx].emblem_offset        = row.emblem_offset        ?? -36;
+          bars[idx].glow_empty_color     = row.glow_empty_color     || bars[idx].color;
+          bars[idx].glow_empty_intensity = row.glow_empty_intensity ?? 20;
+          bars[idx].glow_busy_color      = row.glow_busy_color      || bars[idx].color;
+          bars[idx].glow_busy_intensity  = row.glow_busy_intensity  ?? 50;
+          bars[idx].glow_packed_color    = row.glow_packed_color    || bars[idx].color;
+          bars[idx].glow_packed_intensity= row.glow_packed_intensity?? 90;
         }
       });
     }
@@ -333,6 +340,40 @@ function buildFriendsAtBarRow(barName) {
   </div>`;
 }
 
+
+// ── SHOW FRIENDS AT BAR POPUP ──
+function showFriendsAtBar(barName, event) {
+  event.stopPropagation();
+  const friends = (window.friendsCheckins || []).filter(f => f.barName === barName);
+  if (!friends.length) return;
+
+  // Remove existing popup
+  const existing = document.getElementById('friends-at-bar-popup');
+  if (existing) existing.remove();
+
+  const popup = document.createElement('div');
+  popup.id = 'friends-at-bar-popup';
+  popup.style.cssText = 'position:fixed;left:16px;right:16px;bottom:90px;z-index:5000;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,0.5)';
+  popup.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:15px;font-weight:800">👥 Friends at ${barName}</div>
+      <button onclick="document.getElementById('friends-at-bar-popup').remove()" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;line-height:1">×</button>
+    </div>
+    ${friends.map(f => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="width:36px;height:36px;border-radius:50%;background:${f.color};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:white;flex-shrink:0">${f.username[0].toUpperCase()}</div>
+        <div>
+          <div style="font-size:14px;font-weight:700">${f.username}</div>
+          <div style="font-size:11px;color:var(--text2)">${f.type === 'inside' ? '🎉 Inside' : '🚶 In line'}</div>
+        </div>
+      </div>`).join('')}
+  `;
+  document.body.appendChild(popup);
+  // Auto close after 5s or on tap outside
+  setTimeout(() => popup.remove(), 5000);
+  document.addEventListener('click', () => popup.remove(), { once: true });
+}
+
 // ── RENDER BARS ──
 function renderBars() {
   const c = document.getElementById('bars');
@@ -399,17 +440,55 @@ function renderBars() {
     }
     checkinStripHTML += '</div>';
 
+    // Glow settings per status
+    const glowSettings = {
+      Dead:    { color: bar.glow_empty_color  || bar.color, intensity: bar.glow_empty_intensity  ?? 20 },
+      Busy:    { color: bar.glow_busy_color   || bar.color, intensity: bar.glow_busy_intensity   ?? 50 },
+      Packed:  { color: bar.glow_packed_color || bar.color, intensity: bar.glow_packed_intensity ?? 90 },
+      'No Data': { color: bar.color, intensity: 10 },
+    };
+    const glow = glowSettings[status] || glowSettings['No Data'];
+    const glowAlpha = Math.round(glow.intensity * 2.55).toString(16).padStart(2,'0');
+    const glowColor = glow.color + glowAlpha;
+    const glowSize = Math.round(glow.intensity * 0.6);
+
+    // Line count and inside count from checkins
+    const lineCount    = Object.values(activeCheckins).filter(c => c.barName === bar.name && c.type === 'line').length;
+    const insideCount  = Object.values(activeCheckins).filter(c => c.barName === bar.name && c.type === 'inside').length;
+
+    // Friends at this bar
+    const friendsHere = (window.friendsCheckins || []).filter(f => f.barName === bar.name);
+
+    const emblSz = bar.emblem_size || 48;
+    const vertOffset = bar.emblem_offset || -36;
+
     el.innerHTML = `
       <!-- Photo area -->
-      <div class="bar-photo-v2 ${isCollapsed ? 'photo-collapsed' : ''}">
-        <div class="bar-photo-gradient-v2" style="background:linear-gradient(135deg,${bar.color}22,${bar.color}44,#030308)">
-          ${bar.emblem_url ? `<img src="${bar.emblem_url}" style="width:${bar.emblem_size||48}px;height:${bar.emblem_size||48}px;object-fit:cover;border-radius:8px;display:block">` : `<span class="bar-emoji-v2" style="filter:drop-shadow(0 0 18px ${bar.color}aa)">${bar.emoji}</span>`}
+      <div class="bar-photo-v2 ${isCollapsed ? 'photo-collapsed' : ''}" style="overflow:visible">
+
+        <!-- Floating emblem -->
+        <div class="bar-emblem-float" style="top:${vertOffset}px">
+          <div class="bar-emblem-glow" style="background:${glow.color};width:${emblSz+40}px;height:${emblSz+40}px;opacity:${glow.intensity/100}"></div>
+          <div class="bar-emblem-disc" style="width:${emblSz+24}px;height:${emblSz+24}px">
+            ${bar.emblem_url
+              ? `<img src="${bar.emblem_url}" style="width:${emblSz}px;height:${emblSz}px;object-fit:cover;border-radius:50%">`
+              : `<span style="font-size:${emblSz*0.55}px;line-height:1">${bar.emoji}</span>`}
+          </div>
         </div>
+
+        <div class="bar-photo-gradient-v2" style="background:linear-gradient(135deg,${bar.color}22,${bar.color}44,#030308)"></div>
         <div class="bar-photo-overlay-v2"></div>
+
+        <!-- Upper left: line count -->
+        ${lineCount > 0 ? `<div class="bar-corner-badge bar-corner-left">🚶 ${lineCount} in line</div>` : ''}
+
+        <!-- Upper right: inside count -->
+        ${insideCount > 0 ? `<div class="bar-corner-badge bar-corner-right">🎉 ${insideCount} inside</div>` : ''}
+
+        <!-- Status badge -->
         <div class="bar-status-badge-v2 status-badge-${status.replace(' ','')}">
           ${text}
         </div>
-        ${recentCount > 0 ? `<div class="bar-headcount-v2">👥 ${recentCount} reports</div>` : ''}
       </div>
 
       <!-- Body -->
@@ -425,7 +504,7 @@ function renderBars() {
         </div>
 
         ${hasMission ? `<div class="bar-mission-badge"><div class="mission-blink-dot"></div>Active Mission</div>` : ''}
-        ${recentReports.length ? buildReporterAvatars(recentReports) : ''}
+
         ${!isCollapsed ? buildVibeSegs(vibe, status) : ''}
 
         ${!isCollapsed ? `<div class="bar-meta-pills">
@@ -438,21 +517,25 @@ function renderBars() {
 
       <div class="vote-row">
         <button class="vote-btn dead ${userStatus==='Dead'?'selected':''}" onclick="handleVote(event,${i},'Dead')">
-          <span class="vote-btn-icon">🟢</span>
           <span class="vote-btn-label">Empty</span>
         </button>
         <button class="vote-btn busy ${userStatus==='Busy'?'selected':''}" onclick="handleVote(event,${i},'Busy')">
-          <span class="vote-btn-icon">🟡</span>
           <span class="vote-btn-label">Busy</span>
         </button>
         <button class="vote-btn packed ${userStatus==='Packed'?'selected':''}" onclick="handleVote(event,${i},'Packed')">
-          <span class="vote-btn-icon">🔴</span>
           <span class="vote-btn-label">Packed</span>
         </button>
       </div>
 
-      <!-- Friends at this bar -->
-      ${buildFriendsAtBarRow(bar.name)}
+      <!-- Friends button -->
+      ${friendsHere.length > 0 ? `
+      <button class="bar-friends-btn" onclick="showFriendsAtBar('${bar.name.replace(/'/g,"\\'")}',event)">
+        <div style="display:flex;margin-right:6px">
+          ${friendsHere.slice(0,3).map(f => `<div class="bar-friend-av-sm" style="background:${f.color}">${f.username[0].toUpperCase()}</div>`).join('')}
+        </div>
+        <span>${friendsHere.length === 1 ? friendsHere[0].username + ' is here' : friendsHere.length + ' friends here'}</span>
+        <span style="margin-left:auto;opacity:0.5">›</span>
+      </button>` : ''}
 
 
 
