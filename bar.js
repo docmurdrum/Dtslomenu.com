@@ -32,7 +32,12 @@ function openBarPage(barIndex) {
   const { text, vibe, barColor } = statusLabel(status);
 
   // Update bar page header
-  document.getElementById('bar-page-emoji').textContent  = bar.emoji;
+  const emojiEl = document.getElementById('bar-page-emoji');
+  if (bar.emblem_url) {
+    emojiEl.innerHTML = `<img src="${bar.emblem_url}" style="width:56px;height:56px;object-fit:cover;border-radius:14px">`;
+  } else {
+    emojiEl.textContent = bar.emoji;
+  }
   document.getElementById('bar-page-name').textContent   = bar.name;
   document.getElementById('bar-page-address').textContent = meta.address || bar.address;
   document.getElementById('bar-page-hours').textContent  = meta.hours   || 'Hours not listed';
