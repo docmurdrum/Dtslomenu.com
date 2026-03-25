@@ -40,7 +40,7 @@ function showPage(p) {
   if (pageEl) pageEl.classList.add('active');
   const nb = document.getElementById('nav-' + p);
   if (nb) nb.classList.add('active');
-  if (p === 'profile')  { renderProfile(); renderCharacterCard(); initAppSettings(); }
+  if (p === 'profile')  { renderProfile(); renderCharacterCard(); initAppSettings(); try { loadSkipIntroPref(); } catch(e) {} }
   if (p === 'games')    { initGamesPage(); }
   if (p === 'missions') { initMissionsPage(); }
   if (p === 'resources'){ renderResources(); }

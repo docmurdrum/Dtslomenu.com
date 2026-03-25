@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>DTSLO</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.js"></script>
+<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
 
 <!-- ── STYLES ── -->
 <link rel="stylesheet" href="base.css">
@@ -18,52 +20,10 @@
 <link rel="stylesheet" href="missions.css">
 <link rel="stylesheet" href="bar.css">
 <link rel="stylesheet" href="friends.css">
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
-
-  <!-- ── MENU INTRO SEQUENCE (shows once) ── -->
-  <div id="menu-intro" style="display:none">
-    <style>
-      #menu-intro { position:fixed;inset:0;z-index:9999;background:#000;font-family:'Georgia',serif; }
-      #mi-wordmark { position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center; }
-      .mi-logo { font-size:clamp(72px,20vw,120px);font-weight:700;letter-spacing:-4px;color:white;opacity:0;transform:translateY(12px);transition:opacity 0.9s ease,transform 0.9s ease; }
-      .mi-logo.in { opacity:1;transform:translateY(0); }
-      .mi-tag { font-size:12px;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:10px;font-family:'Helvetica Neue',sans-serif;opacity:0;transition:opacity 0.7s ease 0.5s; }
-      .mi-tag.in { opacity:1; }
-      .mi-city { font-size:11px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-top:6px;font-family:'Helvetica Neue',sans-serif;opacity:0;transition:opacity 0.6s ease 0.9s; }
-      .mi-city.in { opacity:1; }
-      #mi-map-stage { position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity 1.2s ease; }
-      #mi-map { position:absolute;inset:0; }
-      #mi-map-overlay { position:absolute;inset:0;z-index:2;background:#000;opacity:1;transition:opacity 2s ease;pointer-events:none; }
-      #mi-map-logo { position:absolute;top:52px;left:0;right:0;z-index:10;text-align:center;font-family:'Georgia',serif;font-size:28px;font-weight:700;color:white;letter-spacing:-1px;text-shadow:0 2px 16px rgba(0,0,0,0.6);opacity:0;transition:opacity 0.6s ease; }
-      .mi-hub-pin { display:flex;flex-direction:column;align-items:center;cursor:pointer; }
-      .mi-hub-dot { width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid rgba(255,255,255,0.2);box-shadow:0 4px 20px rgba(0,0,0,0.4);animation:mi-float 3s ease-in-out infinite; }
-      @keyframes mi-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
-      .mi-hub-label { margin-top:4px;font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:white;text-shadow:0 1px 6px rgba(0,0,0,0.8);white-space:nowrap; }
-      #mi-skip { position:absolute;top:52px;right:20px;z-index:100;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.6);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Helvetica Neue',sans-serif;backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s ease; }
-    </style>
-
-    <!-- Wordmark stage -->
-    <div id="mi-wordmark">
-      <div class="mi-logo" id="mi-logo">MENU</div>
-      <div class="mi-tag"  id="mi-tag">Your city. Your way.</div>
-      <div class="mi-city" id="mi-city">San Luis Obispo</div>
-    </div>
-
-    <!-- Map stage -->
-    <div id="mi-map-stage">
-      <div id="mi-map"></div>
-      <div id="mi-map-overlay"></div>
-      <div id="mi-map-logo">MENU</div>
-    </div>
-
-    <button id="mi-skip" onclick="menuIntroFinish()">Skip</button>
-  </div>
-
 
 <!-- ══════════════════ AUTH SCREEN ══════════════════ -->
 <div id="auth-screen">
@@ -339,6 +299,54 @@
 
   </div>
 
+  <!-- ── RIDES PAGE ── -->
+  <div id="rides" class="page">
+    <button class="game-back-btn" onclick="showPage('resources')">← Back to Resources</button>
+    <div class="section-title" style="margin-bottom:4px">🚗 Rides</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:20px">Get home safe tonight.</div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Where to</div>
+      <select id="rides-destination" onchange="ridesUpdateDestination()" style="width:100%;padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:inherit;font-size:14px;font-weight:700;-webkit-appearance:none;cursor:pointer">
+        <option value="">— Just from my location —</option>
+      </select>
+      <div id="rides-bar-status" style="margin-top:8px;font-size:12px;color:var(--text2);padding:8px 12px;background:var(--surface2);border-radius:10px;display:none"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <button class="rides-app-btn" onclick="openRideApp('uber')" style="background:linear-gradient(135deg,#000,#1a1a1a)">
+        <div style="display:flex;align-items:center;gap:14px">
+          <span style="font-size:28px">🚗</span>
+          <div style="text-align:left">
+            <div style="font-size:16px;font-weight:800;color:white">Uber</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5)" id="uber-dest-label">From your location</div>
+          </div>
+        </div>
+        <span style="color:rgba(255,255,255,0.4);font-size:18px">›</span>
+      </button>
+      <button class="rides-app-btn" onclick="openRideApp('lyft')" style="background:linear-gradient(135deg,#e91e8c,#c2185b)">
+        <div style="display:flex;align-items:center;gap:14px">
+          <span style="font-size:28px">🩷</span>
+          <div style="text-align:left">
+            <div style="font-size:16px;font-weight:800;color:white">Lyft</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.7)" id="lyft-dest-label">From your location</div>
+          </div>
+        </div>
+        <span style="color:rgba(255,255,255,0.5);font-size:18px">›</span>
+      </button>
+    </div>
+    <div style="margin-top:24px;padding:14px;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.1);border-radius:14px">
+      <div style="font-size:12px;color:var(--text2);line-height:1.7">🛡 <strong style="color:var(--green)">Stay safe tonight.</strong> Always verify your driver and car before getting in.</div>
+    </div>
+    <div id="rides-confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:5000;backdrop-filter:blur(4px);align-items:flex-end;justify-content:center">
+      <div style="background:var(--surface);border-radius:24px 24px 0 0;padding:28px 24px 52px;width:100%;border-top:1px solid var(--border)">
+        <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px"></div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:8px" id="rides-confirm-title">Order ride?</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:24px" id="rides-confirm-sub">Opening app from your current location</div>
+        <button onclick="ridesConfirm()" style="width:100%;padding:16px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ff9500);color:#000;font-size:16px;font-weight:800;font-family:inherit;cursor:pointer;margin-bottom:10px">Open App →</button>
+        <button onclick="ridesCancel()" style="width:100%;padding:14px;border-radius:14px;border:1px solid var(--border);background:none;color:var(--text2);font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── EVENTS PAGE (accessed from Resources) ── -->
   <div id="events" class="page">
     <button style="background:none;border:none;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:0;margin-bottom:16px;display:flex;align-items:center;gap:6px" onclick="showPage('resources')">← Back to Resources</button>
@@ -449,6 +457,23 @@
       <div id="bar-leaderboard-list"></div>
     </div>
 
+    <!-- Bar Leaderboard -->
+    <div class="bar-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="bar-section-title" style="margin:0">🏆 Bar Regulars</div>
+        <div style="display:flex;gap:4px">
+          <button class="bar-lb-range active" id="blb-3"  onclick="setBarLbRange(3)">3</button>
+          <button class="bar-lb-range"        id="blb-10" onclick="setBarLbRange(10)">10</button>
+          <button class="bar-lb-range"        id="blb-50" onclick="setBarLbRange(50)">50</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none">
+        <button class="lb-tab active" id="blbt-checkins" onclick="setBarLbTab('checkins')">📍 Check-ins</button>
+        <button class="lb-tab"        id="blbt-reports"  onclick="setBarLbTab('reports')">📡 Reports</button>
+      </div>
+      <div id="bar-leaderboard-list"></div>
+    </div>
+
     <!-- Vibe History placeholder -->
     <div class="bar-section">
       <div class="bar-section-title">📈 Vibe History</div>
@@ -495,6 +520,38 @@
 
     <div id="lb-loading" style="text-align:center;padding:32px;color:var(--text2);font-size:13px">Loading...</div>
     <div id="lb-empty"   style="display:none;text-align:center;padding:32px;color:var(--text2);font-size:13px">No data yet — be the first to report!</div>
+  </div>
+
+
+  <!-- ── LEADERBOARD PAGE ── -->
+  <div id="leaderboard" class="page">
+    <button class="game-back-btn" onclick="showPage('profile')">← Back to Profile</button>
+    <div class="section-title" style="margin-bottom:4px">🏆 Leaderboards</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="display:flex;background:var(--surface2);border-radius:12px;padding:3px;border:1px solid var(--border)">
+        <button class="lb-range-btn active" id="lb-top3"    onclick="setLbRange(3)">Top 3</button>
+        <button class="lb-range-btn"        id="lb-top10"   onclick="setLbRange(10)">Top 10</button>
+        <button class="lb-range-btn"        id="lb-top50"   onclick="setLbRange(50)">Top 50</button>
+      </div>
+      <div style="display:flex;background:var(--surface2);border-radius:12px;padding:3px;border:1px solid var(--border)">
+        <button class="lb-range-btn active" id="lb-alltime" onclick="setLbPeriod('alltime')">All Time</button>
+        <button class="lb-range-btn"        id="lb-week"    onclick="setLbPeriod('week')">This Week</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:16px;padding-bottom:4px">
+      <button class="lb-tab active" id="lbt-xp"       onclick="setLbTab('xp')">🏆 XP</button>
+      <button class="lb-tab"        id="lbt-reports"  onclick="setLbTab('reports')">📡 Reports</button>
+      <button class="lb-tab"        id="lbt-checkins" onclick="setLbTab('checkins')">📍 Check-ins</button>
+      <button class="lb-tab"        id="lbt-streak"   onclick="setLbTab('streak')">🔥 Streak</button>
+      <button class="lb-tab"        id="lbt-nights"   onclick="setLbTab('nights')">🌃 Nights Out</button>
+    </div>
+    <div id="leaderboard-list"></div>
+    <div id="my-rank-card" style="display:none;margin-top:12px;padding:14px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:16px">
+      <div style="font-size:10px;color:var(--text2);font-weight:700;letter-spacing:1px;margin-bottom:8px">YOUR RANK</div>
+      <div id="my-rank-row"></div>
+    </div>
+    <div id="lb-loading" style="text-align:center;padding:32px;color:var(--text2);font-size:13px">Loading...</div>
+    <div id="lb-empty"   style="display:none;text-align:center;padding:32px;color:var(--text2);font-size:13px">No data yet — be the first!</div>
   </div>
 
   <!-- ── FRIENDS PAGE ── -->
@@ -687,6 +744,18 @@
       <div id="activity-feed-list">
         <div style="font-size:12px;color:var(--text2);padding:12px 0">No recent activity</div>
       </div>
+    </div>
+
+    <div class="profile-section-label">Preferences</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--surface2);border-radius:14px;margin-bottom:10px;border:1px solid var(--border)">
+      <div>
+        <div style="font-size:14px;font-weight:700">Skip Intro</div>
+        <div style="font-size:11px;color:var(--text2)">Go straight to DTSLO on open</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="pref-skip-intro" onchange="skipIntroToggle(this.checked);saveSkipIntroPref(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
     </div>
 
     <div class="profile-section-label">Account</div>
@@ -1356,11 +1425,9 @@
       <div class="game-panel-title">🔥 Hot Takes</div>
       <div class="game-panel-desc">Vote agree or disagree. No fence sitting allowed.</div>
       <div id="hottakes-card-wrap" style="margin:20px 0">
-        <div id="hottakes-card" class="hottakes-card" onclick="hottakesRevealVotes()"></div>
+        <div id="hottakes-card" class="hottakes-card"></div>
       </div>
-      <div id="hottakes-votes" style="display:none;margin-bottom:16px">
-        <div id="hottakes-vote-bars"></div>
-      </div>
+      <div id="hottakes-votes" style="display:none;margin-bottom:16px"><div id="hottakes-vote-bars"></div></div>
       <div style="display:flex;gap:10px;margin-bottom:16px" id="hottakes-btns">
         <button class="hottakes-vote-btn agree" onclick="hottakesVote('agree')">🔥 Agree</button>
         <button class="hottakes-vote-btn disagree" onclick="hottakesVote('disagree')">❄️ Disagree</button>
@@ -1375,7 +1442,7 @@
       <div class="game-panel-title">🧊 Ice Breakers</div>
       <div class="game-panel-desc">Take turns answering. Get to know your crew.</div>
       <div id="icebreaker-card-wrap" style="margin:20px 0">
-        <div id="icebreaker-card" class="icebreaker-card" onclick="icebreakerNext()">
+        <div id="icebreaker-card" class="icebreaker-card">
           <div id="icebreaker-text" style="font-size:18px;font-weight:800;line-height:1.4;text-align:center"></div>
           <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:12px">Tap for next</div>
         </div>
@@ -1391,7 +1458,7 @@
     <div class="game-panel" id="game-panel-ranking">
       <button class="game-back-btn" onclick="backToGamesGrid()">← Back to Games</button>
       <div class="game-panel-title">🏅 The Ranking</div>
-      <div id="ranking-setup" class="ranking-section">
+      <div id="ranking-setup">
         <div class="game-panel-desc">Everyone secretly ranks the group on a prompt. Then reveal.</div>
         <div style="margin-bottom:16px">
           <div style="font-size:11px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Players (one per line)</div>
@@ -1399,22 +1466,22 @@
         </div>
         <div id="ranking-prompt-display" style="padding:14px;background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);border-radius:14px;font-size:14px;font-weight:700;color:var(--gold);text-align:center;margin-bottom:16px"></div>
         <div style="display:flex;gap:8px">
-          <button class="game-action-btn" onclick="rankingNewPrompt()" style="flex:0">🔀 New Prompt</button>
-          <button class="game-action-btn" onclick="rankingStart()">Start Ranking →</button>
+          <button class="game-action-btn" onclick="rankingNewPrompt()" style="flex:0">🔀 Prompt</button>
+          <button class="game-action-btn" onclick="rankingStart()">Start →</button>
         </div>
       </div>
-      <div id="ranking-vote-section" class="ranking-section" style="display:none">
+      <div id="ranking-vote-section" style="display:none">
         <div style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:6px" id="ranking-voter-label"></div>
         <div style="font-size:16px;font-weight:800;text-align:center;margin-bottom:20px;color:var(--gold)" id="ranking-prompt-label"></div>
         <div id="ranking-player-list" style="display:flex;flex-direction:column;gap:8px"></div>
-        <button class="game-action-btn" onclick="rankingSubmitVote()" style="margin-top:16px">Submit Rankings →</button>
+        <button class="game-action-btn" onclick="rankingSubmitVote()" style="margin-top:16px">Submit →</button>
       </div>
-      <div id="ranking-results-section" class="ranking-section" style="display:none">
+      <div id="ranking-results-section" style="display:none">
         <div style="font-size:14px;font-weight:800;text-align:center;color:var(--gold);margin-bottom:16px" id="ranking-results-title"></div>
         <div id="ranking-results-list"></div>
         <div style="display:flex;gap:8px;margin-top:16px">
-          <button class="game-action-btn" onclick="rankingReset()" style="flex:0">↺ New Game</button>
-          <button class="game-action-btn" onclick="rankingNewPrompt();rankingStart()">Next Prompt →</button>
+          <button class="game-action-btn" onclick="rankingReset()" style="flex:0">↺ New</button>
+          <button class="game-action-btn" onclick="rankingNewPrompt();rankingStart()">Next →</button>
         </div>
       </div>
     </div>
@@ -1440,7 +1507,8 @@
 <script src="party_games.js"></script>
 <script src="achievements.js"></script>
 <script src="onboarding.js"></script>
-<script src="auth.js"></script>
+<script src="intro.js"></script>
+  <script src="auth.js"></script>
 
 </body>
 </html>

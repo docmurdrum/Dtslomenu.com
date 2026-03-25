@@ -1,3 +1,14 @@
+
+// ── SKIP INTRO PREFERENCE ──
+function saveSkipIntroPref(on) {
+  localStorage.setItem('menu_skip_intro', on ? '1' : '0');
+}
+
+function loadSkipIntroPref() {
+  const toggle = document.getElementById('pref-skip-intro');
+  if (toggle) toggle.checked = localStorage.getItem('menu_skip_intro') === '1';
+}
+
 // ══════════════════════════════════════════════
 // PROFILE.JS — Profile, XP, Character System, Level Up
 // ══════════════════════════════════════════════

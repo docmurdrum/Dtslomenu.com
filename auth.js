@@ -192,22 +192,8 @@ async function doChangePassword() {
 
 // ── SESSION INIT ──
 window.onload = async function () {
-  // MENU intro — safe call with fallback
-  try {
-    checkMenuIntro();
-  } catch(e) {
-    console.warn('Intro error:', e);
-    const el = document.getElementById('menu-intro');
-    if (el) el.style.display = 'none';
-  }
-  // Safety fallback — if intro stuck after 8s, hide it
-  setTimeout(() => {
-    const el = document.getElementById('menu-intro');
-    if (el && el.style.display !== 'none') {
-      el.style.display = 'none';
-      console.warn('Intro timeout — hidden');
-    }
-  }, 8000);
+  // MENU intro sequence
+  try { if (typeof initIntro === "function") initIntro(); } catch(e) {}
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session?.user) await onLogin(session.user);
