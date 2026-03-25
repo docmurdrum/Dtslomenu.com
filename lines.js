@@ -70,22 +70,22 @@ async function loadBarsFromDB() {
 
 // ── LOCATION VERIFICATION ──
 const BAR_COORDS = {
-  "Black Sheep Bar & Grill":   { lat: 35.2802, lng: -120.6615 },
-  "Bull's Tavern":             { lat: 35.2800, lng: -120.6614 },
-  "Frog & Peach Pub":          { lat: 35.2797, lng: -120.6609 },
-  "High Bar":                  { lat: 35.2790, lng: -120.6600 },
-  "Nightcap":                  { lat: 35.2796, lng: -120.6612 },
-  "Feral Kitchen & Lounge":    { lat: 35.2803, lng: -120.6617 },
-  "The Library":               { lat: 35.2801, lng: -120.6613 },
-  "The Mark":                  { lat: 35.2798, lng: -120.6610 },
-  "McCarthy's Irish Pub":      { lat: 35.2799, lng: -120.6611 },
-  "Sidecar SLO":               { lat: 35.2795, lng: -120.6608 },
-  "Eureka!":                   { lat: 35.2793, lng: -120.6605 },
-  "Finney's Crafthouse":       { lat: 35.2804, lng: -120.6618 },
-  "Novo Restaurant & Lounge":  { lat: 35.2791, lng: -120.6602 },
-  "BA Start Arcade Bar":       { lat: 35.2792, lng: -120.6604 },
-  "The Carrisa":               { lat: 35.2805, lng: -120.6620 },
-};
+  'Black Sheep Bar & Grill':   [35.2793, -120.6639],  // 1117 Higuera
+  "Bull's Tavern":             [35.2816, -120.6662],  // 709 Higuera
+  'Frog & Peach Pub':          [35.2815, -120.6661],  // 728 Higuera
+  'High Bar':                  [35.2800, -120.6644],  // Hotel SLO, 1 Garden St
+  'Nightcap':                  [35.2791, -120.6640],  // 1144 Chorro St
+  'Feral Kitchen & Lounge':    [35.2806, -120.6655],  // 893 Higuera
+  'The Library':               [35.2801, -120.6648],  // 996 Higuera
+  'The Mark':                  [35.2791, -120.6638],  // 1124 Garden St
+  "McCarthy's Irish Pub":      [35.2821, -120.6658],  // 600 Marsh St
+  'Sidecar SLO':               [35.2788, -120.6629],  // 1127 Broad St
+  'Eureka!':                   [35.2792, -120.6638],  // 1141 Higuera
+  "Finney's Crafthouse":       [35.2792, -120.6637],  // 1144 Higuera
+  'Novo Restaurant & Lounge':  [35.2815, -120.6660],  // 726 Higuera
+  'BA Start Arcade Bar':       [35.2818, -120.6663],  // 647 Higuera
+  'The Carrisa':               [35.2786, -120.6635],  // 1234 Garden St
+}
 const GPS_RADIUS_METERS = 50;
 
 function isGPSBypassed() {
@@ -752,14 +752,36 @@ function renderRealMap() {
       ? '<img src="' + bar.emblem_url + '" style="width:' + emblSz + 'px;height:' + emblSz + 'px;object-fit:contain;border-radius:' + (bar.emblem_radius||0) + '%">'
       : '<span style="font-size:26px;line-height:1">' + bar.emoji + '</span>';
 
-    const iconHtml = `
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;${pulse}">
-        <div style="position:absolute;width:${emblSz+glowSize}px;height:${emblSz+glowSize}px;border-radius:50%;background:${bar.color};filter:blur(${glowSize/2}px);opacity:0.6"></div>
-        <div style="position:relative;z-index:2;width:${emblSz+8}px;height:${emblSz+8}px;border-radius:50%;background:rgba(6,6,15,0.85);border:2px solid ${dotColor};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.5)">
-          ${emblHTML}
-        </div>
-        <div style="position:absolute;bottom:-5px;right:-2px;z-index:3;width:10px;height:10px;border-radius:50%;background:${dotColor};border:1.5px solid #06060f;box-shadow:0 0 6px ${dotColor}"></div>
-      </div>`;
+    // Read pin style from admin settings
+    let settings = {};
+    try { settings = JSON.parse(localStorage.getItem('dtslo_card_layout') || '{}'); } catch(e) {}
+    const pinStyle = settings.mapPinStyle || 'emblem';
+    const pinSz    = settings.mapPinSize  || emblSz;
+
+    let iconHtml = '';
+    if (pinStyle === 'dot') {
+      iconHtml = '<div style="position:relative;' + pulse + '">'
+        + '<div style="width:' + (pinSz/2) + 'px;height:' + (pinSz/2) + 'px;border-radius:50%;background:' + dotColor + ';box-shadow:0 0 ' + glowSize + 'px ' + dotColor + ';border:2px solid rgba(6,6,15,0.8)"></div>'
+        + '</div>';
+    } else if (pinStyle === 'pin') {
+      iconHtml = '<div style="position:relative;' + pulse + ';text-align:center">'
+        + '<div style="font-size:' + pinSz + 'px;filter:drop-shadow(0 0 6px ' + dotColor + ')">📍</div>'
+        + '</div>';
+    } else if (pinStyle === 'bubble') {
+      iconHtml = '<div style="position:relative;' + pulse + ';background:rgba(12,12,28,0.95);border:1.5px solid ' + dotColor + ';border-radius:20px;padding:4px 10px;box-shadow:0 4px 16px rgba(0,0,0,0.5);white-space:nowrap">'
+        + '<div style="font-size:11px;font-weight:800;color:white">' + bar.emoji + ' ' + bar.name + '</div>'
+        + '<div style="font-size:9px;color:' + dotColor + ';font-weight:700">' + (status === 'Dead' ? 'Empty' : status === 'No Data' ? 'No data' : status) + '</div>'
+        + '</div>';
+    } else {
+      // Default: emblem style
+      iconHtml = '<div style="position:relative;display:flex;align-items:center;justify-content:center;' + pulse + '">'
+        + '<div style="position:absolute;width:' + (pinSz+glowSize) + 'px;height:' + (pinSz+glowSize) + 'px;border-radius:50%;background:' + bar.color + ';filter:blur(' + (glowSize/2) + 'px);opacity:0.6"></div>'
+        + '<div style="position:relative;z-index:2;width:' + (pinSz+8) + 'px;height:' + (pinSz+8) + 'px;border-radius:50%;background:rgba(6,6,15,0.85);border:2px solid ' + dotColor + ';display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.5)">'
+        + emblHTML
+        + '</div>'
+        + '<div style="position:absolute;bottom:-5px;right:-2px;z-index:3;width:10px;height:10px;border-radius:50%;background:' + dotColor + ';border:1.5px solid #06060f;box-shadow:0 0 6px ' + dotColor + '"></div>'
+        + '</div>';
+    }
 
     const icon = L.divIcon({
       html: iconHtml,
