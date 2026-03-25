@@ -510,6 +510,503 @@ async function loadProfileExtras() {
 }
 
 // ── RENDER CHARACTER CARD — auto-loads from storage ──
+
+// ══════════════════════════════════════════════
+// CHARACTER CREATOR — Custom Canvas Builder
+// ══════════════════════════════════════════════
+
+const CC = {
+  step: 0,
+  archetype: 0,
+  skin: '#F5C98A',
+  expression: '😊',
+  hairStyle: 0,
+  hairColor: '#1a1a1a',
+  outfitColor: '#ff2d78',
+  outfitStyle: 0,
+  bgType: 0,
+};
+
+const CC_ARCHETYPES = [
+  { emoji:'🌙', name:'Night Owl',   color:'#b44fff' },
+  { emoji:'🍺', name:'The Regular', color:'#f59e0b' },
+  { emoji:'🦋', name:'Social',      color:'#ff2d78' },
+  { emoji:'🌊', name:'Explorer',    color:'#06b6d4' },
+  { emoji:'🔥', name:'Trendsetter', color:'#ef4444' },
+  { emoji:'🎮', name:'Game Master', color:'#22c55e' },
+];
+const CC_SKINS    = ['#FFDAB9','#F5C98A','#D4956A','#A0694A','#7B4F3A','#4A2C1A'];
+const CC_EXPRS    = ['😊','😎','🤙','😤','🥳','😏','😈','🤩','🥶','😴'];
+const CC_HSTYLES  = ['👱','🧑','👩','🧔','👲','🙍','💇','🧑‍🦱','🧑‍🦳','🧑‍🦲'];
+const CC_HCOLORS  = ['#1a1a1a','#4a3728','#8B4513','#D4A017','#FF6B6B','#FF2D78','#b44fff','#06b6d4','#22c55e','#ffffff','#ff9500','#00ff88'];
+const CC_OCOLORS  = ['#ff2d78','#b44fff','#06b6d4','#22c55e','#f59e0b','#ef4444','#1e3a5f','#1a1a2e','#ff6b35','#00ff88'];
+const CC_OSTYLES  = ['👕','🧥','🥻','🎽','👔','🧣','🥋','🩱','🎪','🧤'];
+const CC_BGS      = [
+  {label:'Night',  c:['#06060f','#0d0d1f']},
+  {label:'Neon',   c:['#1a0030','#2d0050']},
+  {label:'Ocean',  c:['#001529','#003049']},
+  {label:'Fire',   c:['#1a0000','#3d0000']},
+  {label:'Forest', c:['#001a00','#003000']},
+  {label:'Gold',   c:['#1a1200','#332500']},
+  {label:'Sunset', c:['#2d1500','#4a1a00']},
+  {label:'Cyber',  c:['#001a1a','#002d2d']},
+];
+const CC_ACCESSORIES = [
+  {emoji:'🎩', name:'Top Hat'},
+  {emoji:'😎', name:'Sunglasses'},
+  {emoji:'🎧', name:'Headphones'},
+  {emoji:'⌚', name:'Watch'},
+  {emoji:'🧢', name:'Cap'},
+  {emoji:'💎', name:'Diamond'},
+  {emoji:'🔮', name:'Crystal'},
+  {emoji:'🌟', name:'Star'},
+  {emoji:'—',  name:'None'},
+];
+
+// Selected accessories (multi-select)
+let ccAccessories = [];
+
+function openCharacterCreator() {
+  // Reset to saved state or defaults
+  const saved = localStorage.getItem('dtslo_char_state');
+  if (saved) { try { Object.assign(CC, JSON.parse(saved)); } catch(e) {} }
+  CC.step = 0;
+  ccAccessories = [];
+
+  let modal = document.getElementById('char-creator-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'char-creator-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#06060f;display:flex;flex-direction:column;overflow:hidden';
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  ccRender();
+}
+
+function closeCharacterCreator() {
+  const modal = document.getElementById('char-creator-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function ccRender() {
+  const modal = document.getElementById('char-creator-modal');
+  if (!modal) return;
+
+  const stepTitles = [
+    'Who are you?',
+    'Your face',
+    'Hair',
+    'Outfit',
+    'Background',
+    'Accessories',
+    'Final touches',
+  ];
+  const totalSteps = 7;
+
+  modal.innerHTML = `
+    <div style="padding:16px 20px 0;flex-shrink:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:18px;font-weight:800;font-family:Georgia,serif">✨ Character Creator</div>
+        <button onclick="closeCharacterCreator()" style="background:rgba(255,255,255,0.08);border:none;color:white;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer">✕</button>
+      </div>
+      <div style="display:flex;gap:4px;margin-bottom:4px">
+        ${Array.from({length:totalSteps},(_,i)=>`<div style="flex:1;height:3px;border-radius:2px;background:${i<CC.step?'#ffd700':i===CC.step?'#ff2d78':'rgba(255,255,255,0.1)'}"></div>`).join('')}
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:10px">Step ${CC.step+1} of ${totalSteps} — ${stepTitles[CC.step]}</div>
+    </div>
+
+    <div style="padding:0 20px 8px;display:flex;justify-content:center;flex-shrink:0">
+      <canvas id="cc-canvas" width="220" height="220" style="border-radius:50%;border:3px solid rgba(255,255,255,0.1);box-shadow:0 0 30px rgba(255,45,120,0.2)"></canvas>
+    </div>
+
+    <div id="cc-step-content" style="flex:1;overflow-y:auto;padding:0 20px 8px"></div>
+
+    <div style="display:flex;gap:10px;padding:12px 20px 32px;flex-shrink:0">
+      ${CC.step > 0 ? '<button onclick="ccBack()" style="flex:1;padding:13px;border-radius:16px;border:none;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.5);font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">← Back</button>' : ''}
+      ${CC.step < totalSteps-1
+        ? '<button onclick="ccNext()" style="flex:2;padding:13px;border-radius:16px;border:none;background:linear-gradient(135deg,#ff2d78,#b44fff);color:white;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">Next →</button>'
+        : '<button onclick="ccSave()" style="flex:2;padding:13px;border-radius:16px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">Save Character ✓</button>'
+      }
+    </div>
+  `;
+
+  ccRenderStep();
+  ccDrawAvatar();
+}
+
+function ccRenderStep() {
+  const el = document.getElementById('cc-step-content');
+  if (!el) return;
+
+  if (CC.step === 0) {
+    // Archetype
+    el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">` +
+      CC_ARCHETYPES.map((a,i) => `
+        <div onclick="CC.archetype=${i};CC.outfitColor='${a.color}';ccRender()"
+          style="padding:12px 8px;border-radius:14px;background:rgba(255,255,255,${CC.archetype===i?'0.08':'0.03'});border:2px solid ${CC.archetype===i?a.color:'rgba(255,255,255,0.08)'};cursor:pointer;text-align:center;transition:all 0.15s">
+          <div style="font-size:28px;margin-bottom:4px">${a.emoji}</div>
+          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.7)">${a.name}</div>
+        </div>`).join('') + '</div>';
+
+  } else if (CC.step === 1) {
+    // Face
+    el.innerHTML = `
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">Skin Tone</div>
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        ${CC_SKINS.map(s=>`<div onclick="CC.skin='${s}';ccRender()" style="width:38px;height:38px;border-radius:50%;background:${s};cursor:pointer;border:3px solid ${CC.skin===s?'#ffd700':'transparent'};transition:all 0.15s;transform:${CC.skin===s?'scale(1.15)':'scale(1)'}"></div>`).join('')}
+      </div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">Expression</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${CC_EXPRS.map(e=>`<div onclick="CC.expression='${e}';ccRender()" style="width:44px;height:44px;border-radius:12px;font-size:24px;background:rgba(255,255,255,${CC.expression===e?'0.1':'0.04'});border:2px solid ${CC.expression===e?'#ff2d78':'rgba(255,255,255,0.08)'};cursor:pointer;display:flex;align-items:center;justify-content:center">${e}</div>`).join('')}
+      </div>`;
+
+  } else if (CC.step === 2) {
+    // Hair
+    el.innerHTML = `
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">Style</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px">
+        ${CC_HSTYLES.map((h,i)=>`<div onclick="CC.hairStyle=${i};ccRender()" style="aspect-ratio:1;border-radius:12px;font-size:24px;background:rgba(255,255,255,${CC.hairStyle===i?'0.1':'0.03'});border:2px solid ${CC.hairStyle===i?'#b44fff':'rgba(255,255,255,0.08)'};cursor:pointer;display:flex;align-items:center;justify-content:center">${h}</div>`).join('')}
+      </div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">Color</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${CC_HCOLORS.map(c=>`<div onclick="CC.hairColor='${c}';ccRender()" style="width:32px;height:32px;border-radius:50%;background:${c};cursor:pointer;border:3px solid ${CC.hairColor===c?'white':'transparent'};transform:${CC.hairColor===c?'scale(1.2)':'scale(1)'};transition:all 0.15s${c==='#ffffff'?';border:3px solid rgba(255,255,255,0.3)':''}"></div>`).join('')}
+      </div>`;
+
+  } else if (CC.step === 3) {
+    // Outfit
+    el.innerHTML = `
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">Style</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px">
+        ${CC_OSTYLES.map((e,i)=>`<div onclick="CC.outfitStyle=${i};ccRender()" style="aspect-ratio:1;border-radius:12px;font-size:22px;background:${CC.outfitStyle===i?CC.outfitColor+'22':'rgba(255,255,255,0.03)'};border:2px solid ${CC.outfitStyle===i?CC.outfitColor:'rgba(255,255,255,0.08)'};cursor:pointer;display:flex;align-items:center;justify-content:center">${e}</div>`).join('')}
+      </div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">Color</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${CC_OCOLORS.map(c=>`<div onclick="CC.outfitColor='${c}';ccRender()" style="width:32px;height:32px;border-radius:50%;background:${c};cursor:pointer;border:3px solid ${CC.outfitColor===c?'white':'transparent'};transform:${CC.outfitColor===c?'scale(1.2)':'scale(1)'};transition:all 0.15s"></div>`).join('')}
+      </div>`;
+
+  } else if (CC.step === 4) {
+    // Background
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        ${CC_BGS.map((bg,i)=>`<div onclick="CC.bgType=${i};ccRender()" style="aspect-ratio:1;border-radius:14px;background:linear-gradient(135deg,${bg.c[0]},${bg.c[1]});border:2px solid ${CC.bgType===i?'#ffd700':'rgba(255,255,255,0.08)'};cursor:pointer;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;font-size:9px;font-weight:800;color:rgba(255,255,255,0.6)">${bg.label}</div>`).join('')}
+      </div>`;
+
+  } else if (CC.step === 5) {
+    // Accessories
+    el.innerHTML = `
+      <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:12px">Select up to 2 accessories</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        ${CC_ACCESSORIES.map((a,i)=>{
+          const sel = ccAccessories.includes(i);
+          return `<div onclick="ccToggleAccessory(${i})" style="padding:10px;border-radius:14px;background:rgba(255,255,255,${sel?'0.08':'0.03'});border:2px solid ${sel?'#ffd700':'rgba(255,255,255,0.08)'};cursor:pointer;text-align:center">
+            <div style="font-size:24px;margin-bottom:4px">${a.emoji}</div>
+            <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.6)">${a.name}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+
+  } else if (CC.step === 6) {
+    // Final - name your character
+    const arch = CC_ARCHETYPES[CC.archetype];
+    el.innerHTML = `
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:28px;margin-bottom:8px">${arch.emoji}</div>
+        <div style="font-size:16px;font-weight:800;color:#ffd700">${arch.name}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px">Your archetype</div>
+      </div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">Character nickname (optional)</div>
+      <input id="cc-nickname" placeholder="Leave blank to use your username" maxlength="20"
+        style="width:100%;padding:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:white;font-size:14px;font-family:inherit;outline:none;margin-bottom:16px">
+      <div style="padding:12px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.15);border-radius:12px;font-size:12px;color:rgba(255,255,255,0.5);line-height:1.6">
+        ✨ Your character will appear on your profile, the leaderboard, and in future character features. You can edit it anytime from your profile settings.
+      </div>`;
+  }
+}
+
+function ccToggleAccessory(i) {
+  const idx = ccAccessories.indexOf(i);
+  if (idx >= 0) {
+    ccAccessories.splice(idx, 1);
+  } else if (ccAccessories.length < 2) {
+    ccAccessories.push(i);
+  }
+  ccRender();
+}
+
+function ccNext() { if (CC.step < 6) { CC.step++; ccRender(); } }
+function ccBack() { if (CC.step > 0) { CC.step--; ccRender(); } }
+
+async function ccSave() {
+  const canvas = document.getElementById('cc-canvas');
+  if (!canvas) return;
+
+  const dataUrl = canvas.toDataURL('image/png');
+  const nickname = document.getElementById('cc-nickname')?.value?.trim() || '';
+
+  // Save state locally
+  localStorage.setItem('dtslo_char_state', JSON.stringify(CC));
+  localStorage.setItem('dtslo_avatar_render', dataUrl);
+  if (nickname) localStorage.setItem('dtslo_char_nickname', nickname);
+
+  // Save to Supabase
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (user) {
+      await supabaseClient.from('profiles').update({
+        avatar_render_url: dataUrl,
+        character_data: JSON.stringify({
+          archetype: CC.archetype,
+          archetypeName: CC_ARCHETYPES[CC.archetype].name,
+          archetypeEmoji: CC_ARCHETYPES[CC.archetype].emoji,
+          nickname,
+          accessories: ccAccessories,
+        })
+      }).eq('id', user.id);
+    }
+  } catch(e) {
+    console.warn('[CharCreator save]', e);
+  }
+
+  closeCharacterCreator();
+  displayAvatar(dataUrl);
+  if (typeof showToast === 'function') showToast('✨ Character saved!');
+}
+
+function ccDrawAvatar() {
+  const canvas = document.getElementById('cc-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const bg = CC_BGS[CC.bgType];
+  const arch = CC_ARCHETYPES[CC.archetype];
+
+  // Clip to circle
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(W/2, H/2, W/2, 0, Math.PI*2);
+  ctx.clip();
+
+  // Background
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, bg.c[0]);
+  grad.addColorStop(1, bg.c[1]);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Body
+  ctx.fillStyle = CC.outfitColor;
+  ctx.beginPath();
+  ctx.ellipse(W/2, H*0.85, W*0.35, H*0.25, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Neck
+  ctx.fillStyle = CC.skin;
+  ctx.fillRect(W/2-11, H*0.56, 22, 24);
+
+  // Head
+  ctx.fillStyle = CC.skin;
+  ctx.beginPath();
+  ctx.ellipse(W/2, H*0.42, 50, 56, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Hair base
+  ctx.fillStyle = CC.hairColor;
+  ctx.beginPath();
+  ctx.ellipse(W/2, H*0.32, 53, 44, 0, Math.PI, 0);
+  ctx.fill();
+
+  // Hair style variations
+  const hs = CC.hairStyle;
+  if ([0,2,5,8].includes(hs)) {
+    ctx.fillRect(W/2-52, H*0.32, 12, 42);
+    ctx.fillRect(W/2+40, H*0.32, 12, 42);
+  }
+  if ([3,5].includes(hs)) {
+    ctx.fillStyle = CC.hairColor + 'aa';
+    ctx.beginPath();
+    ctx.ellipse(W/2, H*0.53, 22, 9, 0, 0, Math.PI);
+    ctx.fill();
+  }
+  if (hs === 4) {
+    ctx.fillStyle = CC.hairColor;
+    ctx.beginPath();
+    ctx.arc(W/2, H*0.19, 16, 0, Math.PI*2);
+    ctx.fill();
+  }
+  if (hs === 7 || hs === 9) {
+    [-32,-16,0,16,32].forEach(x => {
+      ctx.fillStyle = CC.hairColor;
+      ctx.beginPath();
+      ctx.arc(W/2+x, H*0.24, 11, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
+  if (hs === 8) {
+    // White/gray sides
+    ctx.fillStyle = '#cccccc';
+    ctx.fillRect(W/2-52, H*0.32, 12, 30);
+    ctx.fillRect(W/2+40, H*0.32, 12, 30);
+  }
+
+  // Eyes
+  const eyeY = H*0.42;
+  if (CC.expression === '😎') {
+    // Sunglasses
+    ctx.fillStyle = '#1a1a2e';
+    [[W/2-22,16],[W/2+22,16]].forEach(([ex,r])=>{
+      ctx.beginPath(); ctx.ellipse(ex,eyeY,r,11,0,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1.5; ctx.stroke();
+    });
+    ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(W/2-6,eyeY-2); ctx.lineTo(W/2+6,eyeY-2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W/2-38,eyeY-6); ctx.lineTo(W/2-38,eyeY-14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W/2+38,eyeY-6); ctx.lineTo(W/2+38,eyeY-14); ctx.stroke();
+  } else {
+    [W/2-20, W/2+20].forEach(ex => {
+      ctx.fillStyle = 'white';
+      ctx.beginPath(); ctx.ellipse(ex,eyeY,9,7,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#1a1a2e';
+      ctx.beginPath(); ctx.arc(ex,eyeY,4,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'white';
+      ctx.beginPath(); ctx.arc(ex+2,eyeY-1,1.5,0,Math.PI*2); ctx.fill();
+    });
+  }
+
+  // Eyebrows
+  if (CC.expression !== '😎') {
+    ctx.strokeStyle = CC.hairColor;
+    ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    const brow = CC.expression === '😤' ? -1 : 0;
+    [[W/2-28,W/2-12],[W/2+12,W/2+28]].forEach(([x1,x2])=>{
+      ctx.beginPath();
+      ctx.moveTo(x1, eyeY-13+brow);
+      ctx.lineTo(x2, eyeY-13-brow);
+      ctx.stroke();
+    });
+  }
+
+  // Mouth
+  const my = H*0.52;
+  ctx.strokeStyle = '#8B4513'; ctx.lineWidth=2.5; ctx.lineCap='round';
+  const expr = CC.expression;
+  if (['😊','🥳','🤩'].includes(expr)) {
+    ctx.beginPath(); ctx.arc(W/2, my-3, 15, 0.2, Math.PI-0.2); ctx.stroke();
+  } else if (['😤','🥶'].includes(expr)) {
+    ctx.beginPath(); ctx.arc(W/2, my+6, 12, Math.PI+0.2, -0.2); ctx.stroke();
+  } else if (expr === '😴') {
+    ctx.beginPath(); ctx.moveTo(W/2-12,my); ctx.lineTo(W/2+12,my); ctx.stroke();
+    // ZZZ
+    ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='bold 10px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('z z z', W/2+35, eyeY-10);
+  } else if (expr === '😈') {
+    ctx.beginPath(); ctx.arc(W/2, my-3, 15, 0.2, Math.PI-0.2); ctx.stroke();
+    // Horns
+    ctx.fillStyle = '#ff2d78';
+    [[W/2-44,H*0.16],[W/2+44,H*0.16]].forEach(([hx,hy])=>{
+      ctx.beginPath();
+      ctx.moveTo(hx-6,hy+14); ctx.lineTo(hx,hy-4); ctx.lineTo(hx+6,hy+14);
+      ctx.closePath(); ctx.fill();
+    });
+  } else if (expr === '😏') {
+    ctx.beginPath();
+    ctx.moveTo(W/2-14,my+2); ctx.quadraticCurveTo(W/2,my-5,W/2+14,my+4); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.arc(W/2, my-3, 15, 0.2, Math.PI-0.2); ctx.stroke();
+  }
+
+  // Accessories overlay
+  ccAccessories.forEach((ai, idx) => {
+    const acc = CC_ACCESSORIES[ai];
+    if (acc.emoji === '—') return;
+    ctx.font = `${idx===0?28:22}px serif`;
+    ctx.textAlign = 'center';
+    if (idx === 0) ctx.fillText(acc.emoji, W/2, H*0.22);
+    if (idx === 1) ctx.fillText(acc.emoji, W*0.82, H*0.38);
+  });
+
+  // Archetype badge
+  ctx.restore();
+  ctx.fillStyle = arch.color + 'cc';
+  const bw = 80, bh = 22;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(W/2-bw/2, H*0.87, bw, bh, 11);
+  else ctx.rect(W/2-bw/2, H*0.87, bw, bh);
+  ctx.fill();
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 10px Helvetica Neue';
+  ctx.textAlign = 'center';
+  ctx.fillText(arch.emoji + ' ' + arch.name, W/2, H*0.87+15);
+}
+
+// ══════════════════════════════════════════════
+// TITLE & ITEM SYSTEM
+// ══════════════════════════════════════════════
+
+const TITLES = [
+  { level: 1,  title: 'The Newcomer',   color: 'rgba(255,255,255,0.3)' },
+  { level: 3,  title: 'The Regular',    color: 'rgba(255,255,255,0.5)' },
+  { level: 5,  title: 'Bar Star',       color: '#ffd700' },
+  { level: 8,  title: 'Scene Kid',      color: '#00f5ff' },
+  { level: 10, title: 'Downtown Local', color: '#b44fff' },
+  { level: 15, title: 'SLO Insider',    color: '#ff2d78' },
+  { level: 20, title: 'SLO Legend',     color: 'linear-gradient(90deg,#ff2d78,#ffd700)' },
+  { level: 25, title: 'MENU OG',        color: 'linear-gradient(90deg,#ffd700,#b44fff)' },
+];
+
+const ITEMS = [
+  { level: 2,  emoji: '⭐', label: 'First Star',    rarity: 'common' },
+  { level: 4,  emoji: '🎯', label: 'Sharp Eye',     rarity: 'common' },
+  { level: 6,  emoji: '🔥', label: 'On Fire',       rarity: 'uncommon' },
+  { level: 8,  emoji: '💎', label: 'Diamond',       rarity: 'uncommon' },
+  { level: 10, emoji: '👑', label: 'Crown',         rarity: 'rare' },
+  { level: 12, emoji: '🌟', label: 'All Star',      rarity: 'rare' },
+  { level: 15, emoji: '⚡', label: 'Electric',      rarity: 'rare' },
+  { level: 18, emoji: '🏆', label: 'Champion',      rarity: 'legendary' },
+  { level: 20, emoji: '🎭', label: 'Icon',          rarity: 'legendary' },
+  { level: 25, emoji: '🌈', label: 'MENU OG',       rarity: 'legendary' },
+];
+
+function getTitleForLevel(level) {
+  let current = TITLES[0];
+  for (const t of TITLES) {
+    if (level >= t.level) current = t;
+  }
+  return current;
+}
+
+function getItemsForLevel(level) {
+  return ITEMS.filter(i => level >= i.level);
+}
+
+function renderTitleAndItems(level) {
+  const titleData = getTitleForLevel(level);
+  const items = getItemsForLevel(level);
+
+  // Title badge
+  const titleRow = document.getElementById('char-title-row');
+  const titleBadge = document.getElementById('char-title-badge');
+  if (titleRow && titleBadge && level > 0) {
+    titleBadge.textContent = titleData.title;
+    titleBadge.style.background = titleData.color.includes('gradient')
+      ? titleData.color.replace('linear-gradient', 'linear-gradient').replace('90deg', '135deg') + '22'
+      : 'rgba(255,215,0,0.1)';
+    titleRow.style.display = 'block';
+  }
+
+  // Items row
+  const itemsRow = document.getElementById('char-items-row');
+  if (itemsRow && items.length) {
+    itemsRow.style.display = 'flex';
+    itemsRow.innerHTML = items.map(i =>
+      `<div title="${i.label}" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:16px">${i.emoji}</div>`
+    ).join('');
+  }
+}
+
+
 function renderCharacterCard() {
   if (!currentUser) return;
   const level = Math.max(1, Math.floor(userXP / 100) + 1);

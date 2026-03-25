@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MENU Profile</title>
+<meta property="og:title" content="Check out my MENU profile">
+<meta property="og:description" content="Join me on MENU — the app for SLO nightlife">
+<meta property="og:image" content="https://dtslomenu.com/icon-512.png">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { min-height: 100%; background: #06060f; color: white; font-family: 'Helvetica Neue', sans-serif; }
+
+body {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 0 0 60px;
+  background: radial-gradient(ellipse at top, #0d1a2e 0%, #06060f 60%);
+}
+
+/* Header */
+.header {
+  width: 100%; padding: 52px 24px 0;
+  text-align: center; position: relative;
+}
+.menu-logo {
+  font-family: Georgia, serif; font-size: 20px; font-weight: 700;
+  letter-spacing: -1px; color: rgba(255,255,255,0.5); margin-bottom: 32px;
+}
+
+/* Avatar */
+.avatar-wrap {
+  width: 120px; height: 120px; border-radius: 50%;
+  margin: 0 auto 16px; position: relative;
+}
+.avatar-img {
+  width: 100%; height: 100%; border-radius: 50%;
+  object-fit: cover; border: 3px solid rgba(255,45,120,0.4);
+  box-shadow: 0 0 30px rgba(255,45,120,0.2);
+}
+.avatar-placeholder {
+  width: 100%; height: 100%; border-radius: 50%;
+  background: rgba(255,255,255,0.06); border: 3px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center; font-size: 48px;
+}
+.level-badge {
+  position: absolute; bottom: 4px; right: 4px;
+  background: linear-gradient(135deg, #ff2d78, #b44fff);
+  border-radius: 20px; padding: 3px 10px;
+  font-size: 11px; font-weight: 800; border: 2px solid #06060f;
+}
+
+/* Name & title */
+.username { font-size: 26px; font-weight: 800; font-family: Georgia, serif; margin-bottom: 4px; }
+.title-badge {
+  display: inline-block; padding: 4px 14px; border-radius: 20px;
+  background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.25);
+  font-size: 11px; font-weight: 800; color: #ffd700; letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+.archetype { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 16px; }
+
+/* Items row */
+.items-row {
+  display: flex; gap: 8px; justify-content: center; margin-bottom: 24px; flex-wrap: wrap;
+}
+.item-badge {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+
+/* Stats */
+.stats-row {
+  display: flex; gap: 12px; justify-content: center; margin-bottom: 28px; width: 100%; padding: 0 24px;
+}
+.stat-box {
+  flex: 1; padding: 12px 8px; border-radius: 14px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+  text-align: center; max-width: 100px;
+}
+.stat-val { font-size: 20px; font-weight: 900; color: white; }
+.stat-lbl { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Bar affiliations */
+.bars-section { width: 100%; padding: 0 24px; margin-bottom: 28px; }
+.section-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: rgba(255,255,255,0.25); margin-bottom: 10px;
+}
+.bar-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 20px; margin: 4px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.6);
+}
+
+/* CTA */
+.cta-section { width: 100%; padding: 0 24px; }
+.cta-btn {
+  width: 100%; padding: 16px; border-radius: 16px; border: none;
+  background: linear-gradient(135deg, #ff2d78, #b44fff);
+  color: white; font-size: 16px; font-weight: 800;
+  font-family: inherit; cursor: pointer; margin-bottom: 10px;
+  box-shadow: 0 4px 24px rgba(255,45,120,0.3);
+  text-decoration: none; display: block; text-align: center;
+}
+.cta-sub {
+  text-align: center; font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 8px;
+}
+
+/* Loading state */
+.loading { text-align: center; padding: 80px 24px; color: rgba(255,255,255,0.3); }
+.error { text-align: center; padding: 80px 24px; }
+.error h2 { font-size: 18px; margin-bottom: 8px; }
+.error p { font-size: 13px; color: rgba(255,255,255,0.4); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="menu-logo">MENU</div>
+</div>
+
+<div id="profile-content">
+  <div class="loading">Loading profile...</div>
+</div>
+
+<script>
+const SB_URL = 'https://jwgwufggptpdmgcmmqes.supabase.co';
+const SB_KEY = 'sb_publishable_uIxE2Eol_nC2TFvkT_G1EQ_WxWWt7A3';
+
+const TITLES = [
+  {level:1,  title:'The Newcomer'},
+  {level:3,  title:'The Regular'},
+  {level:5,  title:'Bar Star'},
+  {level:8,  title:'Scene Kid'},
+  {level:10, title:'Downtown Local'},
+  {level:15, title:'SLO Insider'},
+  {level:20, title:'SLO Legend'},
+  {level:25, title:'MENU OG'},
+];
+
+const ITEMS = [
+  {level:2, emoji:'⭐'},{level:4, emoji:'🎯'},{level:6, emoji:'🔥'},
+  {level:8, emoji:'💎'},{level:10, emoji:'👑'},{level:12, emoji:'🌟'},
+  {level:15, emoji:'⚡'},{level:18, emoji:'🏆'},{level:20, emoji:'🎭'},{level:25, emoji:'🌈'},
+];
+
+function getTitle(level) {
+  let t = TITLES[0];
+  for (const x of TITLES) { if (level >= x.level) t = x; }
+  return t.title;
+}
+
+function getItems(level) {
+  return ITEMS.filter(i => level >= i.level);
+}
+
+// Get username from URL path /u/username or ?u=username
+function getUsername() {
+  const path = window.location.pathname;
+  const match = path.match(/\/u\/(.+)/);
+  if (match) return decodeURIComponent(match[1]);
+  return new URLSearchParams(window.location.search).get('u') || null;
+}
+
+// Handle incoming friend add param
+const addParam = new URLSearchParams(window.location.search).get('add');
+
+async function loadProfile() {
+  const username = getUsername();
+  const content = document.getElementById('profile-content');
+
+  if (!username) {
+    content.innerHTML = `
+      <div class="error">
+        <h2>Profile not found</h2>
+        <p>This profile link doesn't seem right.</p>
+      </div>
+      <div class="cta-section">
+        <a href="https://dtslomenu.com" class="cta-btn">Download MENU →</a>
+      </div>`;
+    return;
+  }
+
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/profiles?username=eq.${encodeURIComponent(username)}&select=id,username,xp,avatar_render_url,character_data`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+    });
+    const data = await res.json();
+    const profile = data && data[0];
+
+    if (!profile) {
+      content.innerHTML = `
+        <div class="error">
+          <h2>@${username}</h2>
+          <p>This profile doesn't exist yet — or hasn't been set up.</p>
+        </div>
+        <div class="cta-section">
+          <a href="https://dtslomenu.com" class="cta-btn">Join MENU →</a>
+          <div class="cta-sub">Create your own profile</div>
+        </div>`;
+      return;
+    }
+
+    // Calculate level
+    const xp = profile.xp || 0;
+    const level = Math.floor(Math.pow(xp / 100, 0.7)) + 1;
+    const title = getTitle(level);
+    const items = getItems(level);
+    const charData = profile.character_data ? JSON.parse(profile.character_data) : null;
+    const archetypeEmoji = charData?.archetypeEmoji || '🎭';
+    const archetypeName  = charData?.archetypeName  || '';
+    const avatarUrl = profile.avatar_render_url || '';
+
+    // Update page title & meta
+    document.title = `${profile.username} — MENU`;
+
+    content.innerHTML = `
+      <div class="avatar-wrap">
+        ${avatarUrl
+          ? `<img class="avatar-img" src="${avatarUrl}" alt="${profile.username}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+          : ''}
+        <div class="avatar-placeholder" style="${avatarUrl ? 'display:none' : ''}">
+          ${archetypeEmoji}
+        </div>
+        <div class="level-badge">Lvl ${level}</div>
+      </div>
+
+      <div style="text-align:center;padding:0 24px;margin-bottom:20px">
+        <div class="username">@${profile.username}</div>
+        <div class="title-badge">${title}</div>
+        ${archetypeName ? `<div class="archetype">${archetypeEmoji} ${archetypeName}</div>` : ''}
+        ${items.length ? `
+          <div class="items-row">
+            ${items.map(i => `<div class="item-badge">${i.emoji}</div>`).join('')}
+          </div>` : ''}
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-val">${level}</div>
+          <div class="stat-lbl">Level</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val">${xp.toLocaleString()}</div>
+          <div class="stat-lbl">XP</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val">${title.split(' ').pop()}</div>
+          <div class="stat-lbl">Title</div>
+        </div>
+      </div>
+
+      <div class="cta-section">
+        ${addParam
+          ? `<a href="https://dtslomenu.com?add=${encodeURIComponent(addParam)}&ref=${encodeURIComponent(profile.username)}" class="cta-btn">
+               Add ${profile.username} as a friend →
+             </a>
+             <div class="cta-sub">Opens the MENU app</div>`
+          : `<a href="https://dtslomenu.com" class="cta-btn">
+               Join MENU →
+             </a>
+             <div class="cta-sub">Download the app · Free · San Luis Obispo</div>`
+        }
+      </div>
+    `;
+
+  } catch(e) {
+    content.innerHTML = `
+      <div class="error">
+        <h2>Couldn't load profile</h2>
+        <p>Check your connection and try again.</p>
+      </div>
+      <div class="cta-section">
+        <a href="https://dtslomenu.com" class="cta-btn">Download MENU →</a>
+      </div>`;
+  }
+}
+
+loadProfile();
+</script>
+</body>
+</html>

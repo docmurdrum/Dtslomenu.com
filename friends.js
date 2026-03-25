@@ -412,26 +412,92 @@ function escapeHtml(str) {
 function showMyQR() {
   if (!currentUser) { showToast('⚠️ Sign in first'); return; }
 
-  const username = getUsername();
-  const userId   = currentUser.id;
-  const refCode  = username.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);
-  const qrData   = 'https://dtslomenu.com?add=' + encodeURIComponent(userId) + '&ref=' + encodeURIComponent(refCode);
+  const username  = getUsername();
+  const userId    = currentUser.id;
+  const level     = parseInt(document.getElementById('xp-level-badge')?.textContent?.replace('Level ','')) || 1;
+  const title     = document.getElementById('char-title-badge')?.textContent || '';
+  const avatarUrl = localStorage.getItem('dtslo_avatar_render') || '';
 
+  // Public profile URL — shareable link
+  const profileUrl = 'https://dtslomenu.com/u/' + encodeURIComponent(username);
+  // Full QR data includes both profile link + friend-add param
+  const qrData = profileUrl + '?add=' + encodeURIComponent(userId);
+
+  // Populate modal
+  const modal = document.getElementById('qr-modal');
   document.getElementById('qr-username-display').textContent = username;
-  document.getElementById('qr-ref-code').textContent = refCode;
-  document.getElementById('qr-modal').style.display = 'flex';
+  document.getElementById('qr-ref-code').textContent = title || ('Level ' + level);
+  document.getElementById('qr-profile-url').textContent = profileUrl;
 
-  // Generate QR using QR Server API (no library needed)
-  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(qrData) + '&bgcolor=ffffff&color=000000&qzone=2';
+  // Avatar in QR modal
+  const avatarEl = document.getElementById('qr-avatar-img');
+  if (avatarEl) {
+    avatarEl.src = avatarUrl || '';
+    avatarEl.style.display = avatarUrl ? 'block' : 'none';
+  }
+
+  modal.style.display = 'flex';
+
+  // Generate QR — dark background, cyan color to match brand
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='
+    + encodeURIComponent(qrData)
+    + '&bgcolor=06060f&color=00f5ff&qzone=2&format=png';
+
   const display = document.getElementById('qr-code-display');
   const qrImg = document.createElement('img');
   qrImg.src = qrUrl;
-  qrImg.style.width = '200px';
-  qrImg.style.height = '200px';
-  qrImg.style.borderRadius = '8px';
-  qrImg.onerror = function() { display.textContent = 'QR generation failed'; };
+  qrImg.id = 'qr-img-generated';
+  qrImg.style.cssText = 'width:200px;height:200px;border-radius:12px;display:block';
+  qrImg.onerror = function() {
+    // Fallback to black on white
+    this.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='
+      + encodeURIComponent(qrData) + '&qzone=2';
+  };
   display.innerHTML = '';
   display.appendChild(qrImg);
+
+  // Store for share/download
+  window._currentQRData = { qrData, profileUrl, username, level, title };
+}
+
+// Share profile QR
+async function shareProfileQR() {
+  const d = window._currentQRData;
+  if (!d) return;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: d.username + ' on MENU',
+        text: 'Check out ' + d.username + 's profile on MENU! Level ' + d.level + (d.title ? ' · ' + d.title : ''),
+        url: d.profileUrl,
+      });
+      return;
+    } catch(e) {}
+  }
+
+  // Fallback — copy link
+  try {
+    await navigator.clipboard.writeText(d.profileUrl);
+    showToast('✅ Profile link copied!');
+  } catch(e) {
+    showToast('📋 ' + d.profileUrl);
+  }
+}
+
+// Download QR as image
+function downloadQR() {
+  const img = document.getElementById('qr-img-generated');
+  const d = window._currentQRData;
+  if (!img || !d) return;
+
+  // Create download link
+  const a = document.createElement('a');
+  a.href = img.src;
+  a.download = d.username + '_menu_qr.png';
+  a.target = '_blank';
+  a.click();
+  showToast('📥 QR saved!');
 }
 
 function closeQRModal() {
