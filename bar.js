@@ -48,6 +48,10 @@ const BAR_META = {
 
 // ── OPEN BAR PAGE ──
 function openBarPage(barIndex) {
+  // Reset bar leaderboard cache for fresh load
+  barLbCache = {};
+  barLbRange = 3;
+  barLbTab   = 'checkins';
   currentBarIndex = barIndex;
   const bar  = bars[barIndex];
   const meta = BAR_META[bar.name] || {};
@@ -88,6 +92,7 @@ function openBarPage(barIndex) {
 
   // Show bar page
   showPage('bar');
+  setTimeout(() => { try { loadBarLeaderboard(); } catch(e) {} }, 300);
 }
 
 // ── RENDER REPORTS FEED ──

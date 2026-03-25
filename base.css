@@ -350,3 +350,12 @@ body::before {
 #app .page {
   padding-top: calc(var(--nav-h) + 36px + 16px);
 }
+
+/* ── RIDES PAGE ── */
+.rides-app-btn {
+  width: 100%; padding: 16px 18px; border-radius: 18px; border: none;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.rides-app-btn:active { transform: scale(0.98); }

@@ -386,16 +386,6 @@ function showFriendsAtBar(barIndex, event) {
 function renderBars() {
   const c = document.getElementById('bars');
   if (!c) return;
-  // DEBUG: wrap entire function body
-  try {
-    _renderBarsInner(c);
-  } catch(e) {
-    c.innerHTML = '<div style="color:#ff2d78;padding:20px;font-size:13px;font-weight:700;background:rgba(255,45,120,0.1);border-radius:12px;margin:12px">⚠️ Bar render error:<br>' + e.message + '<br><small style=\"opacity:0.6\">' + (e.stack||'').split('\n')[1] + '</small></div>';
-    console.error('renderBars crash:', e);
-  }
-}
-function _renderBarsInner(c) {
-  if (!c) return;
   c.innerHTML = '';
 
   const tb = document.getElementById('thursday-banner');
@@ -489,8 +479,8 @@ function _renderBarsInner(c) {
     // Friends at this bar
     const friendsHere = (window.friendsCheckins || []).filter(f => f.barName === bar.name);
 
-    const emblSz = bar.emblem_size || 48;
-    const vertOffset = bar.emblem_offset || -36;
+    const emblSz = bar.emblem_size || 80;
+    const vertOffset = bar.emblem_offset ?? -20;
     const emblHTML = bar.emblem_url
       ? '<img src="' + bar.emblem_url + '" style="width:' + emblSz + 'px;height:' + emblSz + 'px;object-fit:contain;border-radius:' + (bar.emblem_radius||0) + '%">'
       : '<span style="font-size:' + (emblSz*0.55) + 'px;line-height:1">' + bar.emoji + '</span>';

@@ -306,10 +306,9 @@ const RESOURCES = [
     id: 'rides',
     icon: '🚗',
     name: 'Rides',
-    desc: 'Uber & Lyft quick links for SLO',
-    cls: 'coming',
-    action: null,
-    coming: true,
+    desc: 'Get home safe — Uber & Lyft',
+    cls: 'rides',
+    action: () => showPage('rides'),
   },
   {
     id: 'food',
@@ -406,5 +405,116 @@ function renderEvents() {
       </div>
     </div>`;
   }).join('');
+}
+
+
+// ══════════════════════════════════════════════
+// RIDES
+// ══════════════════════════════════════════════
+let ridesSelectedApp = null;
+
+function initRides() {
+  const sel = document.getElementById('rides-destination');
+  if (!sel) return;
+
+  // Populate dropdown with bars + live status
+  const statusEmoji = { Packed: '🔴', Busy: '🟡', Dead: '🟢', 'No Data': '⚪' };
+  sel.innerHTML = '<option value="">— Just from my location —</option>';
+  bars.forEach((bar, i) => {
+    const status = typeof getStatus === 'function' ? getStatus(bar) : 'No Data';
+    const dot = statusEmoji[status] || '⚪';
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = dot + ' ' + bar.name;
+    sel.appendChild(opt);
+  });
+}
+
+function ridesUpdateDestination() {
+  const sel     = document.getElementById('rides-destination');
+  const statusEl = document.getElementById('rides-bar-status');
+  const uberLbl  = document.getElementById('uber-dest-label');
+  const lyftLbl  = document.getElementById('lyft-dest-label');
+
+  if (!sel.value) {
+    if (statusEl) statusEl.style.display = 'none';
+    if (uberLbl)  uberLbl.textContent = 'From your location';
+    if (lyftLbl)  lyftLbl.textContent = 'From your location';
+    return;
+  }
+
+  const bar    = bars[parseInt(sel.value)];
+  const status = typeof getStatus === 'function' ? getStatus(bar) : 'No Data';
+  const colors = { Packed: '#ff2d78', Busy: '#f59e0b', Dead: '#22c55e', 'No Data': 'var(--text2)' };
+  const labels = { Packed: '🔴 Packed right now', Busy: '🟡 Getting busy', Dead: '🟢 Pretty quiet', 'No Data': '⚪ No reports yet' };
+
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<span style="font-weight:800;color:' + (colors[status]||'var(--text2)') + '">' + bar.name + '</span> — ' + (labels[status] || status);
+  }
+  const destText = 'To ' + bar.name;
+  if (uberLbl) uberLbl.textContent = destText;
+  if (lyftLbl) lyftLbl.textContent = destText;
+}
+
+function openRideApp(app) {
+  ridesSelectedApp = app;
+  const sel      = document.getElementById('rides-destination');
+  const titleEl  = document.getElementById('rides-confirm-title');
+  const subEl    = document.getElementById('rides-confirm-sub');
+  const overlay  = document.getElementById('rides-confirm-overlay');
+
+  const appName = app === 'uber' ? 'Uber' : 'Lyft';
+  let destText  = 'from your current location';
+
+  if (sel && sel.value) {
+    const bar = bars[parseInt(sel.value)];
+    if (bar) destText = 'to ' + bar.name;
+  }
+
+  if (titleEl) titleEl.textContent = 'Open ' + appName + '?';
+  if (subEl)   subEl.textContent   = 'Requesting a ride ' + destText;
+  if (overlay) { overlay.style.display = 'flex'; }
+}
+
+function ridesConfirm() {
+  ridesCancel();
+  const sel = document.getElementById('rides-destination');
+  let destAddr = '';
+  let destName = '';
+
+  if (sel && sel.value) {
+    const bar = bars[parseInt(sel.value)];
+    if (bar) {
+      destAddr = encodeURIComponent((bar.address || bar.name) + ', San Luis Obispo, CA');
+      destName = encodeURIComponent(bar.name);
+    }
+  }
+
+  if (ridesSelectedApp === 'uber') {
+    const deepLink = destAddr
+      ? 'uber://?action=setPickup&pickup=my_location&dropoff[nickname]=' + destName + '&dropoff[formatted_address]=' + destAddr
+      : 'uber://';
+    const webLink  = destAddr
+      ? 'https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[nickname]=' + destName + '&dropoff[formatted_address]=' + destAddr
+      : 'https://m.uber.com';
+    window.location.href = deepLink;
+    setTimeout(() => window.open(webLink, '_blank'), 1500);
+  } else {
+    const deepLink = destAddr
+      ? 'lyft://ridetype?id=lyft&destination[latitude]=&destination[longitude]='
+      : 'lyft://';
+    const webLink  = destAddr
+      ? 'https://www.lyft.com/ride?destination[address]=' + destAddr
+      : 'https://www.lyft.com';
+    window.location.href = deepLink;
+    setTimeout(() => window.open(webLink, '_blank'), 1500);
+  }
+}
+
+function ridesCancel() {
+  const overlay = document.getElementById('rides-confirm-overlay');
+  if (overlay) overlay.style.display = 'none';
+  ridesSelectedApp = null;
 }
 
