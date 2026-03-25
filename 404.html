@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script>
+  // GitHub Pages SPA redirect trick
+  // Captures the path and redirects to the right page
+  var path = window.location.pathname;
+  var search = window.location.search;
+
+  // /u/username → public_profile.html?u=username
+  var userMatch = path.match(/\/u\/([^\/]+)/);
+  if (userMatch) {
+    var username = userMatch[1];
+    window.location.replace(
+      '/public_profile.html?u=' + username + (search ? '&' + search.slice(1) : '')
+    );
+  } else {
+    // Everything else → app
+    window.location.replace('/' + (search || ''));
+  }
+</script>
+</head>
+<body></body>
+</html>
