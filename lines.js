@@ -47,6 +47,7 @@ async function loadBarsFromDB() {
           bars[idx].tags        = row.tags  || [];
           bars[idx].db_id                = row.id;
           bars[idx].emblem_offset        = row.emblem_offset        ?? -36;
+          bars[idx].emblem_radius        = row.emblem_radius        ?? 0;
           bars[idx].glow_empty_color     = row.glow_empty_color     || bars[idx].color;
           bars[idx].glow_empty_intensity = row.glow_empty_intensity ?? 20;
           bars[idx].glow_busy_color      = row.glow_busy_color      || bars[idx].color;
@@ -491,7 +492,7 @@ function _renderBarsInner(c) {
     const emblSz = bar.emblem_size || 48;
     const vertOffset = bar.emblem_offset || -36;
     const emblHTML = bar.emblem_url
-      ? '<img src="' + bar.emblem_url + '" style="width:' + emblSz + 'px;height:' + emblSz + 'px;object-fit:cover;border-radius:50%">'
+      ? '<img src="' + bar.emblem_url + '" style="width:' + emblSz + 'px;height:' + emblSz + 'px;object-fit:contain;border-radius:' + (bar.emblem_radius||0) + '%">'
       : '<span style="font-size:' + (emblSz*0.55) + 'px;line-height:1">' + bar.emoji + '</span>';
 
     el.innerHTML = `
@@ -600,8 +601,10 @@ function _renderBarsInner(c) {
   updateSummaryStrip();
   updateTicker();
   renderHotStrip();
-  if (currentView === 'map')  renderMapView();
-  if (currentView === 'feed') renderFeedView();
+  if (currentView === 'grid2') renderGrid2();
+  if (currentView === 'grid3') renderGrid3();
+  if (currentView === 'map')   renderRealMap();
+  if (currentView === 'feed')  renderFeedView();
   startPackedParticles();
 }
 
@@ -617,9 +620,9 @@ function scrollToBar(targetIdx) {
   }, 150);
 }
 
-// ── MAP / GRID VIEW ──
-function renderMapView() {
-  const g = document.getElementById('map-grid');
+// ── GRID 2 — Mini cards 2col ──
+function renderGrid2() {
+  const g = document.getElementById('grid2-container');
   if (!g) return;
   g.innerHTML = '';
   const order = { 'Packed': 0, 'Busy': 1, 'Dead': 2, 'No Data': 3 };
@@ -628,20 +631,172 @@ function renderMapView() {
 
   sorted.forEach(({ bar, i }) => {
     const status = getStatus(bar);
-    const { text, barColor, vibe } = statusLabel(status);
-    const count = getRecentCount(bar);
+    const { text, barColor } = statusLabel(status);
+    const isPacked = status === 'Packed';
+    const isBusy   = status === 'Busy';
+    const userReport = bar.reports.find(r => r.user_id === currentUser?.id && r.time > Date.now() - 30*60*1000);
+    const userStatus = userReport?.status;
+    const glowColor = isPacked ? 'rgba(255,45,120,0.35)' : isBusy ? 'rgba(245,158,11,0.25)' : 'transparent';
+    const borderColor = isPacked ? 'rgba(255,45,120,0.4)' : isBusy ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.07)';
+    const emblSz = Math.min(bar.emblem_size || 48, 36);
+    const emblHTML = bar.emblem_url
+      ? '<img src="' + bar.emblem_url + '" style="width:' + emblSz + 'px;height:' + emblSz + 'px;object-fit:contain;border-radius:' + (bar.emblem_radius||0) + '%">'
+      : '<span style="font-size:24px">' + bar.emoji + '</span>';
+
     const el = document.createElement('div');
-    el.className = 'map-card';
-    el.onclick = () => { setView('list'); setTimeout(() => document.querySelectorAll('.bar-card-v2')[i]?.scrollIntoView({ behavior:'smooth', block:'center' }), 100); };
+    el.className = 'g2-card' + (isPacked ? ' g2-packed' : '');
+    el.style.cssText = 'border-color:' + borderColor + ';box-shadow:0 0 16px ' + glowColor;
     el.innerHTML = `
-      <div class="map-card-top" style="background:${barColor}"></div>
-      <div class="map-card-emoji">${bar.emoji}</div>
-      <div class="map-card-name">${bar.name}</div>
-      <div class="map-card-status" style="color:${barColor}">${text}</div>
-      <div class="map-card-vibe"><div class="map-card-vibe-fill" style="width:${vibe}%;background:${barColor}"></div></div>
-      ${count > 0 ? `<div class="map-card-count">👥 ${count} reports</div>` : '<div class="map-card-count" style="opacity:0.4">No reports</div>'}
+      <div class="g2-emblem-wrap">
+        <div class="g2-emblem-glow" style="background:${bar.color}"></div>
+        <div class="g2-emblem">${emblHTML}</div>
+      </div>
+      <div class="g2-body">
+        <div class="g2-name">${bar.name}</div>
+        <div class="g2-badge" style="background:${barColor}22;color:${barColor};border:1px solid ${barColor}44">${text}</div>
+        <div class="g2-addr">${bar.address}</div>
+      </div>
+      <div class="g2-votes">
+        <button class="g2-vote ${userStatus==='Dead'?'sel':''}" onclick="handleVote(event,${i},'Dead')" style="${userStatus==='Dead'?'color:'+barColor:''}">Empty</button>
+        <button class="g2-vote ${userStatus==='Busy'?'sel':''}" onclick="handleVote(event,${i},'Busy')" style="${userStatus==='Busy'?'color:'+barColor:''}">Busy</button>
+        <button class="g2-vote ${userStatus==='Packed'?'sel':''}" onclick="handleVote(event,${i},'Packed')" style="${userStatus==='Packed'?'color:'+barColor:''}">Packed</button>
+      </div>
+    `;
+    el.addEventListener('click', (e) => { if (!e.target.classList.contains('g2-vote')) openBarPage(i); });
+    g.appendChild(el);
+  });
+}
+
+// ── GRID 3 — Tiles 3col ──
+function renderGrid3() {
+  const g = document.getElementById('grid3-container');
+  if (!g) return;
+  g.innerHTML = '';
+  const order = { 'Packed': 0, 'Busy': 1, 'Dead': 2, 'No Data': 3 };
+  const sorted = [...bars].map((bar, i) => ({ bar, i }))
+    .sort((a, b) => (order[getStatus(a.bar)] ?? 3) - (order[getStatus(b.bar)] ?? 3));
+
+  sorted.forEach(({ bar, i }) => {
+    const status   = getStatus(bar);
+    const { barColor } = statusLabel(status);
+    const isPacked = status === 'Packed';
+    const isBusy   = status === 'Busy';
+    const isEmpty  = status === 'Dead';
+    const dotColor = isPacked ? '#ff2d78' : isBusy ? '#f59e0b' : isEmpty ? '#22c55e' : 'rgba(255,255,255,0.2)';
+    const dotGlow  = isPacked ? '0 0 8px #ff2d78' : isBusy ? '0 0 6px #f59e0b' : isEmpty ? '0 0 4px #22c55e' : 'none';
+    const borderColor = isPacked ? 'rgba(255,45,120,0.5)' : isBusy ? 'rgba(245,158,11,0.4)' : isEmpty ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)';
+    const opacity  = status === 'No Data' ? '0.45' : '1';
+    const emblSz   = Math.min(bar.emblem_size || 48, 32);
+    const emblHTML = bar.emblem_url
+      ? '<img src="' + bar.emblem_url + '" style="width:' + emblSz + 'px;height:' + emblSz + 'px;object-fit:contain;border-radius:' + (bar.emblem_radius||0) + '%">'
+      : '<span style="font-size:28px">' + bar.emoji + '</span>';
+
+    const el = document.createElement('div');
+    el.className = 'g3-tile' + (isPacked ? ' g3-packed' : '');
+    el.style.cssText = 'opacity:' + opacity + ';border-color:' + borderColor;
+    el.onclick = () => openBarPage(i);
+    el.innerHTML = `
+      <div class="g3-tile-bg" style="background:radial-gradient(circle at 50% 40%,${bar.color}44,transparent 70%)"></div>
+      ${emblHTML}
+      <div class="g3-name">${bar.name}</div>
+      <div class="g3-dot" style="background:${dotColor};box-shadow:${dotGlow}"></div>
     `;
     g.appendChild(el);
+  });
+}
+
+// ── REAL MAP VIEW ──
+let leafletMap = null;
+let leafletMarkers = [];
+
+
+
+function renderRealMap() {
+  const container = document.getElementById('leaflet-map');
+  if (!container) return;
+
+  // Init map once
+  if (!leafletMap) {
+    leafletMap = L.map('leaflet-map', {
+      center: [35.2803, -120.6598],
+      zoom: 16,
+      zoomControl: false,
+      attributionControl: false
+    });
+
+    // Dark tile layer
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19
+    }).addTo(leafletMap);
+
+    L.control.zoom({ position: 'bottomright' }).addTo(leafletMap);
+  }
+
+  // Clear old markers
+  leafletMarkers.forEach(m => m.remove());
+  leafletMarkers = [];
+
+  bars.forEach((bar, i) => {
+    const coords = BAR_COORDS[bar.name];
+    if (!coords) return;
+
+    const status   = getStatus(bar);
+    const { barColor } = statusLabel(status);
+    const isPacked = status === 'Packed';
+    const isBusy   = status === 'Busy';
+    const dotColor = isPacked ? '#ff2d78' : isBusy ? '#f59e0b' : status === 'Dead' ? '#22c55e' : '#888';
+    const glowSize = isPacked ? 20 : isBusy ? 14 : 8;
+    const pulse    = isPacked ? 'animation:map-pin-pulse 1.5s ease-in-out infinite;' : '';
+    const emblSz   = 36;
+    const emblHTML = bar.emblem_url
+      ? '<img src="' + bar.emblem_url + '" style="width:' + emblSz + 'px;height:' + emblSz + 'px;object-fit:contain;border-radius:' + (bar.emblem_radius||0) + '%">'
+      : '<span style="font-size:26px;line-height:1">' + bar.emoji + '</span>';
+
+    const iconHtml = `
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;${pulse}">
+        <div style="position:absolute;width:${emblSz+glowSize}px;height:${emblSz+glowSize}px;border-radius:50%;background:${bar.color};filter:blur(${glowSize/2}px);opacity:0.6"></div>
+        <div style="position:relative;z-index:2;width:${emblSz+8}px;height:${emblSz+8}px;border-radius:50%;background:rgba(6,6,15,0.85);border:2px solid ${dotColor};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.5)">
+          ${emblHTML}
+        </div>
+        <div style="position:absolute;bottom:-5px;right:-2px;z-index:3;width:10px;height:10px;border-radius:50%;background:${dotColor};border:1.5px solid #06060f;box-shadow:0 0 6px ${dotColor}"></div>
+      </div>`;
+
+    const icon = L.divIcon({
+      html: iconHtml,
+      className: '',
+      iconSize: [emblSz + glowSize + 10, emblSz + glowSize + 10],
+      iconAnchor: [(emblSz + glowSize + 10)/2, (emblSz + glowSize + 10)/2]
+    });
+
+    const marker = L.marker(coords, { icon }).addTo(leafletMap);
+
+    // Popup
+    const recentCount = getRecentCount(bar);
+    const popupHtml = `
+      <div style="font-family:'DM Sans',sans-serif;min-width:180px;background:#0f0f1a;color:white;padding:12px;border-radius:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:22px">${bar.emoji}</span>
+          <div>
+            <div style="font-size:14px;font-weight:800">${bar.name}</div>
+            <div style="font-size:10px;color:#5a5a8a">${bar.address}</div>
+          </div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:${dotColor};margin-bottom:10px">${status === 'Dead' ? 'Empty' : status === 'No Data' ? 'No reports yet' : status} ${recentCount > 0 ? '· ' + recentCount + ' reports' : ''}</div>
+        <div style="display:flex;gap:6px">
+          <button onclick="handleVote(event,${i},'Dead');this.closest('.leaflet-popup').querySelector('.leaflet-popup-close-button').click()" style="flex:1;padding:6px 0;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:8px;color:#22c55e;font-size:11px;font-weight:800;cursor:pointer">Empty</button>
+          <button onclick="handleVote(event,${i},'Busy');this.closest('.leaflet-popup').querySelector('.leaflet-popup-close-button').click()" style="flex:1;padding:6px 0;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:8px;color:#f59e0b;font-size:11px;font-weight:800;cursor:pointer">Busy</button>
+          <button onclick="handleVote(event,${i},'Packed');this.closest('.leaflet-popup').querySelector('.leaflet-popup-close-button').click()" style="flex:1;padding:6px 0;background:rgba(255,45,120,0.1);border:1px solid rgba(255,45,120,0.2);border-radius:8px;color:#ff2d78;font-size:11px;font-weight:800;cursor:pointer">Packed</button>
+        </div>
+        <button onclick="openBarPage(${i});this.closest('.leaflet-popup').querySelector('.leaflet-popup-close-button').click()" style="width:100%;margin-top:6px;padding:7px;background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.2);border-radius:8px;color:#ffd700;font-size:11px;font-weight:800;cursor:pointer">View Bar Page →</button>
+      </div>`;
+
+    marker.bindPopup(popupHtml, {
+      className: 'dtslo-popup',
+      closeButton: true,
+      maxWidth: 220
+    });
+
+    leafletMarkers.push(marker);
   });
 }
 
@@ -677,20 +832,19 @@ function renderFeedView() {
 
 function setView(v) {
   currentView = v;
-  const bList = document.getElementById('bars-list');
-  const bMap  = document.getElementById('bars-map');
-  const bFeed = document.getElementById('bars-feed');
-  if (bList) bList.style.display = v === 'list' ? 'block' : 'none';
-  if (bMap)  bMap.style.display  = v === 'map'  ? 'block' : 'none';
-  if (bFeed) bFeed.style.display = v === 'feed' ? 'block' : 'none';
-  const btnList = document.getElementById('view-list-btn');
-  const btnMap  = document.getElementById('view-map-btn');
-  const btnFeed = document.getElementById('view-feed-btn');
-  if (btnList) btnList.classList.toggle('active', v === 'list');
-  if (btnMap)  btnMap.classList.toggle('active',  v === 'map');
-  if (btnFeed) btnFeed.classList.toggle('active', v === 'feed');
-  if (v === 'map')  renderMapView();
-  if (v === 'feed') renderFeedView();
+  const views = { list:'bars-list', grid2:'bars-grid2', grid3:'bars-grid3', map:'bars-map', feed:'bars-feed' };
+  Object.entries(views).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = key === v ? 'block' : 'none';
+  });
+  ['list','grid2','grid3','map','feed'].forEach(key => {
+    const btn = document.getElementById('view-' + key + '-btn');
+    if (btn) btn.classList.toggle('active', key === v);
+  });
+  if (v === 'grid2') renderGrid2();
+  if (v === 'grid3') renderGrid3();
+  if (v === 'map')   renderRealMap();
+  if (v === 'feed')  renderFeedView();
 }
 
 // ── LOAD REPORTS ──

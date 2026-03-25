@@ -18,6 +18,8 @@
 <link rel="stylesheet" href="missions.css">
 <link rel="stylesheet" href="bar.css">
 <link rel="stylesheet" href="friends.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -120,7 +122,15 @@
           <span id="lines-last-updated" style="font-size:10px;color:var(--text2);font-weight:700">Loading...</span>
         </div>
       </div>
-      <button onclick="loadReports()" style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:7px 14px;color:var(--text2);font-family:inherit;font-size:11px;font-weight:800;cursor:pointer;margin-top:4px">↺ Refresh</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+        <button onclick="loadReports()" style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:7px 14px;color:var(--text2);font-family:inherit;font-size:11px;font-weight:800;cursor:pointer">↺ Refresh</button>
+        <div class="lines-view-toggle" id="lines-view-toggle">
+          <button class="view-btn active" id="view-list-btn" onclick="setView('list')" title="List">☰</button>
+          <button class="view-btn" id="view-grid2-btn" onclick="setView('grid2')" title="Mini Grid">⊞</button>
+          <button class="view-btn" id="view-grid3-btn" onclick="setView('grid3')" title="Tiles">⣿</button>
+          <button class="view-btn" id="view-map-btn" onclick="setView('map')" title="Map">🗺</button>
+        </div>
+      </div>
     </div>
 
     <div id="thursday-banner" style="display:none" class="thursday-banner">
@@ -156,9 +166,19 @@
       <div id="bars"></div>
     </div>
 
-    <!-- GRID VIEW -->
+    <!-- GRID 2 — Mini cards 2col -->
+    <div id="bars-grid2" style="display:none">
+      <div class="lines-grid2" id="grid2-container"></div>
+    </div>
+
+    <!-- GRID 3 — Tiles 3col -->
+    <div id="bars-grid3" style="display:none">
+      <div class="lines-grid3" id="grid3-container"></div>
+    </div>
+
+    <!-- MAP VIEW — Real Leaflet map -->
     <div id="bars-map" style="display:none">
-      <div class="map-grid" id="map-grid"></div>
+      <div id="leaflet-map" style="width:100%;height:calc(100vh - 220px);border-radius:16px;overflow:hidden;margin-bottom:12px"></div>
     </div>
 
     <!-- LIVE FEED VIEW -->
