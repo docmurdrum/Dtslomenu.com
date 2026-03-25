@@ -99,6 +99,88 @@
     if (tab)    tab.classList.add('mh-tab-active');
   }
 
+
+  function hubPreview(id) {
+    var hubs = {
+      beach: {
+        name: 'Beach Hub', emoji: '🏖', color: 'linear-gradient(135deg,#06b6d4,#0ea5e9)',
+        tagline: 'Surf conditions, beach cams, coastal trails and more',
+        features: ['🌊 Live surf cams & conditions','🚗 Beach traffic & parking','🥾 Coastal hiking trails','🏄 Rental & activity bookings','📍 Beach geo caches','🌅 Sunset alerts']
+      },
+      calpoly: {
+        name: 'Cal Poly Hub', emoji: '🎓', color: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+        tagline: 'Campus life, events, sports and student resources',
+        features: ['🏈 Mustang sports & tickets','📅 Campus events calendar','🍕 Dining & late night food','🎭 Performing Arts Center','📚 Study spots & library','🎓 Campus tours']
+      },
+      city: {
+        name: 'City Hub', emoji: '🏛', color: 'linear-gradient(135deg,#00f5ff,#00ff88)',
+        tagline: 'Community marketplace, civic events and local services',
+        features: ['🛒 Local marketplace','💼 Gig work & odd jobs','📅 City events & permits','🌳 Parks & recreation','🗳 Community board','🤝 Volunteer opportunities']
+      }
+    };
+    var hub = hubs[id];
+    if (!hub) return;
+
+    // Inject preview sheet
+    var existing = document.getElementById('mh-hub-preview');
+    if (existing) existing.remove();
+
+    var sheet = document.createElement('div');
+    sheet.id = 'mh-hub-preview';
+    sheet.innerHTML = [
+      '<div id="mh-hub-preview-inner">',
+        '<div class="mh-sheet-handle" id="mh-preview-handle"></div>',
+        '<div style="width:56px;height:56px;border-radius:16px;background:' + hub.color + ';display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:12px">' + hub.emoji + '</div>',
+        '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif;margin-bottom:6px">' + hub.name + '</div>',
+        '<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:20px;line-height:1.5">' + hub.tagline + '</div>',
+        '<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:12px">COMING SOON</div>',
+        hub.features.map(function(f) {
+          return '<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;color:rgba(255,255,255,0.7)">' + f + '</div>';
+        }).join(''),
+        '<button id="mh-preview-close-btn" style="width:100%;margin-top:20px;padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.4);font-size:14px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer">Notify Me When It Launches</button>',
+      '</div>',
+      '.mh-plan-btn{width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,215,0,0.3);background:linear-gradient(135deg,rgba(255,215,0,0.12),rgba(180,79,255,0.12));color:#ffd700;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:16px;font-family:Helvetica Neue,sans-serif;text-align:center}',
+      '.mh-section-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.25);margin:14px 0 8px}',
+      '.mh-tour-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}',
+      '.mh-tour-card{padding:12px 8px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);cursor:pointer;text-align:center;transition:all 0.15s}',
+      '.mh-tour-card:active{transform:scale(0.97)}',
+      '.mh-tour-icon{font-size:22px;margin-bottom:4px}',
+      '.mh-tour-name{font-size:11px;font-weight:800;color:#fff;margin-bottom:2px}',
+      '.mh-tour-meta{font-size:9px;color:rgba(255,255,255,0.3)}',
+      '.mh-venue-list{display:flex;flex-direction:column;gap:0;margin-bottom:4px}',
+      '.mh-venue-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer}',
+      '.mh-venue-emoji{font-size:20px;flex-shrink:0}',
+      '.mh-venue-info{flex:1}',
+      '.mh-venue-name{font-size:13px;font-weight:800;color:#fff}',
+      '.mh-venue-sub{font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px}',
+      '.mh-tool-icon{font-size:22px;margin-bottom:4px}',
+      '.mh-hub-card-soon{opacity:0.7;cursor:pointer}',
+      '.mh-hub-card-soon:active{transform:scale(0.98)}',
+      '#mh-hub-preview{position:absolute;inset:0;z-index:25;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;backdrop-filter:blur(4px);opacity:0;transition:opacity 0.3s}',
+      '#mh-hub-preview.show{opacity:1}',
+      '#mh-hub-preview-inner{width:100%;background:rgba(8,8,20,0.97);border-radius:24px 24px 0 0;padding:16px 20px 48px;border-top:1px solid rgba(255,255,255,0.08);max-height:80vh;overflow-y:auto}',
+    ].join('');
+
+    document.getElementById('menu-home').appendChild(sheet);
+    setTimeout(function() {
+      sheet.classList.add('show');
+      var handle = document.getElementById('mh-preview-handle');
+      var closeBtn = document.getElementById('mh-preview-close-btn');
+      var closeSheet = function() { sheet.remove(); };
+      if (handle) handle.addEventListener('click', closeSheet);
+      if (closeBtn) closeBtn.addEventListener('click', closeSheet);
+    }, 50);
+  }
+  window.menuHomeHubPreview = hubPreview;
+
+  function closeThenShowPlanIt() {
+    closeDrawer();
+    // Plan It will be wired in next build
+    setTimeout(function() {
+      if (typeof revealApp === 'function') revealApp();
+    }, 300);
+  }
+  window.menuHomeCloseThenShowPlanIt = closeThenShowPlanIt;
   function closeDrawer() {
     ['mh-drawer-hubs','mh-drawer-travel','mh-drawer-tools','mh-drawer-dev'].forEach(function(d) {
       var el = document.getElementById(d);
@@ -266,38 +348,69 @@
         '<div class="mh-hub-cards">',
           '<div class="mh-hub-card mh-hub-card-active" onclick="menuHomeEnterDTSLO()">',
             '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#ff2d78,#b44fff)">🌃</div>',
-            '<div class="mh-hub-card-info"><div class="mh-hub-card-name">DTSLO</div><div class="mh-hub-card-sub">Nightlife · Active</div></div>',
-            '<div class="mh-hub-card-arrow">→</div>',
+            '<div class="mh-hub-card-info"><div class="mh-hub-card-name">DTSLO</div><div class="mh-hub-card-sub">Nightlife · Active Now</div></div>',
+            '<div class="mh-hub-card-arrow" style="color:#ffd700">→</div>',
           '</div>',
-          '<div class="mh-hub-card mh-hub-card-soon">',
-            '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#06b6d4,#0ea5e9);opacity:0.4">🏖</div>',
-            '<div class="mh-hub-card-info"><div class="mh-hub-card-name">Beach Hub</div><div class="mh-hub-card-sub">Coming Soon</div></div>',
+          '<div class="mh-hub-card mh-hub-card-soon" onclick="menuHomeHubPreview(this.dataset.hub)" data-hub="beach">',
+            '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#06b6d4,#0ea5e9)">🏖</div>',
+            '<div class="mh-hub-card-info"><div class="mh-hub-card-name">Beach Hub</div><div class="mh-hub-card-sub">Surf · Beaches · Coastal</div></div>',
+            '<div class="mh-hub-card-arrow" style="color:rgba(255,255,255,0.2)">›</div>',
           '</div>',
-          '<div class="mh-hub-card mh-hub-card-soon">',
-            '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);opacity:0.4">🎓</div>',
-            '<div class="mh-hub-card-info"><div class="mh-hub-card-name">Cal Poly</div><div class="mh-hub-card-sub">Coming Soon</div></div>',
+          '<div class="mh-hub-card mh-hub-card-soon" onclick="menuHomeHubPreview(this.dataset.hub)" data-hub="calpoly">',
+            '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">🎓</div>',
+            '<div class="mh-hub-card-info"><div class="mh-hub-card-name">Cal Poly</div><div class="mh-hub-card-sub">Campus · Events · Sports</div></div>',
+            '<div class="mh-hub-card-arrow" style="color:rgba(255,255,255,0.2)">›</div>',
           '</div>',
-          '<div class="mh-hub-card mh-hub-card-soon">',
-            '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#00f5ff,#00ff88);opacity:0.4">🏛</div>',
-            '<div class="mh-hub-card-info"><div class="mh-hub-card-name">City Hub</div><div class="mh-hub-card-sub">Coming Soon</div></div>',
+          '<div class="mh-hub-card mh-hub-card-soon" onclick="menuHomeHubPreview(this.dataset.hub)" data-hub="city">',
+            '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#00f5ff,#00ff88)">🏛</div>',
+            '<div class="mh-hub-card-info"><div class="mh-hub-card-name">City Hub</div><div class="mh-hub-card-sub">Community · Events · Civic</div></div>',
+            '<div class="mh-hub-card-arrow" style="color:rgba(255,255,255,0.2)">›</div>',
           '</div>',
         '</div>',
       '</div>',
 
       '<div id="mh-drawer-travel" class="mh-drawer">',
         '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
-        '<div class="mh-drawer-title">Travel Guide</div>',
-        '<div style="color:rgba(255,255,255,0.4);font-size:13px;padding:8px 0">Your SLO travel companion — coming soon.</div>',
+        '<div class="mh-drawer-title">✨ Travel Guide</div>',
+        '<button class="mh-plan-btn" onclick="menuHomeCloseThenShowPlanIt()">✨ Plan It — Build My Outing</button>',
+        '<div class="mh-section-label">🗺 TOURS</div>',
+        '<div class="mh-tour-grid">',
+          '<div class="mh-tour-card" onclick="menuHomeEnterDTSLO()"><div class="mh-tour-icon">🏛</div><div class="mh-tour-name">Historic SLO</div><div class="mh-tour-meta">90 min · Walking</div></div>',
+          '<div class="mh-tour-card" onclick="menuHomeEnterDTSLO()"><div class="mh-tour-icon">🥾</div><div class="mh-tour-name">Bishop Peak</div><div class="mh-tour-meta">2.5 hrs · Hard</div></div>',
+          '<div class="mh-tour-card" onclick="menuHomeEnterDTSLO()"><div class="mh-tour-icon">🍕</div><div class="mh-tour-name">Food Tour</div><div class="mh-tour-meta">3 hrs · Easy</div></div>',
+          '<div class="mh-tour-card" onclick="menuHomeEnterDTSLO()"><div class="mh-tour-icon">🚴</div><div class="mh-tour-name">Bike Loop</div><div class="mh-tour-meta">90 min · Easy</div></div>',
+          '<div class="mh-tour-card" onclick="menuHomeEnterDTSLO()"><div class="mh-tour-icon">🍷</div><div class="mh-tour-name">Wine Trail</div><div class="mh-tour-meta">4 hrs · Drive</div></div>',
+          '<div class="mh-tour-card" onclick="menuHomeEnterDTSLO()"><div class="mh-tour-icon">🌊</div><div class="mh-tour-name">Beach Day</div><div class="mh-tour-meta">All day · Drive</div></div>',
+        '</div>',
+        '<div class="mh-section-label">🍽 RESTAURANTS</div>',
+        '<div class="mh-venue-list">',
+          '<div class="mh-venue-row" onclick="menuHomeEnterDTSLO()"><span class="mh-venue-emoji">🌊</span><div class="mh-venue-info"><div class="mh-venue-name">Novo Restaurant</div><div class="mh-venue-sub">World Fusion · $$$ · 4.5⭐</div></div></div>',
+          '<div class="mh-venue-row" onclick="menuHomeEnterDTSLO()"><span class="mh-venue-emoji">🍕</span><div class="mh-venue-info"><div class="mh-venue-name">Giuseppe\'s Cucina</div><div class="mh-venue-sub">Italian · $$$ · 4.4⭐</div></div></div>',
+          '<div class="mh-venue-row" onclick="menuHomeEnterDTSLO()"><span class="mh-venue-emoji">🥩</span><div class="mh-venue-info"><div class="mh-venue-name">Firestone Grill</div><div class="mh-venue-sub">BBQ · $ · 4.3⭐</div></div></div>',
+          '<div class="mh-venue-row" onclick="menuHomeEnterDTSLO()"><span class="mh-venue-emoji">🌮</span><div class="mh-venue-info"><div class="mh-venue-name">Luna Red</div><div class="mh-venue-sub">Tapas · $$ · 4.2⭐</div></div></div>',
+          '<div class="mh-venue-row" style="color:rgba(255,255,255,0.3);font-size:12px;padding:10px 0;text-align:center">View all 30 restaurants →</div>',
+        '</div>',
+        '<div class="mh-section-label">🏨 HOTELS</div>',
+        '<div class="mh-venue-list">',
+          '<div class="mh-venue-row" onclick="menuHomeEnterDTSLO()"><span class="mh-venue-emoji">✨</span><div class="mh-venue-info"><div class="mh-venue-name">Hotel San Luis Obispo</div><div class="mh-venue-sub">Luxury · $$$$ · 4.7⭐</div></div></div>',
+          '<div class="mh-venue-row" onclick="menuHomeEnterDTSLO()"><span class="mh-venue-emoji">🌿</span><div class="mh-venue-info"><div class="mh-venue-name">Hotel Cerro</div><div class="mh-venue-sub">Boutique · $$$$ · 4.6⭐</div></div></div>',
+          '<div class="mh-venue-row" onclick="menuHomeEnterDTSLO()"><span class="mh-venue-emoji">🏛</span><div class="mh-venue-info"><div class="mh-venue-name">Granada Hotel</div><div class="mh-venue-sub">Historic · $$$ · 4.5⭐</div></div></div>',
+          '<div class="mh-venue-row" style="color:rgba(255,255,255,0.3);font-size:12px;padding:10px 0;text-align:center">View all 18 hotels →</div>',
+        '</div>',
       '</div>',
 
       '<div id="mh-drawer-tools" class="mh-drawer">',
         '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
         '<div class="mh-drawer-title">Tools</div>',
         '<div class="mh-tools-grid">',
-          '<button class="mh-tool-btn" onclick="menuHomeEnterDTSLO()">🚗 Rides</button>',
-          '<button class="mh-tool-btn">🏄 Surf</button>',
-          '<button class="mh-tool-btn">🌤 Weather</button>',
-          '<button class="mh-tool-btn">🏧 ATMs</button>',
+          '<button class="mh-tool-btn" onclick="menuHomeEnterDTSLO()"><div class="mh-tool-icon">🚗</div><div>Rides</div></button>',
+          '<button class="mh-tool-btn"><div class="mh-tool-icon">🏄</div><div>Surf</div></button>',
+          '<button class="mh-tool-btn"><div class="mh-tool-icon">🌤</div><div>Weather</div></button>',
+          '<button class="mh-tool-btn"><div class="mh-tool-icon">🏧</div><div>ATMs</div></button>',
+          '<button class="mh-tool-btn"><div class="mh-tool-icon">🅿️</div><div>Parking</div></button>',
+          '<button class="mh-tool-btn"><div class="mh-tool-icon">📡</div><div>Traffic</div></button>',
+          '<button class="mh-tool-btn"><div class="mh-tool-icon">🚌</div><div>Transit</div></button>',
+          '<button class="mh-tool-btn"><div class="mh-tool-icon">⛽</div><div>Gas</div></button>',
         '</div>',
       '</div>',
 
