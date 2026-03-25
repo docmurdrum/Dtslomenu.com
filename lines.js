@@ -348,8 +348,9 @@ function buildFriendsAtBarRow(barName) {
 
 
 // ── SHOW FRIENDS AT BAR POPUP ──
-function showFriendsAtBar(barName, event) {
+function showFriendsAtBar(barIndex, event) {
   event.stopPropagation();
+  const barName = bars[barIndex]?.name || "";
   const friends = (window.friendsCheckins || []).filter(f => f.barName === barName);
   if (!friends.length) return;
 
@@ -426,16 +427,7 @@ function renderBars() {
       : null;
 
     const el = document.createElement('div');
-    const fx = glowSettings[status]?.effects || {};
-    let cardClasses = 'bar-card-v2';
-    if (isPacked) cardClasses += ' v2-packed';
-    else if (isBusy) cardClasses += ' v2-busy';
-    else if (isCollapsed) cardClasses += ' v2-collapsed';
-    if (fx.pulse)  cardClasses += ' emblem-effect-pulse';
-    if (fx.bounce) cardClasses += ' emblem-effect-bounce';
-    if (fx.shake)  cardClasses += ' emblem-effect-shake';
-    if (fx.dim)    cardClasses += ' card-effect-dim';
-    el.className = cardClasses;
+    el.className = 'bar-card-v2'; // updated after glowSettings computed below
 
     // Build checkin strip separately to avoid nested template literal issues
     const _ci = activeCheckins[bar.name];
@@ -467,6 +459,18 @@ function renderBars() {
     const glowColor = glow.color + glowAlpha;
     const glowSize = Math.round(glow.intensity * 0.6);
 
+    // Apply card classes now that glowSettings is computed
+    const fx = glow.effects || {};
+    let cardClasses = 'bar-card-v2';
+    if (isPacked) cardClasses += ' v2-packed';
+    else if (isBusy) cardClasses += ' v2-busy';
+    else if (isCollapsed) cardClasses += ' v2-collapsed';
+    if (fx.pulse)  cardClasses += ' emblem-effect-pulse';
+    if (fx.bounce) cardClasses += ' emblem-effect-bounce';
+    if (fx.shake)  cardClasses += ' emblem-effect-shake';
+    if (fx.dim)    cardClasses += ' card-effect-dim';
+    el.className = cardClasses;
+
     // Line count and inside count from checkins
     const lineCount    = Object.values(activeCheckins).filter(c => c.barName === bar.name && c.type === 'line').length;
     const insideCount  = Object.values(activeCheckins).filter(c => c.barName === bar.name && c.type === 'inside').length;
@@ -476,6 +480,9 @@ function renderBars() {
 
     const emblSz = bar.emblem_size || 48;
     const vertOffset = bar.emblem_offset || -36;
+    const emblHTML = bar.emblem_url
+      ? '<img src="' + bar.emblem_url + '" style="width:' + emblSz + 'px;height:' + emblSz + 'px;object-fit:cover;border-radius:50%">'
+      : '<span style="font-size:' + (emblSz*0.55) + 'px;line-height:1">' + bar.emoji + '</span>';
 
     el.innerHTML = `
       <!-- Photo area -->
@@ -485,9 +492,7 @@ function renderBars() {
         <div class="bar-emblem-float" style="top:${vertOffset}px">
           <div class="bar-emblem-glow" style="background:${glow.color};width:${emblSz+40}px;height:${emblSz+40}px;opacity:${glow.intensity/100}"></div>
           <div class="bar-emblem-disc" style="width:${emblSz+24}px;height:${emblSz+24}px">
-            ${bar.emblem_url
-              ? `<img src="${bar.emblem_url}" style="width:${emblSz}px;height:${emblSz}px;object-fit:cover;border-radius:50%">`
-              : `<span style="font-size:${emblSz*0.55}px;line-height:1">${bar.emoji}</span>`}
+            ${emblHTML}
           </div>
         </div>
 
@@ -544,7 +549,7 @@ function renderBars() {
 
       <!-- Friends button -->
       ${friendsHere.length > 0 ? `
-      <button class="bar-friends-btn" onclick="showFriendsAtBar('${bar.name.replace(/'/g,"\\'")}',event)">
+      <button class="bar-friends-btn" onclick="showFriendsAtBar(${i},event)">
         <div style="display:flex;margin-right:6px">
           ${friendsHere.slice(0,3).map(f => `<div class="bar-friend-av-sm" style="background:${f.color}">${f.username[0].toUpperCase()}</div>`).join('')}
         </div>
