@@ -55,10 +55,10 @@ async function loadBarsFromDB() {
           bars[idx].glow_packed_intensity= row.glow_packed_intensity?? 90;
           bars[idx].glow_nodata_color    = row.glow_nodata_color     || bars[idx].color;
           bars[idx].glow_nodata_intensity= row.glow_nodata_intensity ?? 10;
-          bars[idx].effects_nodata = JSON.parse(row.effects_nodata || '{}');
-          bars[idx].effects_empty  = JSON.parse(row.effects_empty  || '{}');
-          bars[idx].effects_busy   = JSON.parse(row.effects_busy   || '{}');
-          bars[idx].effects_packed = JSON.parse(row.effects_packed || '{}');
+          try { bars[idx].effects_nodata = JSON.parse(row.effects_nodata || '{}'); } catch(e) { bars[idx].effects_nodata = {}; }
+          try { bars[idx].effects_empty  = JSON.parse(row.effects_empty  || '{}'); } catch(e) { bars[idx].effects_empty  = {}; }
+          try { bars[idx].effects_busy   = JSON.parse(row.effects_busy   || '{}'); } catch(e) { bars[idx].effects_busy   = {}; }
+          try { bars[idx].effects_packed = JSON.parse(row.effects_packed || '{}'); } catch(e) { bars[idx].effects_packed = {}; }
         }
       });
     }
