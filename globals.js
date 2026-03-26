@@ -35,3 +35,17 @@ if (typeof window !== 'undefined') {
 // ── MERCH / PRINTFUL ──
 var PRINTFUL_KEY = 'r1xwbRdtOpANsjTjcsP7IFiA6XssWqSu28UWAsG8';
 var PRINTFUL_API = 'https://api.printful.com';
+
+// ── GEO DISTANCE HELPER ──
+function geoDistance(lat1, lng1, lat2, lng2) {
+  var R = 3958.8; // miles
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLng = (lng2 - lng1) * Math.PI / 180;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+    Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Current map center — updated when Find Hubs marker is tapped
+var _findHubsUserCenter = null;

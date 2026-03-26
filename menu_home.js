@@ -406,10 +406,10 @@ var hubs = [
   { coords: savedCoords['restaurants']||[-120.6655, 35.2808], icon: '🍽',  label: 'Restaurants',  sub: 'Browse & dine',  color: 'linear-gradient(135deg,#ff6b35,#ef4444)', active: true,  onclick: 'menuHomeOpenRestaurantHub()' },
   { coords: savedCoords['beach']||[-120.6750, 35.2680], icon: '🏖',  label: 'Beach Hub',    sub: '8 beaches',      color: 'linear-gradient(135deg,#06b6d4,#0ea5e9)', active: true,  onclick: 'menuHomeOpenBeachHub()' },
   { coords: savedCoords['wine']||[-120.8200, 35.3600], icon: '🍷',  label: 'Wine Country', sub: 'Paso & SLO wine', color: 'linear-gradient(135deg,#7c2d8e,#b44fff)', active: true,  onclick: 'menuHomeOpenWineHub()' },
-  { coords: savedCoords['events']||[-120.6590, 35.2820], icon: '🎭',  label: 'Events',       sub: 'Coming Soon',    color: 'linear-gradient(135deg,#ffd700,#ff9500)', active: false },
-  { coords: savedCoords['calpoly']||[-120.6540, 35.2980], icon: '🎓',  label: 'Cal Poly',     sub: 'Coming Soon',    color: 'linear-gradient(135deg,#6366f1,#8b5cf6)', active: false },
+  { coords: savedCoords['events']||[-120.6590, 35.2820], icon: '🎭',  label: 'Events',       sub: 'Concerts · Markets',  color: 'linear-gradient(135deg,#ffd700,#ff9500)', active: true,  onclick: 'menuHomeOpenEventsHub()' },
+  { coords: savedCoords['calpoly']||[-120.6540, 35.2980], icon: '🎓',  label: 'Cal Poly',     sub: 'Student Life',        color: 'linear-gradient(135deg,#6366f1,#8b5cf6)', active: true,  onclick: 'menuHomeOpenCalPolyHub()' },
   { coords: savedCoords['shopping']||[-120.6580, 35.2760], icon: '🛒',  label: 'Shopping',     sub: 'Coming Soon',    color: 'linear-gradient(135deg,#22c55e,#16a34a)', active: false },
-  { coords: savedCoords['city']||[-120.6620, 35.2790], icon: '🏛',  label: 'City Hub',     sub: 'Coming Soon',    color: 'linear-gradient(135deg,#00f5ff,#00ff88)', active: false },
+  { coords: savedCoords['city']||[-120.6620, 35.2790], icon: '🏛',  label: 'City Hub',     sub: 'Landmarks · Culture',  color: 'linear-gradient(135deg,#00f5ff,#00ff88)', active: true,  onclick: 'menuHomeOpenCityHub()' },
 ];
 
 hubs.forEach(function(hub) {
@@ -473,14 +473,22 @@ function injectHTML() {
           '<div class="mh-hub-card-info"><div class="mh-hub-card-name">Beach Hub</div><div class="mh-hub-card-sub">8 beaches · Surf · Trails</div></div>',
           '<div class="mh-hub-card-arrow" style="color:#ffd700">→</div>',
         '</div>',
-        '<div class="mh-hub-card mh-hub-card-soon" onclick="menuHomeHubPreview(this.dataset.hub)" data-hub="calpoly">',
+        '<div class="mh-hub-card mh-hub-card-active" onclick="menuHomeOpenCalPolyHub()">',
+          '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">🎓</div>',
+          '<div class="mh-hub-card-info"><div class="mh-hub-card-name">Cal Poly Hub</div><div class="mh-hub-card-sub">Student life · Bars · Eats</div></div>',
+          '<div class="mh-hub-card-arrow" style="color:#ffd700">→</div>',
+        '</div>',
+        '<div class="mh-hub-card mh-hub-card-active" onclick="menuHomeOpenEventsHub()">',
+          '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#ffd700,#ff9500)">🎭</div>',
+          '<div class="mh-hub-card-info"><div class="mh-hub-card-name">Events Hub</div><div class="mh-hub-card-sub">Concerts · Markets · Festivals</div></div>',
+          '<div class="mh-hub-card-arrow" style="color:#ffd700">→</div>',
+        '</div>',
+        '<div class="mh-hub-card mh-hub-card-active" onclick="menuHomeOpenCityHub()">',
+          '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#00f5ff,#00ff88)">🏛</div>',
+          '<div class="mh-hub-card-info"><div class="mh-hub-card-name">City Hub</div><div class="mh-hub-card-sub">Landmarks · Culture · Art</div></div>',
+          '<div class="mh-hub-card-arrow" style="color:#ffd700">→</div>',
           '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">🎓</div>',
           '<div class="mh-hub-card-info"><div class="mh-hub-card-name">Cal Poly</div><div class="mh-hub-card-sub">Campus · Events · Sports</div></div>',
-          '<div class="mh-hub-card-arrow" style="color:rgba(255,255,255,0.2)">›</div>',
-        '</div>',
-        '<div class="mh-hub-card mh-hub-card-soon" onclick="menuHomeHubPreview(this.dataset.hub)" data-hub="city">',
-          '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#00f5ff,#00ff88)">🏛</div>',
-          '<div class="mh-hub-card-info"><div class="mh-hub-card-name">City Hub</div><div class="mh-hub-card-sub">Community · Events · Civic</div></div>',
           '<div class="mh-hub-card-arrow" style="color:rgba(255,255,255,0.2)">›</div>',
         '</div>',
       '</div>',
@@ -833,77 +841,122 @@ function closeDrawer() {
 }
 
 function findHubs() {
-  // Open a hub picker sheet — shows all active hubs, tap to enter
-  var existing = document.getElementById('mh-find-hubs-sheet');
-  if (existing) { existing.remove(); return; }
-
-  var hubs = [
-    { id:'dtslo',       icon:'🌃', label:'DTSLO',        sub:'Nightlife · Bars · Games',        color:'linear-gradient(135deg,#ff2d78,#b44fff)', fn:'menuHomeRequireAuth()',        coords:[-120.6650,35.2803] },
-    { id:'restaurants', icon:'🍽',  label:'Restaurants',   sub:'38 venues · All cuisine',          color:'linear-gradient(135deg,#f97316,#ef4444)', fn:'menuHomeOpenRestaurantHub()',  coords:[-120.6655,35.2808] },
-    { id:'nature',      icon:'🌿', label:'Nature Hub',    sub:'10 spots · Hikes · Parks',         color:'linear-gradient(135deg,#22c55e,#16a34a)', fn:'menuHomeOpenNatureHub()',      coords:[-120.6785,35.2920] },
-    { id:'thrill',      icon:'⚡', label:'Thrill Hub',    sub:'9 adventures · Zipline · ATV',     color:'linear-gradient(135deg,#ef4444,#dc2626)', fn:'menuHomeOpenThrillHub()',      coords:[-120.6595,35.2750] },
-    { id:'beach',       icon:'🏖', label:'Beach Hub',     sub:'8 beaches · Conditions · Trails',  color:'linear-gradient(135deg,#06b6d4,#0284c7)', fn:'menuHomeOpenBeachHub()',       coords:[-120.6750,35.2680] },
-    { id:'wine',        icon:'🍷', label:'Wine Country',  sub:'Paso Robles · Edna Valley',        color:'linear-gradient(135deg,#9b2335,#6b1020)', fn:'menuHomeOpenWineHub()',        coords:[-120.8200,35.3600] },
-    { id:'brewery',     icon:'🍺', label:'Craft Beer',    sub:'9 SLO breweries · Crawl builder',  color:'linear-gradient(135deg,#f59e0b,#d97706)', fn:'menuHomeOpenBreweryHub()',     coords:[-120.6595,35.2808] },
-  ];
-
-  var sheet = document.createElement('div');
-  sheet.id = 'mh-find-hubs-sheet';
-  sheet.style.cssText = 'position:absolute;bottom:0;left:0;right:0;z-index:25;background:rgba(8,8,20,0.97);border-radius:24px 24px 0 0;border-top:1px solid rgba(255,255,255,0.1);padding:12px 16px 40px;max-height:70vh;overflow-y:auto;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)';
-
-  // Build sheet content using DOM to avoid quote nesting
-  var dragHandle = document.createElement('div');
-  dragHandle.style.cssText = 'width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.15);margin:0 auto 14px;cursor:pointer';
-  dragHandle.onclick = function() { sheet.remove(); };
-  sheet.appendChild(dragHandle);
-
-  var title = document.createElement('div');
-  title.style.cssText = 'font-size:16px;font-weight:800;margin-bottom:4px';
-  title.textContent = '📍 Find Hubs';
-  sheet.appendChild(title);
-
-  var sub = document.createElement('div');
-  sub.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:14px';
-  sub.textContent = 'Tap a hub to jump there';
-  sheet.appendChild(sub);
-
-  hubs.forEach(function(h) {
-    var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:14px;margin-bottom:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:background 0.15s';
-    row.innerHTML = '<div style="width:40px;height:40px;border-radius:12px;background:' + h.color + ';display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">' + h.icon + '</div>' +
-      '<div style="flex:1"><div style="font-size:13px;font-weight:800">' + h.label + '</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">' + h.sub + '</div></div>' +
-      '<div style="font-size:14px;color:rgba(255,255,255,0.3)">→</div>';
-    row.addEventListener('mousedown', function() { row.style.background = 'rgba(255,255,255,0.07)'; });
-    row.addEventListener('mouseup', function() { row.style.background = 'rgba(255,255,255,0.03)'; });
-    row.addEventListener('click', function() {
-      sheet.remove();
-      try { if (homeMap) homeMap.flyTo({ center: h.coords, zoom: 14.5, duration: 800 }); } catch(e) {}
-      try { eval(h.fn); } catch(e) {}
-    });
-    sheet.appendChild(row);
-  });
-
-  var returnRow = document.createElement('div');
-  returnRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:14px;margin-top:4px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.08);cursor:pointer';
-  returnRow.innerHTML = '<div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🗺</div><div style="flex:1"><div style="font-size:13px;font-weight:800">Return to SLO</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">Fly back to downtown</div></div>';
-  returnRow.onclick = menuHomeReturnToSLO;
-  sheet.appendChild(returnRow);
-
-  document.getElementById('menu-home').appendChild(sheet);
-  setTimeout(function() { sheet.style.transform = 'translateY(0)'; }, 30);
-
-  // Close on map tap
-  var mapEl = document.getElementById('mh-map');
-  if (mapEl) {
-    function closeOnMapTap() { sheet.remove(); mapEl.removeEventListener('click', closeOnMapTap); }
-    setTimeout(function() { mapEl.addEventListener('click', closeOnMapTap); }, 300);
+  // Toggle find-hubs mode — place glowing markers on map, no sheet yet
+  if (window._findHubsActive) {
+    findHubsDeactivate();
+    return;
   }
+  findHubsActivate();
 }
 
-// 2. Return to SLO
+var _findHubsMarkers = [];
+var _findHubsActive = false;
+
+var FIND_HUBS_DEFS = [
+  { id:'dtslo',       icon:'🌃', label:'DTSLO',        sub:'Nightlife · Bars',         color:'#ff2d78',  fn:'menuHomeRequireAuth()',       coords:[-120.6650,35.2803], glow:'255,45,120' },
+  { id:'restaurants', icon:'🍽',  label:'Restaurants',  sub:'Dining · All cuisine',     color:'#f97316',  fn:'menuHomeOpenRestaurantHub()', coords:[-120.6655,35.2808], glow:'249,115,22' },
+  { id:'nature',      icon:'🌿', label:'Nature',        sub:'Hikes · Parks · Trails',   color:'#22c55e',  fn:'menuHomeOpenNatureHub()',     coords:[-120.6785,35.2920], glow:'34,197,94'  },
+  { id:'thrill',      icon:'⚡', label:'Thrill',        sub:'Zipline · ATV · Air',      color:'#ef4444',  fn:'menuHomeOpenThrillHub()',     coords:[-120.6595,35.2750], glow:'239,68,68'  },
+  { id:'beach',       icon:'🏖', label:'Beach',         sub:'Beaches · Surf · Tides',   color:'#06b6d4',  fn:'menuHomeOpenBeachHub()',      coords:[-120.6750,35.2680], glow:'6,182,212'  },
+  { id:'wine',        icon:'🍷', label:'Wine',          sub:'Paso · Edna Valley',       color:'#9b2335',  fn:'menuHomeOpenWineHub()',       coords:[-120.8200,35.3600], glow:'155,35,53'  },
+  { id:'brewery',     icon:'🍺', label:'Craft Beer',    sub:'SLO breweries',            color:'#f59e0b',  fn:'menuHomeOpenBreweryHub()',    coords:[-120.6595,35.2808], glow:'245,158,11' },
+  { id:'events',      icon:'🎭', label:'Events',        sub:'Concerts · Markets',       color:'#ffd700',  fn:'menuHomeOpenEventsHub()',     coords:[-120.6590,35.2820], glow:'255,215,0'  },
+  { id:'calpoly',     icon:'🎓', label:'Cal Poly',      sub:'Student life',             color:'#6366f1',  fn:'menuHomeOpenCalPolyHub()',    coords:[-120.6540,35.2980], glow:'99,102,241' },
+  { id:'city',        icon:'🏛', label:'City',          sub:'Landmarks · Culture',      color:'#00f5ff',  fn:'menuHomeOpenCityHub()',       coords:[-120.6620,35.2790], glow:'0,245,255'  },
+];
+
+function findHubsActivate() {
+  window._findHubsActive = true;
+
+  // Update button state
+  var btn = document.getElementById('mh-find-hubs');
+  if (btn) { btn.textContent = '✕ Exit'; btn.style.background = 'rgba(255,45,120,0.3)'; btn.style.borderColor = '#ff2d78'; btn.style.color = '#ff2d78'; }
+
+  // Dim the map slightly
+  var overlay = document.getElementById('mh-map-overlay');
+  if (overlay) { overlay.style.opacity = '0.25'; overlay.style.pointerEvents = 'none'; }
+
+  // Show instruction toast
+  if (typeof showToast === 'function') showToast('Tap a glowing hub to open it');
+
+  // Add CSS for pulsing markers if not present
+  if (!document.getElementById('find-hubs-css')) {
+    var s = document.createElement('style');
+    s.id = 'find-hubs-css';
+    s.textContent = '@keyframes hub-pulse{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(var(--glow),0.7)}70%{transform:scale(1.05);box-shadow:0 0 0 16px rgba(var(--glow),0)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(var(--glow),0)}}' +
+      '.find-hub-marker{cursor:pointer;transition:transform 0.15s}' +
+      '.find-hub-marker:hover{transform:scale(1.15)!important}' +
+      '.find-hub-pulse{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;animation:hub-pulse 2s ease-out infinite;border:2px solid rgba(255,255,255,0.5)}';
+    document.head.appendChild(s);
+  }
+
+  // Place a glowing marker for each hub
+  FIND_HUBS_DEFS.forEach(function(h, idx) {
+    var el = document.createElement('div');
+    el.className = 'find-hub-marker';
+    el.style.cssText = '--glow:' + h.glow + ';display:flex;flex-direction:column;align-items:center;gap:4px;transform:scale(0);transition:transform 0.4s cubic-bezier(0.34,1.5,0.64,1)';
+
+    var dot = document.createElement('div');
+    dot.className = 'find-hub-pulse';
+    dot.style.cssText = 'background:' + h.color + ';box-shadow:0 0 20px rgba(' + h.glow + ',0.6)';
+    dot.textContent = h.icon;
+
+    var label = document.createElement('div');
+    label.style.cssText = 'font-size:10px;font-weight:800;color:white;background:rgba(0,0,0,0.7);padding:2px 7px;border-radius:20px;white-space:nowrap;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.15)';
+    label.textContent = h.label;
+
+    el.appendChild(dot);
+    el.appendChild(label);
+
+    // Tap opens hub directly — store map center for proximity sort
+    el.addEventListener('click', function() {
+      findHubsDeactivate();
+      // Store current map center for proximity sorting inside the hub
+      try {
+        if (homeMap) {
+          var center = homeMap.getCenter();
+          window._findHubsUserCenter = [center.lat, center.lng];
+        }
+      } catch(e) {}
+      // Fly to hub location first
+      try { if (homeMap) homeMap.flyTo({ center: h.coords, zoom: 14.5, duration: 600 }); } catch(e) {}
+      // Then open hub after short delay
+      setTimeout(function() {
+        try { eval(h.fn); } catch(e) {}
+      }, 400);
+    });
+
+    try {
+      var marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat(h.coords)
+        .addTo(homeMap);
+      _findHubsMarkers.push(marker);
+    } catch(e) {}
+
+    // Stagger pop-in animation
+    setTimeout(function() { el.style.transform = 'scale(1)'; }, 50 + idx * 60);
+  });
+}
+
+function findHubsDeactivate() {
+  window._findHubsActive = false;
+
+  // Reset button
+  var btn = document.getElementById('mh-find-hubs');
+  if (btn) { btn.textContent = '📍 Find Hubs'; btn.style.background = 'rgba(8,8,20,0.75)'; btn.style.borderColor = 'rgba(255,255,255,0.15)'; btn.style.color = 'rgba(255,255,255,0.8)'; }
+
+  // Undim map
+  var overlay = document.getElementById('mh-map-overlay');
+  if (overlay) { overlay.style.opacity = '0'; }
+
+  // Remove markers
+  _findHubsMarkers.forEach(function(m) { try { m.remove(); } catch(e) {} });
+  _findHubsMarkers = [];
+}
+window.findHubsDeactivate = findHubsDeactivate;
+
 function menuHomeReturnToSLO() {
-  var sheet = document.getElementById('mh-find-hubs-sheet');
-  if (sheet) sheet.remove();
+  findHubsDeactivate();
   if (homeMap) {
     homeMap.flyTo({ center: [-120.6650, 35.2803], zoom: 13.5, pitch: 55, bearing: -25, duration: 1200 });
   }

@@ -222,6 +222,21 @@ function openNatureHub() {
 
   document.getElementById('menu-home').appendChild(hub);
   setTimeout(function() { hub.style.opacity = '1'; }, 30);
+
+  // If opened via Find Hubs, sort nearest spots first
+  if (window._findHubsUserCenter) {
+    var uLat = window._findHubsUserCenter[0];
+    var uLng = window._findHubsUserCenter[1];
+    var sorted = NATURE_SPOTS.slice().sort(function(a, b) {
+      if (!a.coords || !b.coords) return 0;
+      var da = typeof geoDistance === 'function' ? geoDistance(uLat, uLng, a.coords[1], a.coords[0]) : 0;
+      var db = typeof geoDistance === 'function' ? geoDistance(uLat, uLng, b.coords[1], b.coords[0]) : 0;
+      return da - db;
+    });
+    var _cEl = document.getElementById('nature-content');
+    if (_cEl) _cEl.innerHTML = natureRenderList(sorted);
+    window._findHubsUserCenter = null;
+  }
 }
 window.menuHomeOpenNatureHub = openNatureHub;
 

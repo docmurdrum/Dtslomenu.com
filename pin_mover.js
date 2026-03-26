@@ -16,6 +16,9 @@ var HUB_PIN_DEFS = [
   { id:'brewery',     label:'Craft Beer',   icon:'🍺',  color:'#f59e0b', defaultCoords:[-120.6595, 35.2808] },
   { id:'calpoly',     label:'Cal Poly',     icon:'🎓',  color:'#6366f1', defaultCoords:[-120.6540, 35.2980] },
   { id:'city',        label:'City Hub',     icon:'🏛',  color:'#00f5ff', defaultCoords:[-120.6590, 35.2820] },
+  { id:'nature',      label:'Nature Hub',   icon:'🌿',  color:'#22c55e', defaultCoords:[-120.6785, 35.2920] },
+  { id:'thrill',      label:'Thrill Hub',   icon:'⚡',  color:'#ef4444', defaultCoords:[-120.6595, 35.2750] },
+  { id:'events',      label:'Events Hub',   icon:'🎭',  color:'#ffd700', defaultCoords:[-120.6590, 35.2820] },
 ];
 
 // ── LOAD SAVED COORDS FROM SUPABASE ──
@@ -24,11 +27,20 @@ async function loadSavedPinCoords() {
   // Set defaults first
   HUB_PIN_DEFS.forEach(function(h) { coords[h.id] = h.defaultCoords; });
 
+  // Layer 1: localStorage (instant, no network)
+  try {
+    var local = JSON.parse(localStorage.getItem('dtslo_hub_pins') || '{}');
+    Object.keys(local).forEach(function(id) {
+      if (local[id] && local[id].length === 2) coords[id] = local[id];
+    });
+  } catch(e) {}
+
+  // Layer 2: Supabase (authoritative, overwrites local)
   try {
     var sb = supabaseClient;
     if (!sb) return coords;
     var res = await sb.from('app_settings').select('key,value').like('key','hub_pin_%');
-    if (res.data) {
+    if (res.data && res.data.length) {
       res.data.forEach(function(row) {
         var id = row.key.replace('hub_pin_', '');
         try {
@@ -38,8 +50,14 @@ async function loadSavedPinCoords() {
           }
         } catch(e) {}
       });
+      // Mirror to localStorage for offline use
+      var toStore = {};
+      Object.keys(coords).forEach(function(id) { toStore[id] = coords[id]; });
+      localStorage.setItem('dtslo_hub_pins', JSON.stringify(toStore));
     }
-  } catch(e) {}
+  } catch(e) {
+    console.warn('[pin_mover] Supabase load failed, using localStorage');
+  }
 
   return coords;
 }
@@ -215,6 +233,13 @@ async function savePinPositions() {
       .upsert(upserts, { onConflict: 'key' });
 
     if (result.error) throw result.error;
+
+    // Mirror to localStorage immediately
+    try {
+      var toStore = {};
+      Object.keys(pinMoverCoords).forEach(function(id) { toStore[id] = pinMoverCoords[id]; });
+      localStorage.setItem('dtslo_hub_pins', JSON.stringify(toStore));
+    } catch(e) {}
 
     // Rebuild live markers with new coords immediately
     rebuildHubMarkersFromCoords(pinMoverCoords);

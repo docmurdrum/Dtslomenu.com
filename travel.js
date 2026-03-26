@@ -156,15 +156,111 @@ function cap(s) {
 
 // Tour detail sheet
 var TOUR_DATA = {
-  historic: { name:'Historic Downtown SLO', emoji:'🏛', time:'90 min', diff:'Easy', cost:'Free', desc:'Walk 2,500 years of history from the 1772 Mission to Bubblegum Alley. Passes Chinatown, Fremont Theater, and Mission Plaza.', tips:['Best in morning before crowds','Free parking on side streets','Thursday adds Farmers Market'], tags:['Family','Dogs OK','Free','Walking'] },
-  bishop:   { name:'Bishop Peak Summit', emoji:'🥾', time:'2.5-3 hrs', diff:'Hard', cost:'Free', desc:'The tallest of the Nine Sisters volcanic morros. 3.5 miles round trip, 950ft elevation gain. 360° views from the top.', tips:['Start early — gets hot','Bring 2L water minimum','Dogs must be leashed'], tags:['Dogs OK','Views','Workout','Free'] },
-  food:     { name:'SLO Food Tour', emoji:'🍕', time:'3 hrs', diff:'Easy', cost:'$40-100', desc:'Hit the iconic spots — Firestone tri-tip, Novo creekside, High Street Deli half-off after 4:20pm. SLO has a serious food scene.', tips:['Thursday nights add Farmers Market stops','High Street Deli half off after 4:20pm','Book Novo in advance'], tags:['Family','Popular','Downtown'] },
-  farmers:  { name:'Farmers Market', emoji:'🌽', time:'2 hrs', diff:'Easy', cost:'Free', desc:"Every Thursday 6-9pm Higuera Street becomes one of California's most beloved weekly street fairs. Fresh produce, live music, local food.", tips:['Thursday only, year-round','Gets crowded 7-8pm','Bring cash for vendors'], tags:['Weekly','Family','Thursday'] },
-  bike:     { name:'Downtown Bike Loop', emoji:'🚴', time:'90 min', diff:'Easy', cost:'$15-30', desc:'Rent a bike and cruise the Bob Jones Trail, downtown Higuera, and along the creek. Mostly flat, beginner friendly.', tips:['Rent from SLO Bike Hub','Bob Jones Trail is paved','Creek path connects downtown to Avila'], tags:['Rental','Trail','Family'] },
-  wine:     { name:'Edna Valley Wine Trail', emoji:'🍷', time:'4 hrs', diff:'Easy', cost:'$30-100', desc:"World-class Chardonnay and Pinot 10 minutes from downtown. Edna Valley is one of California's coolest growing regions.", tips:['Book a driver or use Uber','Tolosa and Laetitia are standouts','Most tasting rooms open 11am-5pm'], tags:['21+','Romantic','Drive'] },
-  beach:    { name:'Central Coast Beach Day', emoji:'🌊', time:'All day', diff:'Easy', cost:'$0-50', desc:'Avila for calm water and families, Pismo for the classic boardwalk vibe, Shell Beach for dramatic cliffs and surf.', tips:['Avila has the calmest water','Pismo Pier area has parking','Bring layers — coast can be foggy'], tags:['Family','Dogs OK','Summer'] },
-  morro:    { name:'Morro Bay Escape', emoji:'🦦', time:'Half day', diff:'Easy', cost:'$20-80', desc:'Sea otters, Morro Rock, fresh chowder on the Embarcadero. 30 minutes north. One of the most scenic towns on the Central Coast.', tips:['Kayak around Morro Rock','Sub-Sub is a local sandwich legend','Watch for otters near the estuary'], tags:['Wildlife','Seafood','Drive'] },
-  brewery:  { name:'SLO Brewery Hop', emoji:'🍺', time:'3 hrs', diff:'Easy', cost:'$20-60', desc:"SLO Brew, Libertine Brewing, Barrelhouse — SLO has a thriving craft beer scene. All walkable from downtown.", tips:['Start at Libertine for sours','SLO Brew has live music','Barrelhouse has the best patio'], tags:['21+','Local','Walking'] },
+  historic: {
+    name:'Historic Downtown SLO', emoji:'🏛', time:'90 min', diff:'Easy', cost:'Free',
+    desc:'Walk 2,500 years of history from the 1772 Mission to Bubblegum Alley. Passes Chinatown, Fremont Theater, and Mission Plaza.',
+    tips:['Best in morning before crowds','Free parking on side streets','Thursday nights add Farmers Market'],
+    tags:['Family','Dogs OK','Free','Walking'],
+    stops:[
+      { name:'Mission San Luis Obispo de Tolosa', type:'landmark', mins:20, cost:'Free', tip:'Walk the gardens and museum. Founded 1772 by Father Serra.' },
+      { name:'Mission Plaza', type:'landmark', mins:10, cost:'Free', tip:'Community heart of SLO. Events and concerts held here.' },
+      { name:'Bubblegum Alley', type:'landmark', mins:15, cost:'Free', tip:'70ft of chewed gum since the 1950s. Grab a gumball from Rocket Fizz first.' },
+      { name:'Fremont Theater', type:'landmark', mins:10, cost:'Free', tip:'Art deco landmark built 1942. Best photographed at night for the neon sign.' },
+      { name:'Ah Louis Store', type:'landmark', mins:10, cost:'Free', tip:'SLO oldest brick building (1874) and tiny Chinatown history.' },
+      { name:'Higuera Street Stroll', type:'activity', mins:20, cost:'Free', tip:'Browse boutiques, coffee shops, and soak up the downtown energy.' },
+    ]
+  },
+  bishop: {
+    name:'Bishop Peak Summit', emoji:'🥾', time:'2.5-3 hrs', diff:'Hard', cost:'Free',
+    desc:'The tallest of the Nine Sisters volcanic morros at 1,559ft. 3.5 miles round trip with 950ft elevation gain. 360° views of SLO, Morro Bay and the Pacific.',
+    tips:['Start by 8am in summer — gets very hot','Bring at least 2L water','Dogs must be leashed','Patricia Drive trailhead has the most parking'],
+    tags:['Dogs OK','Views','Workout','Free'],
+    stops:[
+      { name:'Patricia Drive Trailhead', type:'activity', mins:5, cost:'Free', tip:'Free parking. Get here early on weekends — fills by 9am.' },
+      { name:'Ferrini Open Space', type:'activity', mins:30, cost:'Free', tip:'Wide trail through oak woodland. Steady climb begins here.' },
+      { name:'Bishop Peak Summit (1,559ft)', type:'landmark', mins:90, cost:'Free', tip:'360° panoramic views. Morro Bay, Pismo Beach, SLO valley all visible. Bring a snack.' },
+      { name:'Descent + Cool Down', type:'activity', mins:45, cost:'Free', tip:'Take the alternate trail down for different views.' },
+      { name:'SLO Brew or High Street Deli', type:'restaurant', mins:45, cost:'$15-25', tip:'You earned it. High Street Deli half-off after 4:20pm.' },
+    ]
+  },
+  food: {
+    name:'SLO Food Tour', emoji:'🍕', time:'3-4 hrs', diff:'Easy', cost:'$40-80',
+    desc:'Hit the iconic spots that define SLO dining. Firestone tri-tip, Novo creekside patio, McConnells ice cream, and the Thursday night Farmers Market food stalls.',
+    tips:['Thursday nights add Farmers Market stops','High Street Deli half off after 4:20pm','Book Novo in advance for weekend dinner'],
+    tags:['Family','Popular','Downtown','Food'],
+    stops:[
+      { name:'Scout Coffee Co.', type:'cafe', mins:20, cost:'$5-10', tip:'Start with coffee. Best espresso in downtown SLO. Great patio.' },
+      { name:'Firestone Grill', type:'restaurant', mins:40, cost:'$12-18', tip:'The Cal Poly classic. Tri-tip sandwich and salad. Line moves fast.' },
+      { name:'Bubblegum Alley', type:'landmark', mins:10, cost:'Free', tip:'Quick photo stop between eats. Grab a gumball at Rocket Fizz.' },
+      { name:'McConnells Ice Cream', type:'restaurant', mins:15, cost:'$6-10', tip:'Santa Barbara-based artisan ice cream. Eureka Lemon & Marionberry is iconic.' },
+      { name:'Novo Restaurant & Lounge', type:'restaurant', mins:75, cost:'$30-55', tip:'Creekside patio under the oaks. California fusion. Book ahead on weekends.' },
+      { name:'Farmers Market (Thursday)', type:'activity', mins:45, cost:'$10-20', tip:'Thursday only, 6-9pm. Five blocks of Higuera. BBQ, kettle corn, live music.' },
+    ]
+  },
+  wine: {
+    name:'Edna Valley Wine Trail', emoji:'🍷', time:'4-5 hrs', diff:'Easy', cost:'$40-100',
+    desc:'World-class Chardonnay and Pinot Noir just 10 minutes from downtown. Edna Valley is one of the coolest growing regions in California — ocean breezes keep temps mild.',
+    tips:['Book a driver or use Uber — do not drink and drive','Most tasting rooms open 11am-5pm','Tolosa and Laetitia are the standouts','Call ahead to book private tastings'],
+    tags:['21+','Romantic','Drive','Wine'],
+    stops:[
+      { name:'Tolosa Winery', type:'winery', mins:60, cost:'$20-35', tip:'Stunning modern facility. Pinot and Chardonnay focused. Rotating food pairings.' },
+      { name:'Laetitia Vineyard', type:'winery', mins:60, cost:'$15-25', tip:'French Champagne heritage. Sparkling wines are exceptional. Beautiful grounds.' },
+      { name:'Saucelito Canyon', type:'winery', mins:45, cost:'$15-20', tip:'Family-run, Zinfandel specialists. More intimate than the big producers.' },
+      { name:'Wolff Vineyards', type:'winery', mins:45, cost:'$15', tip:'Relaxed picnic-friendly atmosphere. Great views of the valley.' },
+      { name:'Lunch at Edna Valley', type:'restaurant', mins:60, cost:'$20-35', tip:'Most wineries allow picnics. Or head to Avila Beach for lunch with an ocean view.' },
+    ]
+  },
+  beach: {
+    name:'Central Coast Beach Day', emoji:'🌊', time:'All day', diff:'Easy', cost:'$0-50',
+    desc:'Three distinct beach personalities within 20 minutes: Avila for calm water and families, Pismo for the classic boardwalk, Shell Beach for dramatic cliffs and surf.',
+    tips:['Avila has the calmest water for swimming','Pismo Pier area has the most parking','Bring layers — the coast runs 10-15°F cooler than SLO','Bob Jones Trail connects SLO to Avila by bike'],
+    tags:['Family','Dogs OK','Summer','Swimming'],
+    stops:[
+      { name:'Avila Beach', type:'beach', mins:120, cost:'Free', tip:'Calm protected cove. Volleyball, kayak rentals, warm water. Most family-friendly.' },
+      { name:'Avila Beach Pier & Shops', type:'activity', mins:30, cost:'Free', tip:'Small shops, Custom House restaurant. Try the fish tacos.' },
+      { name:'Pismo Beach Pier', type:'landmark', mins:30, cost:'Free', tip:'Classic California boardwalk. Clam chowder is the move. ' },
+      { name:'Shell Beach', type:'beach', mins:60, cost:'Free', tip:'More dramatic, less crowded. Tide pools at low tide. Surfers and scenery.' },
+      { name:'Splash Cafe', type:'restaurant', mins:30, cost:'$10-20', tip:'Famous clam chowder bread bowl in Pismo. Get there before the line.' },
+    ]
+  },
+  morro: {
+    name:'Morro Bay Escape', emoji:'🦦', time:'Half day', diff:'Easy', cost:'$20-80',
+    desc:'Sea otters, Morro Rock, fresh chowder on the Embarcadero. 30 minutes north on the 101. One of the most scenic small towns on the entire California coast.',
+    tips:['Morning is best for otter spotting near the estuary','Sub-Sub sandwiches is a local legend','Kayak around Morro Rock for the best views','Watch for otters floating in the kelp'],
+    tags:['Wildlife','Seafood','Drive','Family'],
+    stops:[
+      { name:'Morro Rock', type:'landmark', mins:30, cost:'Free', tip:'Drive to the base. 576ft volcanic plug. Peregrine falcons nest here. No climbing allowed.' },
+      { name:'Morro Bay Embarcadero', type:'activity', mins:45, cost:'Free', tip:'Waterfront boardwalk with shops and restaurants. Watch sea otters from the dock.' },
+      { name:'Central Coast Kayaks', type:'activity', mins:90, cost:'$35-55', tip:'Kayak tour around Morro Rock. Wildlife sightings almost guaranteed — otters, dolphins, herons.' },
+      { name:'Sub-Sub Sandwiches', type:'restaurant', mins:30, cost:'$10-15', tip:'Local institution. Get the sandwich, sit outside, watch the boats.' },
+      { name:'Morro Bay State Park', type:'activity', mins:45, cost:'Free', tip:'Birdwatching paradise. Great blue herons, pelicans, shorebirds. Free to walk.' },
+    ]
+  },
+  brewery: {
+    name:'SLO Brewery Hop', emoji:'🍺', time:'3-4 hrs', diff:'Easy', cost:'$25-60',
+    desc:'SLOs craft beer scene is genuinely world-class. Libertine Brewing for wild ales, BarrelHouse for the outdoor patio, SLO Brew for live music. All walkable from downtown.',
+    tips:['Start at Libertine for the most unique beers','SLO Brew has live music on weekends','Barrelhouse closes earlier — go mid-afternoon','Use Uber between spots if you plan to drink seriously'],
+    tags:['21+','Local','Walking','Craft Beer'],
+    stops:[
+      { name:'Libertine Brewing Co.', type:'bar', mins:60, cost:'$15-25', tip:'Wild ales, sours, and funky experimental beers. Most adventurous of the three. Try whatever is seasonal.' },
+      { name:'BarrelHouse Brewing', type:'bar', mins:60, cost:'$15-25', tip:'Best outdoor beer garden. Live music most weekends. Food trucks on site. Dog friendly.' },
+      { name:'SLO Brew Rock', type:'bar', mins:60, cost:'$15-30', tip:'Check their calendar for shows. Great selection including their own brewed flagship beers.' },
+      { name:'Bang the Drum Brewery', type:'bar', mins:45, cost:'$12-20', tip:'Tucked in an oak grove on the south side. Dog friendly, chill vibe, great IPAs.' },
+    ]
+  },
+  bike: {
+    name:'Bob Jones City-to-Sea Trail', emoji:'🚴', time:'2-3 hrs', diff:'Easy', cost:'$15-30',
+    desc:'8 miles of flat paved trail from SLO through Avila Valley farmland and oak forests all the way to Avila Beach. One of the best bike rides on the Central Coast.',
+    tips:['Rent from SLO Bike Hub downtown','Bring a lock to stop at Avila Beach','One way is 8 miles — Uber back if needed','Avila Hot Springs at the trailhead for a post-ride soak'],
+    tags:['Family','Trail','Dogs OK','Active'],
+    stops:[
+      { name:'SLO Bike Hub (Rental)', type:'activity', mins:15, cost:'$15-30', tip:'Rent bikes downtown. Reserve ahead on weekends.' },
+      { name:'Bob Jones Trailhead', type:'activity', mins:5, cost:'Free', tip:'Access near Avila Hot Springs. Paved flat trail begins here.' },
+      { name:'San Luis Creek Section', type:'activity', mins:30, cost:'Free', tip:'Creek views, birding opportunities, shaded oaks. Most scenic stretch.' },
+      { name:'Avila Beach Arrival', type:'beach', mins:60, cost:'Free', tip:'Lock your bike and hit the beach. Volleyball, swimming, shops on the pier.' },
+      { name:'Custom House Restaurant', type:'restaurant', mins:45, cost:'$15-30', tip:'Lunch with ocean views before biking back or Ubering.' },
+    ]
+  },
 };
 
 function tourDetail(el) {
@@ -178,36 +274,143 @@ function tourDetail(el) {
   var sheet = document.createElement('div');
   sheet.id = 'mh-tour-detail';
   sheet.style.cssText = 'position:absolute;inset:0;z-index:23;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
-  sheet.innerHTML = '<div id="mh-td-inner" style="width:100%;background:rgba(8,8,20,0.98);border-radius:24px 24px 0 0;border-top:1px solid rgba(255,255,255,0.08);padding:12px 20px 48px;max-height:85vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)">' +
+
+  // Build stops HTML
+  var stopsHtml = '';
+  if (tour.stops && tour.stops.length) {
+    stopsHtml =
+      '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:10px">FULL TRIP PLAN</div>' +
+      '<div style="margin-bottom:16px">' +
+      tour.stops.map(function(stop, i) {
+        var typeColor = {
+          landmark:'#ffd700', restaurant:'#f97316', cafe:'#a78bfa',
+          activity:'#22c55e', beach:'#06b6d4', winery:'#9b2335',
+          bar:'#ff2d78', gym:'#22c55e'
+        }[stop.type] || '#ffffff';
+        return '<div style="display:flex;gap:10px;margin-bottom:10px">' +
+          '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">' +
+            '<div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:rgba(255,255,255,0.5)">' + (i+1) + '</div>' +
+            (i < tour.stops.length-1 ? '<div style="width:1px;flex:1;background:rgba(255,255,255,0.08);margin:2px 0"></div>' : '') +
+          '</div>' +
+          '<div style="flex:1;padding-bottom:8px">' +
+            '<div style="font-size:13px;font-weight:800;margin-bottom:2px">' + stop.name + '</div>' +
+            '<div style="display:flex;gap:8px;margin-bottom:4px">' +
+              '<span style="font-size:10px;font-weight:700;color:' + typeColor + '">' + stop.type.toUpperCase() + '</span>' +
+              '<span style="font-size:10px;color:rgba(255,255,255,0.35)">⏱ ' + stop.mins + ' min</span>' +
+              '<span style="font-size:10px;color:rgba(255,255,255,0.35)">💰 ' + stop.cost + '</span>' +
+            '</div>' +
+            '<div style="font-size:11px;color:rgba(255,255,255,0.5);line-height:1.5">' + stop.tip + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+      '</div>';
+  }
+
+  var totalMins = tour.stops ? tour.stops.reduce(function(a, s) { return a + (s.mins || 0); }, 0) : 0;
+  var totalHrs = totalMins >= 60 ? Math.floor(totalMins/60) + 'h ' + (totalMins%60 ? totalMins%60+'m' : '') : totalMins + 'min';
+
+  var inner = document.createElement('div');
+  inner.id = 'mh-td-inner';
+  inner.style.cssText = 'width:100%;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(255,215,0,0.2);padding:12px 20px 48px;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)';
+
+  inner.innerHTML =
     '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 16px;cursor:pointer" onclick="closeTourDetail()"></div>' +
     '<div style="font-size:36px;margin-bottom:8px">' + tour.emoji + '</div>' +
-    '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif;margin-bottom:4px">' + tour.name + '</div>' +
-    '<div style="display:flex;gap:12px;margin-bottom:16px;font-size:12px;color:rgba(255,255,255,0.5)">' +
-      '<span>⏱ ' + tour.time + '</span>' +
-      '<span>💪 ' + tour.diff + '</span>' +
-      '<span>💰 ' + tour.cost + '</span>' +
+    '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif;margin-bottom:10px">' + tour.name + '</div>' +
+
+    // Stats row
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">' +
+      '<div style="padding:8px;background:rgba(255,255,255,0.03);border-radius:10px;text-align:center">' +
+        '<div style="font-size:13px;font-weight:800">' + tour.time + '</div>' +
+        '<div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:2px">DURATION</div>' +
+      '</div>' +
+      '<div style="padding:8px;background:rgba(255,255,255,0.03);border-radius:10px;text-align:center">' +
+        '<div style="font-size:13px;font-weight:800">' + tour.diff + '</div>' +
+        '<div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:2px">DIFFICULTY</div>' +
+      '</div>' +
+      '<div style="padding:8px;background:rgba(255,255,255,0.03);border-radius:10px;text-align:center">' +
+        '<div style="font-size:13px;font-weight:800">' + tour.cost + '</div>' +
+        '<div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:2px">COST</div>' +
+      '</div>' +
     '</div>' +
-    '<div style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.6;margin-bottom:16px">' + tour.desc + '</div>' +
+
+    // Description
+    '<div style="font-size:13px;color:rgba(255,255,255,0.65);line-height:1.6;margin-bottom:16px">' + tour.desc + '</div>' +
+
+    // Full stop plan
+    stopsHtml +
+
+    // Insider tips
     '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">INSIDER TIPS</div>' +
-    tour.tips.map(function(t) {
-      return '<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px;color:rgba(255,255,255,0.6)">💡 ' + t + '</div>';
-    }).join('') +
-    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px">' +
+    '<div style="margin-bottom:16px">' +
+      tour.tips.map(function(t) {
+        return '<div style="padding:8px 10px;border-radius:10px;background:rgba(255,215,0,0.04);border:1px solid rgba(255,215,0,0.1);margin-bottom:6px;font-size:12px;color:rgba(255,255,255,0.6)">💡 ' + t + '</div>';
+      }).join('') +
+    '</div>' +
+
+    // Tags
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px">' +
       tour.tags.map(function(t) {
         return '<span style="padding:4px 10px;border-radius:20px;background:rgba(255,255,255,0.06);font-size:11px;font-weight:700;color:rgba(255,255,255,0.5)">' + t + '</span>';
       }).join('') +
     '</div>' +
-    '<button onclick="closeTourDetail()" style="width:100%;margin-top:16px;padding:13px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.4);font-size:13px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer">Close</button>' +
-  '</div>';
 
-  document.getElementById('menu-home').appendChild(sheet);
+    // Action buttons — IDs wired after render
+    '<div style="display:flex;gap:8px;margin-bottom:8px">' +
+      '<button id="tour-itin-btn" style="flex:1;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#f59e0b);color:#000;font-size:13px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer">🗓 Add to Itinerary</button>' +
+      '<button onclick="closeTourDetail()" style="padding:13px 16px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:13px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer">Close</button>' +
+    '</div>' +
+    (tour.stops && tour.stops.length ?
+      '<button id="tour-all-btn" style="width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,215,0,0.2);background:rgba(255,215,0,0.05);color:rgba(255,215,0,0.7);font-size:12px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer">+ Add all ' + tour.stops.length + ' stops to itinerary</button>' : '');
+
+  sheet.appendChild(inner);
+  var parent = document.getElementById('menu-home') || document.body;
+  parent.appendChild(sheet);
+
   setTimeout(function() {
     sheet.style.opacity = '1';
-    document.getElementById('mh-td-inner').style.transform = 'translateY(0)';
+    inner.style.transform = 'translateY(0)';
+    // Wire button events now that DOM is ready
+    var itinBtn = document.getElementById('tour-itin-btn');
+    if (itinBtn) itinBtn.onclick = function() { tourAddToItinerary(id); };
+    var allBtn = document.getElementById('tour-all-btn');
+    if (allBtn) allBtn.onclick = function() { tourAddAllStops(id); };
   }, 30);
+
   sheet.addEventListener('click', function(e) { if (e.target === sheet) closeTourDetail(); });
 }
 window.menuHomeTourDetail = tourDetail;
+
+function closeTourDetail() {
+  var s = document.getElementById('mh-tour-detail');
+  if (s) { s.style.opacity = '0'; setTimeout(function() { s.remove(); }, 300); }
+}
+window.closeTourDetail = closeTourDetail;
+
+// Add single tour as one itinerary stop
+function tourAddToItinerary(tourId) {
+  var tour = TOUR_DATA[tourId];
+  if (!tour) return;
+  if (typeof itinAddBusinessStop === 'function') {
+    itinAddBusinessStop(tour.name, 'activity', tour.stops ? tour.stops.reduce(function(a,s){return a+s.mins;},0) : 180, tour.cost, tour.tips[0] || '');
+    closeTourDetail();
+  }
+}
+window.tourAddToItinerary = tourAddToItinerary;
+
+// Add each stop individually to itinerary
+function tourAddAllStops(tourId) {
+  var tour = TOUR_DATA[tourId];
+  if (!tour || !tour.stops) return;
+  if (typeof itinAddBusinessStop !== 'function') return;
+  tour.stops.forEach(function(stop) {
+    itinAddBusinessStop(stop.name, stop.type, stop.mins, stop.cost, stop.tip);
+  });
+  closeTourDetail();
+  if (typeof showToast === 'function') showToast('✅ ' + tour.stops.length + ' stops added to itinerary!');
+}
+window.tourAddAllStops = tourAddAllStops;
+
 window.menuHomeCloseViewAll  = function() { var s = document.getElementById('mh-viewall-sheet'); if(s) s.remove(); };
 window.menuHomeCloseBeachSheet = function() { var s = document.getElementById('mh-beach-sheet'); if(s) s.remove(); };
 window.menuHomeClosePlanIt   = function() { var s = document.getElementById('mh-planit-sheet'); if(s) s.remove(); };
