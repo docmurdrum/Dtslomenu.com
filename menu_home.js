@@ -257,9 +257,13 @@ function loadHomeMap() {
       requestAnimationFrame(rot);
     };
     setTimeout(rot, 800);
+  });
+
+  // Fade overlay immediately — don't wait for tiles to load
+  setTimeout(function() {
     var overlay = document.getElementById('mh-map-overlay');
     if (overlay) overlay.style.opacity = '0';
-  });
+  }, 300);
 
   homeMap.on('error', function(e) { console.warn('[Map error]', e); });
 }
