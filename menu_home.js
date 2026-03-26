@@ -226,11 +226,10 @@ function loadHomeMap() {
       } catch(e) { console.warn('[3D buildings]', e); }
     }
 
-    // Delay all effects — let map render first
+    // Hub glow layers — delayed, non-blocking
     setTimeout(function() {
-      try { startBuildingGlow(); } catch(e) {}
       try { if (typeof initHubGlowLayers === 'function') initHubGlowLayers(); } catch(e) {}
-    }, 2000);
+    }, 3000);
 
     // Use localStorage coords only — skip Supabase lookup on map load (avoids network hang)
     try {
@@ -492,3 +491,239 @@ function buildHubGlowToggles() {
   }).join('');
 }
 window.buildHubGlowToggles = buildHubGlowToggles;
+
+// ══════════════════════════════════════════════
+// INJECT FUNCTIONS — restored from v6.0
+// These were missing in v6.1.1 causing black screen
+// ══════════════════════════════════════════════
+
+function mkCard(fn, colors, icon, name, sub) {
+  return '<div class="mh-hub-card mh-hub-card-active" onclick="' + fn + '">' +
+    '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,' + colors + ')">' + icon + '</div>' +
+    '<div class="mh-hub-card-info"><div class="mh-hub-card-name">' + name + '</div><div class="mh-hub-card-sub">' + sub + '</div></div>' +
+    '<div class="mh-hub-card-arrow">→</div></div>';
+}
+function mkTour(id, icon, name, meta) {
+  return '<div class="mh-tour-card" onclick="menuHomeTourDetail(this)" data-tour="' + id + '">' +
+    '<div class="mh-tour-icon">' + icon + '</div><div class="mh-tour-name">' + name + '</div><div class="mh-tour-meta">' + meta + '</div></div>';
+}
+function mkBeach(id, icon, name, sub) {
+  return '<div class="mh-venue-row" onclick="menuHomeTravelBeach(\'' + id + '\')">' +
+    '<span class="mh-venue-emoji">' + icon + '</span>' +
+    '<div class="mh-venue-info"><div class="mh-venue-name">' + name + '</div><div class="mh-venue-sub">' + sub + '</div></div>' +
+    '<span style="color:rgba(255,255,255,0.3)">›</span></div>';
+}
+function mkTool(id, icon, label) {
+  return '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="' + id + '"><div class="mh-tool-icon">' + icon + '</div><div>' + label + '</div></button>';
+}
+
+function injectHTML() {
+  if (document.getElementById('menu-home')) return;
+  var div = document.createElement('div');
+  div.id = 'menu-home';
+  var dev = localStorage.getItem('dtslo_dev_mode') === '1';
+  div.innerHTML = [
+    '<div id="mh-map"></div>',
+    '<div id="mh-map-overlay"></div>',
+    '<div id="mh-header"><div id="mh-logo">MENU</div><div id="mh-city">San Luis Obispo</div></div>',
+    '<button id="mh-location-btn" onclick="menuHomeToggleLocation()" style="position:absolute;top:160px;right:16px;z-index:10;background:rgba(8,8,20,0.75);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);padding:7px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(8px);font-family:Helvetica Neue,sans-serif">📍 Me</button>',
+
+    // HUBS DRAWER
+    '<div id="mh-drawer-hubs" class="mh-drawer">',
+      '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
+      '<div class="mh-drawer-title">Hubs</div>',
+      '<div class="mh-hub-cards">',
+        mkCard('menuHomeRequireAuth()',       '#ff2d78,#b44fff', '🌃', 'DTSLO',        'Nightlife · Active Now'),
+        mkCard('menuHomeOpenRestaurantHub()', '#ff6b35,#ef4444', '🍽',  'Restaurants',  'Browse & dine'),
+        mkCard('menuHomeOpenBeachHub()',      '#06b6d4,#0ea5e9', '🏖',  'Beach Hub',    '8 beaches · Surf · Trails'),
+        mkCard('menuHomeOpenNatureHub()',     '#22c55e,#16a34a', '🌿',  'Nature Hub',   'Hikes · Parks · Trails'),
+        mkCard('menuHomeOpenThrillHub()',     '#ef4444,#dc2626', '⚡',  'Thrill Hub',   'Zipline · ATV · Adventure'),
+        mkCard('menuHomeOpenEventsHub()',     '#ffd700,#ff9500', '🎭',  'Events Hub',   'Concerts · Markets · Festivals'),
+        mkCard('menuHomeOpenBreweryHub()',    '#f59e0b,#d97706', '🍺',  'Craft Beer',   '9 SLO breweries'),
+        mkCard('menuHomeOpenWineHub()',       '#7c2d8e,#b44fff', '🍷',  'Wine Country', 'Paso Robles · Edna Valley'),
+        mkCard('menuHomeOpenCalPolyHub()',    '#6366f1,#8b5cf6', '🎓',  'Cal Poly Hub', 'Student life · Bars · Eats'),
+        mkCard('menuHomeOpenCityHub()',       '#00f5ff,#00ff88', '🏛',  'City Hub',     'Landmarks · Culture · Art'),
+        '<div class="mh-hub-card mh-hub-card-soon"><div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">🛒</div><div class="mh-hub-card-info"><div class="mh-hub-card-name">Shopping</div><div class="mh-hub-card-sub">Coming Soon</div></div><div class="mh-hub-card-arrow" style="opacity:0.3">→</div></div>',
+      '</div>',
+    '</div>',
+
+    // TRAVEL DRAWER
+    '<div id="mh-drawer-travel" class="mh-drawer">',
+      '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
+      '<div class="mh-drawer-title">✨ Travel Guide</div>',
+      '<button class="mh-plan-btn" onclick="menuHomeOpenTravelPlanIt()"><span style="font-size:18px">✨</span><div style="text-align:left;flex:1"><div style="font-size:14px;font-weight:800">Plan It</div><div style="font-size:11px;color:rgba(255,255,255,0.5)">Build your perfect outing with AI</div></div><span style="color:rgba(255,255,255,0.3)">›</span></button>',
+      '<div class="mh-travel-tabs">',
+        '<button class="mh-travel-tab active" onclick="menuHomeTravelTab(this,\'all\')">All</button>',
+        '<button class="mh-travel-tab" onclick="menuHomeTravelTab(this,\'tours\')">🗺 Tours</button>',
+        '<button class="mh-travel-tab" onclick="menuHomeTravelTab(this,\'food\')">🍽 Food</button>',
+        '<button class="mh-travel-tab" onclick="menuHomeTravelTab(this,\'hotels\')">🏨 Hotels</button>',
+        '<button class="mh-travel-tab" onclick="menuHomeTravelTab(this,\'beaches\')">🌊 Beaches</button>',
+      '</div>',
+      '<div class="mh-travel-section" id="mh-tsec-tours">',
+        '<div class="mh-section-label">🗺 SELF-GUIDED TOURS</div>',
+        '<div class="mh-tour-grid">',
+          mkTour('historic','🏛','Historic SLO','90 min · Free'),
+          mkTour('bishop','🥾','Bishop Peak','2.5 hrs · Hard'),
+          mkTour('food','🍕','Food Tour','3 hrs · $40-100'),
+          mkTour('wine','🍷','Wine Trail','4 hrs · Drive'),
+          mkTour('beach','🌊','Beach Day','All day · Drive'),
+          mkTour('morro','🦦','Morro Bay','Half day · Drive'),
+          mkTour('brewery','🍺','Brewery Hop','3 hrs · Walking'),
+          mkTour('bike','🚴','Bike Trail','2-3 hrs · Easy'),
+        '</div>',
+      '</div>',
+      '<div class="mh-travel-section" id="mh-tsec-food">',
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="mh-section-label" style="margin-bottom:0">🍽 RESTAURANTS</div><button onclick="menuHomeTravelViewAll(\'food\')" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">View all →</button></div>',
+        '<div id="mh-restaurant-list"><div style="padding:20px;text-align:center;color:rgba(255,255,255,0.3);font-size:12px">Loading...</div></div>',
+      '</div>',
+      '<div class="mh-travel-section" id="mh-tsec-hotels">',
+        '<div class="mh-section-label">🏨 HOTELS</div>',
+        '<div id="mh-hotel-list"><div style="padding:20px;text-align:center;color:rgba(255,255,255,0.3);font-size:12px">Loading...</div></div>',
+      '</div>',
+      '<div class="mh-travel-section" id="mh-tsec-beaches">',
+        '<div class="mh-section-label">🌊 BEACHES NEARBY</div>',
+        '<div class="mh-venue-list">',
+          mkBeach('avila','🏖','Avila Beach','10 min · Calm water · Dog friendly'),
+          mkBeach('pismo','🌊','Pismo Beach','15 min · Classic vibe · Pier'),
+          mkBeach('shell','🪨','Shell Beach','12 min · Dramatic cliffs · Surfing'),
+          mkBeach('morro','🦦','Morro Bay Beach','30 min · Sea otters · Morro Rock'),
+        '</div>',
+      '</div>',
+    '</div>',
+
+    // TOOLS DRAWER
+    '<div id="mh-drawer-tools" class="mh-drawer">',
+      '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
+      '<div class="mh-drawer-title">Tools</div>',
+      '<div class="mh-section-label">🚗 TRANSPORT</div>',
+      '<div class="mh-tools-grid">',
+        mkTool('rides','🚗','Rides'), mkTool('transit','🚌','Transit'),
+        mkTool('gas','⛽','Gas'),     mkTool('parking','🅿️','Parking'),
+      '</div>',
+      '<div class="mh-section-label">📍 MAP TOOLS</div>',
+      '<div class="mh-tools-grid">',
+        '<button class="mh-tool-btn" onclick="menuHomePinMover()"><div class="mh-tool-icon">📍</div><div>Move Pins</div></button>',
+        '<button class="mh-tool-btn" onclick="menuHomeReturnToSLO()"><div class="mh-tool-icon">🗺</div><div>Return to SLO</div></button>',
+        '<button class="mh-tool-btn" onclick="openMapSettings()"><div class="mh-tool-icon">🏙</div><div>Map Settings</div></button>',
+      '</div>',
+      '<div class="mh-section-label">🏙 DOWNTOWN</div>',
+      '<div class="mh-tools-grid">',
+        mkTool('atms','🏧','ATMs'),        mkTool('traffic','📡','Traffic'),
+        mkTool('wifi','📶','Free WiFi'),   mkTool('safe_ride','🌙','Safe Ride'),
+      '</div>',
+      '<div class="mh-section-label">🛡 SAFETY</div>',
+      '<div class="mh-tools-grid">',
+        mkTool('emergency','🚨','Emergency'), mkTool('hospital','🏥','Hospital'),
+        mkTool('pharmacy','💊','Pharmacy'),
+      '</div>',
+    '</div>',
+
+    dev ? [
+      '<div id="mh-drawer-dev" class="mh-drawer">',
+        '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
+        '<div class="mh-drawer-title">🐛 Dev Tools</div>',
+        '<div id="mh-dev-coords" style="font-size:10px;color:#b44fff;font-family:monospace;margin-bottom:12px"></div>',
+        '<div class="mh-section-label">🧪 APP</div>',
+        '<div class="mh-tools-grid">',
+          '<button class="mh-tool-btn" onclick="menuHomeEnterDTSLO()"><div class="mh-tool-icon">→</div><div>Skip to DTSLO</div></button>',
+        '</div>',
+      '</div>'
+    ].join('') : '',
+
+    // TOOLBAR
+    '<div id="mh-toolbar">',
+      '<button class="mh-tab" id="mh-tab-hubs"   onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="hubs"><span class="mh-tab-icon">🌐</span><span class="mh-tab-label">Hubs</span></button>',
+      '<button class="mh-tab" id="mh-tab-tools"  onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="tools"><span class="mh-tab-icon">⚡</span><span class="mh-tab-label">Tools</span></button>',
+      '<button class="mh-tab" id="mh-tab-travel" onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="travel"><span class="mh-tab-icon">🗺</span><span class="mh-tab-label">Travel</span></button>',
+      dev ? '<button class="mh-tab" id="mh-tab-dev" onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="dev"><span class="mh-tab-icon">🐛</span><span class="mh-tab-label">Dev</span></button>' : '',
+    '</div>',
+
+    // SKIP PROMPT
+    '<div id="mh-skip-prompt"><div id="mh-skip-sheet"><div class="mh-sheet-handle"></div>',
+      '<div id="mh-skip-title">Go straight to DTSLO?</div>',
+      '<div id="mh-skip-body">Skip the hub screen on future opens. Change this anytime in your profile settings.</div>',
+      '<button class="mh-skip-btn mh-skip-yes" onclick="menuHomePromptYes()">Yes, go straight to DTSLO</button>',
+      '<button class="mh-skip-btn mh-skip-no"  onclick="menuHomePromptNo()">No, show me the hub screen</button>',
+    '</div></div>',
+
+  ].join('');
+  document.body.insertBefore(div, document.body.firstChild);
+  if (dev) setInterval(function() {
+    var el = document.getElementById('mh-dev-coords');
+    if (el && homeMap) { var c = homeMap.getCenter(); el.textContent = 'Center: ' + c.lat.toFixed(4) + ', ' + c.lng.toFixed(4); }
+  }, 500);
+}
+
+function injectCSS() {
+  if (document.getElementById('mh-css')) return;
+  var s = document.createElement('style');
+  s.id = 'mh-css';
+  s.textContent = [
+    '#menu-home{position:fixed;inset:0;z-index:9998;background:#000;display:none}',
+    '#mh-map{position:absolute;inset:0}',
+    '#mh-map-overlay{position:absolute;inset:0;z-index:2;background:#000;opacity:1;transition:opacity 1.5s ease;pointer-events:none}',
+    '#mh-header{position:absolute;top:52px;left:0;right:0;z-index:10;text-align:center;pointer-events:none}',
+    '#mh-logo{font-family:Georgia,serif;font-size:28px;font-weight:700;color:#fff;letter-spacing:-1px;text-shadow:0 2px 20px rgba(0,0,0,0.8)}',
+    '#mh-city{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:3px;font-family:Helvetica Neue,sans-serif}',
+    '.mh-hub-marker{background:none;border:none}',
+    '.mh-hub-pin{display:flex;flex-direction:column;align-items:center;transition:transform 0.2s}',
+    '.mh-hub-active{cursor:pointer}.mh-hub-active:active{transform:scale(0.95)}',
+    '.mh-hub-dim{opacity:0.3;cursor:default}',
+    '.mh-hub-dot{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,0.2);box-shadow:0 4px 20px rgba(0,0,0,0.5)}',
+    '.mh-hub-active .mh-hub-dot{animation:mh-float 3s ease-in-out infinite}',
+    '@keyframes mh-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}',
+    '.mh-hub-icon{font-size:22px}',
+    '.mh-hub-label{margin-top:4px;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,0.9);white-space:nowrap;font-family:Helvetica Neue,sans-serif}',
+    '.mh-hub-sub{font-size:9px;color:rgba(255,255,255,0.4);font-family:Helvetica Neue,sans-serif;white-space:nowrap}',
+    '.mh-hub-enter{font-size:9px;color:#ffd700;font-family:Helvetica Neue,sans-serif;font-weight:800;white-space:nowrap}',
+    '#mh-toolbar{position:absolute;bottom:0;left:0;right:0;z-index:20;display:flex;background:rgba(6,6,15,0.7);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,0.08);padding:8px 0 28px}',
+    '.mh-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;padding:8px 4px;transition:all 0.15s;font-family:Helvetica Neue,sans-serif}',
+    '.mh-tab-icon{font-size:22px}.mh-tab-label{font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase}',
+    '.mh-tab-active{color:#ffd700}.mh-tab-active .mh-tab-icon{filter:drop-shadow(0 0 6px rgba(255,215,0,0.6))}',
+    '.mh-drawer{position:absolute;bottom:72px;left:0;right:0;z-index:15;background:rgba(6,6,15,0.92);backdrop-filter:blur(24px);border-radius:24px 24px 0 0;border-top:1px solid rgba(255,255,255,0.08);padding:12px 20px 20px;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);max-height:60vh;overflow-y:auto}',
+    '.mh-drawer-open{transform:translateY(0)}',
+    '.mh-drawer-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.15);margin:0 auto 14px;cursor:pointer}',
+    '.mh-drawer-title{font-size:16px;font-weight:800;color:#fff;margin-bottom:14px;font-family:Georgia,serif}',
+    '.mh-hub-cards{display:flex;flex-direction:column;gap:8px}',
+    '.mh-hub-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);cursor:pointer;transition:all 0.15s}',
+    '.mh-hub-card-active{border-color:rgba(255,45,120,0.3);background:rgba(255,45,120,0.06)}.mh-hub-card-active:active{transform:scale(0.98)}',
+    '.mh-hub-card-soon{opacity:0.4;cursor:default}',
+    '.mh-hub-card-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}',
+    '.mh-hub-card-info{flex:1}.mh-hub-card-name{font-size:14px;font-weight:800;color:#fff;font-family:Helvetica Neue,sans-serif}',
+    '.mh-hub-card-sub{font-size:11px;color:rgba(255,255,255,0.4);font-family:Helvetica Neue,sans-serif}',
+    '.mh-hub-card-arrow{font-size:18px;color:#ffd700}',
+    '.mh-tools-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}',
+    '.mh-tool-btn{padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:Helvetica Neue,sans-serif;transition:all 0.15s;text-align:left}',
+    '.mh-tool-btn:active{transform:scale(0.97)}.mh-tool-icon{font-size:22px;margin-bottom:4px}',
+    '.mh-section-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px;margin-top:4px}',
+    '.mh-plan-btn{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border-radius:16px;border:1px solid rgba(255,215,0,0.25);background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,215,0,0.04));cursor:pointer;font-family:Helvetica Neue,sans-serif;color:#fff;margin-bottom:14px;transition:all 0.15s}',
+    '.mh-plan-btn:active{transform:scale(0.98)}',
+    '.mh-travel-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:12px}',
+    '.mh-travel-tab{padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:Helvetica Neue,sans-serif;flex-shrink:0;transition:all 0.15s}',
+    '.mh-travel-tab.active{background:rgba(255,215,0,0.12);border-color:rgba(255,215,0,0.3);color:#ffd700}',
+    '.mh-travel-section{margin-bottom:16px}',
+    '.mh-tour-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
+    '.mh-tour-card{padding:12px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);cursor:pointer;transition:all 0.15s}',
+    '.mh-tour-card:active{transform:scale(0.97);background:rgba(255,215,0,0.08)}',
+    '.mh-tour-icon{font-size:24px;margin-bottom:6px}.mh-tour-name{font-size:12px;font-weight:800;margin-bottom:2px;font-family:Helvetica Neue,sans-serif}',
+    '.mh-tour-meta{font-size:10px;color:rgba(255,255,255,0.4);font-family:Helvetica Neue,sans-serif}',
+    '.mh-venue-list{display:flex;flex-direction:column;gap:6px}',
+    '.mh-venue-row{display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:all 0.15s}',
+    '.mh-venue-row:active{background:rgba(255,255,255,0.06)}.mh-venue-emoji{font-size:22px;flex-shrink:0}.mh-venue-info{flex:1}',
+    '.mh-venue-name{font-size:13px;font-weight:800;font-family:Helvetica Neue,sans-serif}.mh-venue-sub{font-size:11px;color:rgba(255,255,255,0.4);font-family:Helvetica Neue,sans-serif}',
+    '#mh-skip-prompt{position:absolute;inset:0;z-index:25;background:rgba(0,0,0,0.6);display:none;align-items:flex-end;opacity:0;transition:opacity 0.35s;backdrop-filter:blur(4px)}',
+    '#mh-skip-sheet{width:100%;background:rgba(8,8,20,0.97);border-radius:24px 24px 0 0;padding:20px 24px 52px;border-top:1px solid rgba(255,255,255,0.08)}',
+    '#mh-skip-title{font-size:18px;font-weight:800;margin-bottom:8px;font-family:Georgia,serif}',
+    '#mh-skip-body{font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:20px;line-height:1.5}',
+    '.mh-skip-btn{width:100%;padding:14px;border-radius:14px;font-size:14px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer;margin-bottom:8px;transition:all 0.15s}',
+    '.mh-skip-yes{background:linear-gradient(135deg,#ff2d78,#b44fff);border:none;color:#fff}',
+    '.mh-skip-no{background:transparent;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5)}',
+    '#mh-hub-preview{position:absolute;inset:0;z-index:22;background:rgba(0,0,0,0.75);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s;backdrop-filter:blur(4px)}',
+    '#mh-hub-preview.show{opacity:1}',
+    '#mh-hub-preview-inner{width:100%;background:rgba(8,8,20,0.98);border-radius:24px 24px 0 0;padding:20px 20px 48px;max-height:85vh;overflow-y:auto;border-top:1px solid rgba(255,255,255,0.08)}',
+    '.mh-sheet-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.15);margin:0 auto 16px;cursor:pointer}',
+    '.mh-suggestion-tag{padding:6px 12px;border-radius:20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:700;color:rgba(255,255,255,0.5);cursor:pointer;display:inline-block;transition:all 0.15s}',
+    '.mh-suggestion-tag-sel{background:rgba(255,215,0,0.12);border-color:rgba(255,215,0,0.4);color:#ffd700}',
+  ].join('');
+  document.head.appendChild(s);
+}
