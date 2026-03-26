@@ -3,10 +3,15 @@
 // ══════════════════════════════════════════════
 
 // ── SUPABASE ──
-supabaseClient = window.supabase.createClient(
-  "https://jwgwufggptpdmgcmmqes.supabase.co",
-  "sb_publishable_uIxE2Eol_nC2TFvkT_G1EQ_WxWWt7A3"
-);
+try {
+  supabaseClient = window.supabase.createClient(
+    "https://jwgwufggptpdmgcmmqes.supabase.co",
+    "sb_publishable_uIxE2Eol_nC2TFvkT_G1EQ_WxWWt7A3"
+  );
+} catch(e) {
+  console.warn('[DTSLO] Supabase init failed — running offline:', e.message);
+  supabaseClient = null;
+}
 
 // ── GLOBAL STATE ──
 // currentUser declared in globals.js

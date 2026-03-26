@@ -1,10 +1,10 @@
 // ══════════════════════════════════════════════
-// DTSLO Service Worker v6.0.4
+// DTSLO Service Worker v6.1.2
 // Network-first for JS/HTML, cache-first for assets.
 // Bump CACHE_NAME on every deploy to bust old caches.
 // ══════════════════════════════════════════════
 
-const CACHE_NAME = 'dtslo-v6.0.4';
+const CACHE_NAME = 'dtslo-v6.1.3';
 
 const CORE_ASSETS = [
   '/','/index.html',
