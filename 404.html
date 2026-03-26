@@ -9,6 +9,11 @@
   var search = window.location.search;
 
   // /u/username → public_profile.html?u=username
+  var planMatch = path.match(/\/plan\/([^\/]+)/);
+  if (planMatch) {
+    var planId = planMatch[1];
+    window.location.replace('/public_itinerary.html?id=' + planId);
+  }
   var userMatch = path.match(/\/u\/([^\/]+)/);
   if (userMatch) {
     var username = userMatch[1];

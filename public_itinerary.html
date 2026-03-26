@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Tonight's Plan — MENU</title>
+<meta property="og:title" content="Check out tonight's plan on MENU">
+<meta property="og:description" content="A curated night out in San Luis Obispo">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:#06060f;color:white;font-family:'Helvetica Neue',sans-serif}
+body{display:flex;flex-direction:column;align-items:center;padding:0 0 60px;background:radial-gradient(ellipse at top,#0d1a2e,#06060f 60%)}
+.header{width:100%;padding:52px 24px 0;text-align:center}
+.menu-logo{font-family:Georgia,serif;font-size:20px;font-weight:700;letter-spacing:-1px;color:rgba(255,255,255,0.5);margin-bottom:24px}
+.plan-title{font-size:24px;font-weight:800;font-family:Georgia,serif;margin-bottom:4px}
+.plan-meta{font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:20px}
+.summary-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;padding:0 24px;margin-bottom:24px}
+.summary-card{padding:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;text-align:center}
+.summary-val{font-size:16px;font-weight:900}
+.summary-lbl{font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}
+.stops{width:100%;padding:0 24px;margin-bottom:24px}
+.stop-card{padding:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;margin-bottom:8px}
+.stop-time{font-size:10px;font-weight:800;color:#ffd700;background:rgba(255,215,0,0.1);padding:3px 8px;border-radius:20px;display:inline-block;margin-bottom:6px}
+.stop-name{font-size:15px;font-weight:800;margin-bottom:4px}
+.stop-meta{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:4px}
+.stop-tip{font-size:11px;color:#ffd700;margin-top:6px}
+.ride-row{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:rgba(34,197,94,0.05);border-radius:8px;font-size:11px;color:rgba(255,255,255,0.4);margin:4px 0}
+.cta{width:100%;padding:0 24px}
+.cta-btn{display:block;width:100%;padding:16px;border-radius:16px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:16px;font-weight:800;text-align:center;text-decoration:none;cursor:pointer;margin-bottom:10px}
+.clone-btn{display:block;width:100%;padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);font-size:14px;font-weight:700;text-align:center;text-decoration:none}
+.loading{text-align:center;padding:80px 24px;color:rgba(255,255,255,0.3)}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="menu-logo">MENU</div>
+</div>
+<div id="plan-content"><div class="loading">Loading plan...</div></div>
+
+<script>
+var SB_URL='https://jwgwufggptpdmgcmmqes.supabase.co';
+var SB_KEY='sb_publishable_uIxE2Eol_nC2TFvkT_G1EQ_WxWWt7A3';
+
+function getShareId() {
+  var path=window.location.pathname;
+  var m=path.match(/\/plan\/([^\/]+)/);
+  if(m) return m[1];
+  return new URLSearchParams(window.location.search).get('id');
+}
+
+function parseTime(str) {
+  var m=str.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if(!m) return 21*60;
+  var h=parseInt(m[1]),min=parseInt(m[2]),ampm=m[3].toUpperCase();
+  if(ampm==='PM'&&h!==12) h+=12;
+  if(ampm==='AM'&&h===12) h=0;
+  return h*60+min;
+}
+function formatTime(t) {
+  var h=Math.floor(t/60)%24,m=t%60,ap=h>=12?'PM':'AM',h12=h>12?h-12:h===0?12:h;
+  return h12+':'+(m<10?'0':'')+m+' '+ap;
+}
+
+async function loadPlan() {
+  var shareId=getShareId();
+  var content=document.getElementById('plan-content');
+  if(!shareId){content.innerHTML='<div class="loading">Plan not found</div>';return;}
+
+  try {
+    var res=await fetch(SB_URL+'/rest/v1/itineraries?share_id=eq.'+shareId+'&is_public=eq.true',{
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    });
+    var data=await res.json();
+    var plan=data&&data[0];
+    if(!plan){content.innerHTML='<div class="loading">Plan not found or no longer public</div>';return;}
+
+    var stops=[];
+    try{stops=typeof plan.stops==='string'?JSON.parse(plan.stops):plan.stops||[];}catch(e){}
+
+    document.title=(plan.name||'Tonight\'s Plan')+' — MENU';
+
+    // Calc times
+    var base=parseTime(plan.start_time||'9:00 PM');
+    var times=[];var cur=base;
+    var totalMins=0;
+    stops.forEach(function(s){
+      times.push(formatTime(cur));
+      cur+=(s.estimated_mins||60);
+      totalMins+=(s.estimated_mins||60);
+    });
+    var totalHrs=Math.floor(totalMins/60),totalRem=totalMins%60;
+
+    var stopsHtml=stops.map(function(s,i){
+      var rideRow='';
+      if(plan.using_rideshare&&i<stops.length-1){
+        rideRow='<div class="ride-row"><span>🚗 Ride to next stop</span><span style="color:#22c55e;font-weight:700">~$8-14</span></div>';
+      }
+      return '<div class="stop-card">'+
+        '<div class="stop-time">'+times[i]+'</div>'+
+        '<div class="stop-name">'+s.name+'</div>'+
+        '<div class="stop-meta">'+
+          '<span>'+(s.type||'')+'</span>'+
+          '<span style="display:flex;gap:8px">'+
+            (s.cost?'<span style="color:#22c55e;font-weight:700">'+s.cost+'</span>':'')+
+            '<span>⏱ '+(Math.floor((s.estimated_mins||60)/60)>0?Math.floor((s.estimated_mins||60)/60)+'h':'')+((s.estimated_mins||60)%60?((s.estimated_mins||60)%60)+'m':'')+'</span>'+
+          '</span>'+
+        '</div>'+
+        (s.tip?'<div class="stop-tip">💡 '+s.tip+'</div>':'')+
+      '</div>'+rideRow;
+    }).join('');
+
+    var cloneUrl='https://dtslomenu.com?clone_plan='+shareId;
+
+    content.innerHTML=
+      '<div style="width:100%;padding:0 24px;margin-bottom:8px">'+
+        '<div class="plan-title">'+plan.name+'</div>'+
+        '<div class="plan-meta">⏰ Starts '+plan.start_time+''+
+          (plan.using_rideshare?' · 🚗 Using rideshare':'')+
+        '</div>'+
+      '</div>'+
+      '<div class="summary-row">'+
+        '<div class="summary-card"><div class="summary-val">'+stops.length+'</div><div class="summary-lbl">Stops</div></div>'+
+        '<div class="summary-card"><div class="summary-val">'+totalHrs+'h'+(totalRem?totalRem+'m':'')+'</div><div class="summary-lbl">Total Time</div></div>'+
+        '<div class="summary-card"><div class="summary-val">'+(plan.total_cost||'—')+'</div><div class="summary-lbl">Est. Cost</div></div>'+
+      '</div>'+
+      '<div class="stops">'+stopsHtml+'</div>'+
+      '<div class="cta">'+
+        '<a href="'+cloneUrl+'" class="cta-btn">Add to My Plans →</a>'+
+        '<a href="https://dtslomenu.com" class="clone-btn">Download MENU App</a>'+
+      '</div>';
+
+  } catch(e) {
+    content.innerHTML='<div class="loading">Couldn\'t load plan</div>';
+  }
+}
+loadPlan();
+</script>
+</body>
+</html>

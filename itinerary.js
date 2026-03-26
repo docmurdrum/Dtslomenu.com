@@ -1,0 +1,723 @@
+// ══════════════════════════════════════════════
+// ITINERARY.JS — Plan A + Plan B
+// Live tracker + Saved planner + Share pages
+// ══════════════════════════════════════════════
+
+var ITINERARY_FREE_LIMIT = 3;
+
+// ── STATE ──
+var itin = {
+  current: null,      // active itinerary object
+  saved: [],          // all saved itineraries
+  mode: 'planned',    // 'planned' | 'live'
+  activeStopIdx: 0,
+  liveTimer: null,
+  liveElapsed: 0,     // seconds at current stop
+};
+
+// ── INIT FROM PLAN IT RESULT ──
+function itinFromPlan(plan, options) {
+  options = options || {};
+  var startTime = options.startTime || '9:00 PM';
+  var usingRide = options.usingRideshare || false;
+  var groupSize = options.groupSize || 2;
+
+  var stops = (plan.stops || []).map(function(s) {
+    return {
+      name:           s.name || '',
+      type:           s.type || 'stop',
+      description:    s.description || '',
+      tip:            s.tip || '',
+      cost:           s.cost || '',
+      estimated_mins: parseInt(s.duration_mins) || 60,
+      actual_mins:    null,
+      status:         'pending',
+      coords:         null,
+      address:        '',
+    };
+  });
+
+  return {
+    id:             Math.random().toString(36).slice(2, 10),
+    share_id:       Math.random().toString(36).slice(2, 10),
+    name:           plan.headline || 'My Plan',
+    mode:           'planned',
+    start_time:     startTime,
+    using_rideshare:usingRide,
+    group_size:     groupSize,
+    stops:          stops,
+    total_cost:     plan.total_cost || '',
+    ride_note:      plan.ride_note || '',
+    pro_tip:        plan.pro_tip || '',
+    created:        Date.now(),
+  };
+}
+window.itinFromPlan = itinFromPlan;
+
+// ── SAVE / LOAD ──
+function itinGetSaved() {
+  try { return JSON.parse(localStorage.getItem('dtslo_itineraries') || '[]'); }
+  catch(e) { return []; }
+}
+
+function itinSave(itinObj) {
+  var saved = itinGetSaved();
+  var existing = saved.findIndex(function(s) { return s.id === itinObj.id; });
+  if (existing >= 0) saved[existing] = itinObj;
+  else saved.unshift(itinObj);
+  localStorage.setItem('dtslo_itineraries', JSON.stringify(saved));
+  // Sync to Supabase if logged in
+  if (typeof currentUser !== 'undefined' && currentUser && typeof supabaseClient !== 'undefined') {
+    supabaseClient.from('itineraries').upsert({
+      id: itinObj.id, share_id: itinObj.share_id,
+      user_id: currentUser.id, name: itinObj.name,
+      mode: itinObj.mode, start_time: itinObj.start_time,
+      using_rideshare: itinObj.using_rideshare,
+      stops: JSON.stringify(itinObj.stops),
+      total_cost: itinObj.total_cost, is_public: true,
+      updated_at: new Date().toISOString()
+    }).then(function() {}).catch(function() {});
+  }
+}
+
+function itinCheckLimit() {
+  // Check if user has exceeded free limit
+  var saved = itinGetSaved();
+  var unlocked = localStorage.getItem('dtslo_itin_unlocked') === '1';
+  if (!unlocked && typeof currentUser !== 'undefined' && currentUser) {
+    // Check Supabase profile flag
+    if (window._itinUnlocked) return true;
+  }
+  return unlocked || saved.length < ITINERARY_FREE_LIMIT;
+}
+
+// ── OPEN ITINERARY BUILDER ──
+function openItineraryBuilder(itinObj, startInLiveMode) {
+  itin.current = itinObj;
+  itin.mode = startInLiveMode ? 'live' : 'planned';
+  itin.activeStopIdx = 0;
+  // Set first stop active if going live
+  if (startInLiveMode && itinObj.stops.length) {
+    itinObj.stops[0].status = 'active';
+  }
+  itinRenderModal();
+}
+window.openItineraryBuilder = openItineraryBuilder;
+
+// Open from saved list
+function openItinFromSaved() {
+  var existing = document.getElementById('itin-modal');
+  if (existing) existing.remove();
+
+  var saved = itinGetSaved();
+  var modal = document.createElement('div');
+  modal.id = 'itin-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:8400;background:rgba(0,0,0,0.88);backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center';
+
+  if (!saved.length) {
+    modal.innerHTML = itinWrap(
+      '<div style="text-align:center;padding:40px 20px">' +
+        '<div style="font-size:40px;margin-bottom:12px">🗓</div>' +
+        '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:8px">No saved plans yet</div>' +
+        '<div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:24px">Use Plan It to generate your first night out plan</div>' +
+        '<button onclick="closeItinerary()" style="width:100%;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">Open Plan It</button>' +
+      '</div>'
+    );
+  } else {
+    var freeLeft = Math.max(0, ITINERARY_FREE_LIMIT - saved.length);
+    var unlocked = localStorage.getItem('dtslo_itin_unlocked') === '1';
+    var limitNote = unlocked ? '' :
+      '<div style="padding:8px 12px;background:rgba(255,215,0,0.06);border-radius:10px;font-size:11px;color:rgba(255,215,0,0.6);margin-bottom:14px">' +
+        (freeLeft > 0 ? '✨ ' + freeLeft + ' free plan' + (freeLeft>1?'s':'') + ' remaining' : '🔒 Upgrade to save more plans — $2.99 one-time') +
+      '</div>';
+
+    modal.innerHTML = itinWrap(
+      '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:14px">🗓 My Itineraries</div>' +
+      limitNote +
+      saved.map(function(s) {
+        var stopCount = (s.stops||[]).length;
+        var date = new Date(s.created).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+        return '<div style="padding:13px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;margin-bottom:8px;cursor:pointer" onclick="itinOpen(\'' + s.id + '\')">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
+            '<div style="font-size:14px;font-weight:800">' + (s.name||'My Plan') + '</div>' +
+            '<div style="display:flex;gap:8px;align-items:center">' +
+              '<div style="font-size:10px;color:rgba(255,255,255,0.3)">' + date + '</div>' +
+              '<button onclick="event.stopPropagation();itinDelete(\'' + s.id + '\')" style="background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;font-size:14px;padding:0">✕</button>' +
+            '</div>' +
+          '</div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,0.4)">⏰ ' + s.start_time + ' · ' + stopCount + ' stops' + (s.total_cost?' · '+s.total_cost:'') + '</div>' +
+          '<div style="display:flex;gap:6px;margin-top:8px">' +
+            '<button onclick="event.stopPropagation();itinOpenLive(\'' + s.id + '\')" style="flex:1;padding:8px;border-radius:10px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">▶ Go Live</button>' +
+            '<button onclick="event.stopPropagation();itinShare(\'' + s.id + '\')" style="padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">Share ↗</button>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+      (!unlocked && freeLeft === 0 ?
+        '<button onclick="itinUnlockPrompt()" style="width:100%;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#b44fff,#7c3aed);color:white;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;margin-top:4px">✨ Unlock Unlimited — $2.99</button>' : '') +
+      '<button onclick="closeItinerary()" style="width:100%;margin-top:8px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Close</button>'
+    );
+  }
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e) { if(e.target===modal) closeItinerary(); });
+  setTimeout(function() {
+    var inner = modal.querySelector('#itin-inner');
+    if (inner) inner.style.transform = 'translateY(0)';
+  }, 30);
+}
+window.openItinFromSaved = openItinFromSaved;
+
+function itinOpen(id) {
+  var saved = itinGetSaved();
+  var found = saved.find(function(s) { return s.id === id; });
+  if (found) openItineraryBuilder(found, false);
+}
+window.itinOpen = itinOpen;
+
+function itinOpenLive(id) {
+  var saved = itinGetSaved();
+  var found = saved.find(function(s) { return s.id === id; });
+  if (found) {
+    found.stops.forEach(function(s) { s.status = 'pending'; s.actual_mins = null; });
+    found.stops[0].status = 'active';
+    openItineraryBuilder(found, true);
+  }
+}
+window.itinOpenLive = itinOpenLive;
+
+function itinDelete(id) {
+  var saved = itinGetSaved().filter(function(s) { return s.id !== id; });
+  localStorage.setItem('dtslo_itineraries', JSON.stringify(saved));
+  openItinFromSaved();
+}
+window.itinDelete = itinDelete;
+
+// ── RENDER MAIN MODAL ──
+function itinRenderModal() {
+  var existing = document.getElementById('itin-modal');
+  if (existing) existing.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'itin-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:8400;background:rgba(0,0,0,0.88);backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center';
+
+  modal.innerHTML = itinWrap(
+    itin.mode === 'live' ? itinRenderLive() : itinRenderPlanned()
+  );
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e) { if(e.target===modal) closeItinerary(); });
+  setTimeout(function() {
+    var inner = modal.querySelector('#itin-inner');
+    if (inner) inner.style.transform = 'translateY(0)';
+    if (itin.mode === 'live') itinStartLiveTimer();
+  }, 30);
+}
+
+function itinWrap(body) {
+  return '<div id="itin-inner" style="width:100%;max-width:480px;background:rgba(8,8,20,0.99);border-radius:28px 28px 0 0;border-top:2px solid rgba(255,215,0,0.25);padding:14px 20px 48px;max-height:92vh;overflow-y:auto;transform:translateY(30px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">' +
+      '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12)"></div>' +
+      '<button onclick="closeItinerary()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer">✕</button>' +
+    '</div>' +
+    body +
+  '</div>';
+}
+
+// ── PLANNED MODE ──
+function itinRenderPlanned() {
+  var it = itin.current;
+  if (!it) return '';
+
+  var times = itinCalcTimes(it);
+  var totalMins = it.stops.reduce(function(a,s){return a+(s.estimated_mins||60);},0);
+  var totalHrs = Math.floor(totalMins/60);
+  var totalRem = totalMins%60;
+
+  var html =
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">' +
+      '<div style="font-size:22px">🗓</div>' +
+      '<div style="flex:1">' +
+        '<input id="itin-name-input" value="' + (it.name||'My Plan') + '" style="background:none;border:none;color:white;font-size:16px;font-weight:800;font-family:Georgia,serif;width:100%;outline:none" onchange="itin.current.name=this.value">' +
+      '</div>' +
+      '<button onclick="itinGoLive()" style="padding:7px 14px;border-radius:20px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer">▶ Go Live</button>' +
+    '</div>' +
+
+    // Start time + rideshare row
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">' +
+      '<div style="font-size:11px;color:rgba(255,255,255,0.4)">Starts</div>' +
+      '<input id="itin-start" type="time" value="' + itinTo24(it.start_time) + '" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;font-size:12px;font-weight:700;padding:4px 8px;font-family:inherit;outline:none" onchange="itinUpdateStart(this.value)">' +
+      '<div style="flex:1"></div>' +
+      '<div style="font-size:11px;color:rgba(255,255,255,0.4)">Rideshare</div>' +
+      '<label style="display:flex;align-items:center">' +
+        '<input type="checkbox" id="itin-ride-check" ' + (it.using_rideshare?'checked':'') + ' onchange="itin.current.using_rideshare=this.checked;itinRenderModal()" style="accent-color:#22c55e">' +
+      '</label>' +
+    '</div>' +
+
+    // Summary row
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">' +
+      itinSummaryCard('Stops', it.stops.length + '') +
+      itinSummaryCard('Total Time', totalHrs + 'h' + (totalRem?totalRem+'m':'')) +
+      itinSummaryCard('Est. Cost', it.total_cost || '—') +
+    '</div>' +
+
+    // Stop list
+    '<div id="itin-stops-list">' +
+      itinRenderStops(it, times) +
+    '</div>' +
+
+    // Add stop button
+    '<button onclick="itinAddCustomStop()" style="width:100%;padding:11px;border-radius:12px;border:1px dashed rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.4);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:12px">+ Add Stop</button>' +
+
+    // Action row
+    '<div style="display:flex;gap:8px">' +
+      '<button onclick="itinSaveAndClose()" style="flex:1;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer">Save Plan</button>' +
+      '<button onclick="itinShare(itin.current.id)" style="padding:13px 16px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Share ↗</button>' +
+    '</div>';
+
+  return html;
+}
+
+function itinSummaryCard(label, value) {
+  return '<div style="padding:10px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.07);text-align:center">' +
+    '<div style="font-size:16px;font-weight:900;color:white">' + value + '</div>' +
+    '<div style="font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">' + label + '</div>' +
+  '</div>';
+}
+
+function itinRenderStops(it, times) {
+  return it.stops.map(function(s, i) {
+    var arrivalTime = times[i] || '';
+    var dur = s.estimated_mins || 60;
+    var durLabel = Math.floor(dur/60) > 0 ? Math.floor(dur/60)+'h'+(dur%60?dur%60+'m':'') : dur+'min';
+
+    // Rideshare cost to next stop
+    var rideSegment = '';
+    if (it.using_rideshare && i < it.stops.length - 1) {
+      var rideCost = itinEstRideCost(s, it.stops[i+1]);
+      rideSegment = '<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;margin:4px 0;background:rgba(34,197,94,0.05);border-radius:8px;font-size:11px;color:rgba(255,255,255,0.4)">' +
+        '<span>🚗 Ride to next stop</span>' +
+        '<span style="margin-left:auto;color:#22c55e;font-weight:700">~' + rideCost + '</span>' +
+      '</div>';
+    }
+
+    return '<div style="margin-bottom:4px">' +
+      '<div style="padding:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+          '<div style="font-size:10px;font-weight:800;color:#ffd700;background:rgba(255,215,0,0.1);padding:3px 8px;border-radius:20px;white-space:nowrap">' + arrivalTime + '</div>' +
+          '<div style="font-size:13px;font-weight:800;flex:1">' + s.name + '</div>' +
+          '<button onclick="itinEditStop(' + i + ')" style="background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:13px;padding:2px">✏️</button>' +
+          '<button onclick="itinRemoveStop(' + i + ')" style="background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;font-size:13px;padding:2px">✕</button>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.35)">' +
+          '<span>' + (s.type||'') + '</span>' +
+          '<span style="display:flex;gap:8px">' +
+            (s.cost ? '<span style="color:#22c55e;font-weight:700">' + s.cost + '</span>' : '') +
+            '<span>⏱ ' + durLabel + '</span>' +
+            '<button onclick="itinAdjustDur(' + i + ',-15)" style="background:rgba(255,255,255,0.06);border:none;color:rgba(255,255,255,0.4);border-radius:4px;padding:1px 5px;font-size:10px;cursor:pointer">-15</button>' +
+            '<button onclick="itinAdjustDur(' + i + ',15)" style="background:rgba(255,255,255,0.06);border:none;color:rgba(255,255,255,0.4);border-radius:4px;padding:1px 5px;font-size:10px;cursor:pointer">+15</button>' +
+            '<button onclick="itinAdjustDur(' + i + ',60)" style="background:rgba(255,255,255,0.06);border:none;color:rgba(255,255,255,0.4);border-radius:4px;padding:1px 5px;font-size:10px;cursor:pointer">+1h</button>' +
+          '</span>' +
+        '</div>' +
+        (s.tip ? '<div style="font-size:10px;color:#ffd700;margin-top:4px">💡 ' + s.tip + '</div>' : '') +
+      '</div>' +
+      rideSegment +
+    '</div>';
+  }).join('');
+}
+
+// ── LIVE MODE ──
+function itinRenderLive() {
+  var it = itin.current;
+  if (!it) return '';
+
+  var times = itinCalcTimes(it);
+  var activeIdx = it.stops.findIndex(function(s) { return s.status === 'active'; });
+  if (activeIdx < 0) activeIdx = itin.activeStopIdx;
+  var activeStop = it.stops[activeIdx];
+  if (!activeStop) return itinRenderLiveComplete();
+
+  var nextStop = it.stops[activeIdx + 1];
+  var doneCount = it.stops.filter(function(s){return s.status==='done';}).length;
+  var totalStops = it.stops.length;
+
+  return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">' +
+    '<div style="font-size:20px">▶</div>' +
+    '<div style="flex:1"><div style="font-size:16px;font-weight:800;font-family:Georgia,serif">' + it.name + '</div>' +
+    '<div style="font-size:11px;color:rgba(255,255,255,0.4)">Stop ' + (doneCount+1) + ' of ' + totalStops + '</div></div>' +
+    '<button onclick="itinExitLive()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.4);padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">Exit Live</button>' +
+  '</div>' +
+
+  // Progress bar
+  '<div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;margin-bottom:16px;overflow:hidden">' +
+    '<div style="height:100%;background:linear-gradient(90deg,#22c55e,#ffd700);border-radius:2px;transition:width 0.5s;width:' + Math.round((doneCount/totalStops)*100) + '%"></div>' +
+  '</div>' +
+
+  // Current stop hero
+  '<div style="padding:16px;background:rgba(34,197,94,0.08);border:2px solid rgba(34,197,94,0.3);border-radius:16px;margin-bottom:12px">' +
+    '<div style="font-size:10px;font-weight:700;color:#22c55e;letter-spacing:1px;margin-bottom:6px">📍 YOU ARE HERE</div>' +
+    '<div style="font-size:18px;font-weight:800;margin-bottom:4px">' + activeStop.name + '</div>' +
+    '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:10px">' + (activeStop.description||activeStop.type||'') + '</div>' +
+    // Timer
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+      '<div>' +
+        '<div id="itin-live-timer" style="font-size:28px;font-weight:900;color:#22c55e;font-family:monospace">0:00</div>' +
+        '<div style="font-size:10px;color:rgba(255,255,255,0.3)">Time here · Est. ' + (activeStop.estimated_mins||60) + 'min</div>' +
+      '</div>' +
+      (activeStop.cost ? '<div style="text-align:right"><div style="font-size:16px;font-weight:800;color:#22c55e">' + activeStop.cost + '</div><div style="font-size:10px;color:rgba(255,255,255,0.3)">per person</div></div>' : '') +
+    '</div>' +
+    (activeStop.tip ? '<div style="font-size:11px;color:#ffd700;padding:6px 8px;background:rgba(255,215,0,0.06);border-radius:8px">💡 ' + activeStop.tip + '</div>' : '') +
+  '</div>' +
+
+  // Add time buttons
+  '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-bottom:6px">RUNNING LATE? ADD TIME</div>' +
+  '<div style="display:flex;gap:8px;margin-bottom:14px">' +
+    '<button onclick="itinAddTime(15)" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,165,0,0.2);background:rgba(255,165,0,0.06);color:#f59e0b;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer">+15 min</button>' +
+    '<button onclick="itinAddTime(30)" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,165,0,0.2);background:rgba(255,165,0,0.06);color:#f59e0b;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer">+30 min</button>' +
+    '<button onclick="itinAddTime(60)" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,165,0,0.2);background:rgba(255,165,0,0.06);color:#f59e0b;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer">+1 hour</button>' +
+  '</div>' +
+
+  // Next stop preview
+  (nextStop ?
+    '<div style="padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;margin-bottom:12px;display:flex;align-items:center;gap:10px">' +
+      '<div style="font-size:11px;color:rgba(255,255,255,0.35)">NEXT</div>' +
+      '<div style="flex:1"><div style="font-size:13px;font-weight:700">' + nextStop.name + '</div>' +
+      '<div style="font-size:10px;color:rgba(255,255,255,0.35)">' + (times[activeIdx+1]||'') + (nextStop.cost?' · '+nextStop.cost:'') + '</div></div>' +
+      (it.using_rideshare ? '<div style="font-size:11px;color:#22c55e;font-weight:700">' + itinEstRideCost(activeStop, nextStop) + '</div>' : '') +
+    '</div>' : '') +
+
+  // Next stop button
+  '<button onclick="itinNextStop()" style="width:100%;padding:15px;border-radius:16px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer">' +
+    (nextStop ? 'Next Stop →' : '🏁 Finish Night') +
+  '</button>';
+}
+
+function itinRenderLiveComplete() {
+  var it = itin.current;
+  var totalActual = it.stops.reduce(function(a,s){return a+(s.actual_mins||s.estimated_mins||0);},0);
+  var hrs = Math.floor(totalActual/60), mins = totalActual%60;
+  return '<div style="text-align:center;padding:20px">' +
+    '<div style="font-size:48px;margin-bottom:12px">🏁</div>' +
+    '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif;margin-bottom:8px">Night complete!</div>' +
+    '<div style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:20px">You hit ' + it.stops.length + ' stops in ' + hrs + 'h ' + mins + 'min</div>' +
+    '<button onclick="closeItinerary()" style="width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer">Done 🎉</button>' +
+  '</div>';
+}
+
+// ── LIVE TIMER ──
+function itinStartLiveTimer() {
+  itin.liveElapsed = 0;
+  if (itin.liveTimer) clearInterval(itin.liveTimer);
+  itin.liveTimer = setInterval(function() {
+    itin.liveElapsed++;
+    var el = document.getElementById('itin-live-timer');
+    if (!el) { clearInterval(itin.liveTimer); return; }
+    var mins = Math.floor(itin.liveElapsed / 60);
+    var secs = itin.liveElapsed % 60;
+    el.textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
+    // Color warning if over estimated time
+    var activeStop = itin.current && itin.current.stops.find(function(s){return s.status==='active';});
+    if (activeStop && itin.liveElapsed > (activeStop.estimated_mins||60)*60) {
+      el.style.color = '#f59e0b';
+    }
+  }, 1000);
+}
+
+// ── ACTIONS ──
+function itinAddTime(mins) {
+  if (!itin.current) return;
+  // Push estimated time at current and all future stops
+  var activeIdx = itin.current.stops.findIndex(function(s){return s.status==='active';});
+  if (activeIdx < 0) activeIdx = itin.activeStopIdx;
+  itin.current.stops[activeIdx].estimated_mins = (itin.current.stops[activeIdx].estimated_mins || 60) + mins;
+  if (typeof showToast === 'function') showToast('⏱ +' + mins + ' min added — schedule pushed back');
+  itinRenderModal();
+}
+window.itinAddTime = itinAddTime;
+
+function itinNextStop() {
+  if (!itin.current) return;
+  var activeIdx = itin.current.stops.findIndex(function(s){return s.status==='active';});
+  if (activeIdx < 0) return;
+
+  // Record actual time
+  var actualMins = Math.round(itin.liveElapsed / 60);
+  itin.current.stops[activeIdx].actual_mins = actualMins;
+  itin.current.stops[activeIdx].status = 'done';
+  if (itin.liveTimer) { clearInterval(itin.liveTimer); itin.liveTimer = null; }
+
+  // Log dwell time (anonymous data)
+  itinLogDwell(itin.current.stops[activeIdx], actualMins);
+
+  var nextIdx = activeIdx + 1;
+  if (nextIdx < itin.current.stops.length) {
+    // Show rideshare prompt if needed
+    if (itin.current.using_rideshare) {
+      itinShowRidePrompt(itin.current.stops[activeIdx], itin.current.stops[nextIdx], function() {
+        itin.current.stops[nextIdx].status = 'active';
+        itin.activeStopIdx = nextIdx;
+        itinSave(itin.current);
+        itinRenderModal();
+      });
+    } else {
+      itin.current.stops[nextIdx].status = 'active';
+      itin.activeStopIdx = nextIdx;
+      itinSave(itin.current);
+      itinRenderModal();
+    }
+  } else {
+    // All done
+    itinSave(itin.current);
+    itinRenderModal();
+  }
+}
+window.itinNextStop = itinNextStop;
+
+function itinShowRidePrompt(fromStop, toStop, onContinue) {
+  var existing = document.getElementById('itin-ride-prompt');
+  if (existing) existing.remove();
+
+  var rideCost = itinEstRideCost(fromStop, toStop);
+  var walkMins = itinEstWalkMins(fromStop, toStop);
+
+  var prompt = document.createElement('div');
+  prompt.id = 'itin-ride-prompt';
+  prompt.style.cssText = 'position:fixed;inset:0;z-index:8500;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center';
+  prompt.innerHTML =
+    '<div style="width:100%;max-width:480px;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(34,197,94,0.3);padding:20px 20px 40px">' +
+      '<div style="font-size:16px;font-weight:800;font-family:Georgia,serif;margin-bottom:4px">Getting to ' + toStop.name + '</div>' +
+      '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:16px">Choose how you want to get there</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:10px">' +
+        '<a href="https://m.uber.com/ul/?action=setPickup&pickup=my_location" target="_blank" style="flex:1;padding:13px;border-radius:12px;border:none;background:rgba(0,0,0,0.8);color:white;font-size:13px;font-weight:800;text-align:center;text-decoration:none;border:1px solid rgba(255,255,255,0.1)">🚗 Uber<br><span style="font-size:10px;color:rgba(255,255,255,0.4)">~' + rideCost + '</span></a>' +
+        '<a href="https://lyft.com/ride" target="_blank" style="flex:1;padding:13px;border-radius:12px;border:none;background:rgba(233,30,140,0.2);color:white;font-size:13px;font-weight:800;text-align:center;text-decoration:none;border:1px solid rgba(233,30,140,0.3)">🩷 Lyft<br><span style="font-size:10px;color:rgba(255,255,255,0.4)">~' + rideCost + '</span></a>' +
+        (walkMins <= 12 ?
+          '<button onclick="document.getElementById(\'itin-ride-prompt\').remove();(' + onContinue.toString() + ')()" style="flex:1;padding:13px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.6);font-size:12px;font-weight:800;font-family:inherit;cursor:pointer">🚶 Walk<br><span style="font-size:10px;color:rgba(255,255,255,0.35)">' + walkMins + ' min</span></button>' : '') +
+      '</div>' +
+      '<button onclick="document.getElementById(\'itin-ride-prompt\').remove();(' + onContinue.toString() + ')()" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Skip — I\'ll figure it out</button>' +
+    '</div>';
+
+  document.body.appendChild(prompt);
+  // Clicking outside also continues
+  prompt.addEventListener('click', function(e) {
+    if (e.target === prompt) { prompt.remove(); onContinue(); }
+  });
+}
+
+function itinAdjustDur(idx, deltaMins) {
+  if (!itin.current) return;
+  var s = itin.current.stops[idx];
+  s.estimated_mins = Math.max(15, (s.estimated_mins||60) + deltaMins);
+  itinRenderModal();
+}
+window.itinAdjustDur = itinAdjustDur;
+
+function itinUpdateStart(timeVal) {
+  if (!itin.current || !timeVal) return;
+  // Convert 24h to 12h
+  var parts = timeVal.split(':');
+  var h = parseInt(parts[0]), m = parseInt(parts[1]||0);
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  var h12 = h > 12 ? h-12 : h === 0 ? 12 : h;
+  itin.current.start_time = h12 + ':' + (m<10?'0':'') + m + ' ' + ampm;
+  // Re-render just the stops list
+  var stopsEl = document.getElementById('itin-stops-list');
+  if (stopsEl) stopsEl.innerHTML = itinRenderStops(itin.current, itinCalcTimes(itin.current));
+}
+window.itinUpdateStart = itinUpdateStart;
+
+function itinRemoveStop(idx) {
+  if (!itin.current) return;
+  itin.current.stops.splice(idx, 1);
+  itinRenderModal();
+}
+window.itinRemoveStop = itinRemoveStop;
+
+function itinEditStop(idx) {
+  var s = itin.current && itin.current.stops[idx];
+  if (!s) return;
+  var newName = prompt('Stop name:', s.name);
+  if (newName !== null) s.name = newName || s.name;
+  var newDur = prompt('Duration (minutes):', s.estimated_mins || 60);
+  if (newDur !== null) s.estimated_mins = parseInt(newDur) || s.estimated_mins;
+  itinRenderModal();
+}
+window.itinEditStop = itinEditStop;
+
+function itinAddCustomStop() {
+  var name = prompt('Stop name (bar, restaurant, etc.):');
+  if (!name) return;
+  var dur = parseInt(prompt('How long? (minutes)', '60')) || 60;
+  var cost = prompt('Cost per person? (e.g. $15-25, or leave blank)') || '';
+  itin.current.stops.push({
+    name: name, type: 'custom',
+    estimated_mins: dur, actual_mins: null,
+    cost: cost, tip: '', status: 'pending',
+  });
+  itinRenderModal();
+}
+window.itinAddCustomStop = itinAddCustomStop;
+
+function itinGoLive() {
+  if (!itin.current) return;
+  itin.current.stops.forEach(function(s){s.status='pending';s.actual_mins=null;});
+  if (itin.current.stops.length) itin.current.stops[0].status = 'active';
+  itin.mode = 'live';
+  itin.activeStopIdx = 0;
+  itin.liveElapsed = 0;
+  itinRenderModal();
+}
+window.itinGoLive = itinGoLive;
+
+function itinExitLive() {
+  if (itin.liveTimer) { clearInterval(itin.liveTimer); itin.liveTimer = null; }
+  itin.mode = 'planned';
+  // Reset stop statuses
+  if (itin.current) itin.current.stops.forEach(function(s){s.status='pending';});
+  itinRenderModal();
+}
+window.itinExitLive = itinExitLive;
+
+function itinSaveAndClose() {
+  if (!itin.current) { closeItinerary(); return; }
+  var saved = itinGetSaved();
+  var unlocked = localStorage.getItem('dtslo_itin_unlocked') === '1';
+  var isNew = !saved.find(function(s){return s.id===itin.current.id;});
+  if (isNew && saved.length >= ITINERARY_FREE_LIMIT && !unlocked) {
+    itinUnlockPrompt();
+    return;
+  }
+  itinSave(itin.current);
+  if (typeof showToast === 'function') showToast('✅ ' + (itin.current.name||'Plan') + ' saved!');
+  closeItinerary();
+}
+window.itinSaveAndClose = itinSaveAndClose;
+
+function itinUnlockPrompt() {
+  var existing = document.getElementById('itin-unlock-modal');
+  if (existing) existing.remove();
+  var m = document.createElement('div');
+  m.id = 'itin-unlock-modal';
+  m.style.cssText = 'position:fixed;inset:0;z-index:8600;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px';
+  m.innerHTML =
+    '<div style="background:rgba(8,8,20,0.99);border-radius:24px;border:1px solid rgba(180,79,255,0.3);padding:28px 24px;max-width:340px;width:100%;text-align:center">' +
+      '<div style="font-size:40px;margin-bottom:12px">✨</div>' +
+      '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:8px">Unlock Unlimited Plans</div>' +
+      '<div style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.5;margin-bottom:20px">You\'ve used your 3 free itinerary slots. Unlock unlimited saved plans for a one-time fee.</div>' +
+      '<div style="font-size:32px;font-weight:900;color:#b44fff;margin-bottom:4px">$2.99</div>' +
+      '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:20px">One-time · Keep forever</div>' +
+      '<button onclick="itinProcessUnlock()" style="width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#b44fff,#7c3aed);color:white;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;margin-bottom:8px">Unlock Now — $2.99</button>' +
+      '<button onclick="document.getElementById(\'itin-unlock-modal\').remove()" style="width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Not now</button>' +
+    '</div>';
+  document.body.appendChild(m);
+}
+window.itinUnlockPrompt = itinUnlockPrompt;
+
+function itinProcessUnlock() {
+  // Payment placeholder — set flag locally for now
+  // Real implementation: Stripe Checkout or Apple/Google IAP
+  localStorage.setItem('dtslo_itin_unlocked', '1');
+  window._itinUnlocked = true;
+  if (typeof currentUser !== 'undefined' && currentUser && typeof supabaseClient !== 'undefined') {
+    supabaseClient.from('profiles').update({ itinerary_unlocked: true }).eq('id', currentUser.id).then(function(){}).catch(function(){});
+    supabaseClient.from('itinerary_unlocks').insert({ user_id: currentUser.id, price: '$2.99' }).then(function(){}).catch(function(){});
+  }
+  document.getElementById('itin-unlock-modal')?.remove();
+  if (typeof showToast === 'function') showToast('✨ Unlimited itineraries unlocked!');
+  if (itin.current) itinSaveAndClose();
+}
+window.itinProcessUnlock = itinProcessUnlock;
+
+function itinShare(id) {
+  var saved = itinGetSaved();
+  var it = saved.find(function(s){return s.id===id;}) || itin.current;
+  if (!it) return;
+  var shareUrl = 'https://dtslomenu.com/plan/' + (it.share_id || it.id);
+  if (navigator.share) {
+    navigator.share({ title: it.name, text: 'Check out tonight\'s plan!', url: shareUrl }).catch(function(){});
+  } else {
+    navigator.clipboard.writeText(shareUrl).then(function(){
+      if (typeof showToast === 'function') showToast('📋 Share link copied!');
+    }).catch(function(){
+      if (typeof showToast === 'function') showToast('Share: ' + shareUrl);
+    });
+  }
+}
+window.itinShare = itinShare;
+
+function closeItinerary() {
+  if (itin.liveTimer) { clearInterval(itin.liveTimer); itin.liveTimer = null; }
+  var m = document.getElementById('itin-modal');
+  if (m) {
+    var inner = m.querySelector('#itin-inner');
+    if (inner) inner.style.transform = 'translateY(100%)';
+    setTimeout(function(){m.remove();}, 350);
+  }
+}
+window.closeItinerary = closeItinerary;
+
+// ── HELPERS ──
+function itinCalcTimes(it) {
+  var times = [];
+  var baseTime = itinParseTime(it.start_time || '9:00 PM');
+  var current = baseTime;
+  it.stops.forEach(function(s, i) {
+    times.push(itinFormatTime(current));
+    current += (s.estimated_mins || 60);
+  });
+  return times;
+}
+
+function itinParseTime(str) {
+  // Returns minutes since midnight
+  var m = str.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!m) return 21 * 60; // default 9pm
+  var h = parseInt(m[1]), min = parseInt(m[2]), ampm = m[3].toUpperCase();
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return h * 60 + min;
+}
+
+function itinFormatTime(totalMins) {
+  var h = Math.floor(totalMins / 60) % 24;
+  var m = totalMins % 60;
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  var h12 = h > 12 ? h-12 : h === 0 ? 12 : h;
+  return h12 + ':' + (m<10?'0':'') + m + ' ' + ampm;
+}
+
+function itinTo24(str) {
+  var m = str.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!m) return '21:00';
+  var h = parseInt(m[1]), min = parseInt(m[2]), ampm = m[3].toUpperCase();
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return (h<10?'0':'') + h + ':' + (m[2]||'00');
+}
+
+function itinEstRideCost(fromStop, toStop) {
+  // Rough estimate — SLO is small, most rides $8-15
+  var baseCost = 8 + Math.random() * 6;
+  return '$' + Math.floor(baseCost) + '-' + Math.ceil(baseCost + 4);
+}
+
+function itinEstWalkMins(fromStop, toStop) {
+  // SLO downtown is walkable — most spots 5-12 min
+  return 5 + Math.floor(Math.random() * 8);
+}
+
+function itinLogDwell(stop, actualMins) {
+  if (!actualMins || actualMins < 1) return;
+  var now = new Date();
+  var data = {
+    venue_name: stop.name,
+    venue_type: stop.type || 'bar',
+    estimated_mins: stop.estimated_mins || 60,
+    actual_mins: actualMins,
+    day_of_week: now.getDay(),
+    hour_of_day: now.getHours(),
+  };
+  if (typeof currentUser !== 'undefined' && currentUser) data.user_id = currentUser.id;
+  if (typeof supabaseClient !== 'undefined') {
+    supabaseClient.from('dwell_logs').insert(data).then(function(){}).catch(function(){});
+  }
+}

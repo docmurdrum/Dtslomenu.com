@@ -302,7 +302,7 @@ function piRenderResult(plan) {
 
       '<div style="display:flex;gap:10px">' +
         '<button onclick="window.piState.step=0;window.piRender()" style="flex:1;padding:13px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:13px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer">← Change It</button>' +
-        '<button onclick="menuHomeClosePlanIt()" style="flex:1;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:13px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer">Lets Go →</button>' +
+        '<button onclick="itinOpenFromPlanIt()" style="flex:1;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:13px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer">Lets Go →</button>' +
       '</div>' +
     '</div>';
 }
@@ -310,3 +310,34 @@ function piRenderResult(plan) {
 
 
 
+
+function itinOpenFromPlanIt() {
+  if (!window.piState || !window.piState.result) { menuHomeClosePlanIt(); return; }
+  var plan = window.piState.result;
+  var options = {
+    startTime: '9:00 PM',
+    usingRideshare: window.piState.groupSize >= 5,
+    groupSize: window.piState.groupSize || 2,
+  };
+  // Try to get a real start time based on current time
+  try {
+    var now = new Date();
+    var h = now.getHours(), m = now.getMinutes();
+    var roundedM = Math.ceil(m/15)*15;
+    if (roundedM === 60) { h++; roundedM = 0; }
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    var h12 = h > 12 ? h-12 : h===0?12:h;
+    options.startTime = h12+':'+(roundedM<10?'0':'')+roundedM+' '+ampm;
+  } catch(e) {}
+
+  if (typeof itinFromPlan === 'function') {
+    var itinObj = itinFromPlan(plan, options);
+    menuHomeClosePlanIt();
+    setTimeout(function() {
+      if (typeof openItineraryBuilder === 'function') openItineraryBuilder(itinObj, false);
+    }, 300);
+  } else {
+    menuHomeClosePlanIt();
+  }
+}
+window.itinOpenFromPlanIt = itinOpenFromPlanIt;
