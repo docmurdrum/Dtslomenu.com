@@ -5,7 +5,8 @@
 // ── STATE ──
 let missionsCatFilter = 'all';
 let missionsBarFilter = 'all';
-let completedMissions = new Set(JSON.parse(safeStore.get('completed_missions') || '[]'));
+let completedMissions = new Set();
+try { completedMissions = new Set(JSON.parse((typeof safeStore !== 'undefined' ? safeStore.get('completed_missions') : null) || '[]')); } catch(e) {}
 let redemptionTimer   = null;
 let redemptionSeconds = 600;
 
