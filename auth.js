@@ -155,35 +155,47 @@ async function doSignup() {
 // ── ON LOGIN ──
 async function onLogin(user, isNewUser = false) {
   currentUser = user;
-  // Always hide auth, show app
+
+  // Hide auth screen always
   const authEl = document.getElementById('auth-screen');
-  const appEl  = document.getElementById('app');
   if (authEl) authEl.style.display = 'none';
-  if (appEl)  { appEl.style.display = 'block'; appEl.style.opacity = '1'; }
-  renderAvatar();
-  updateUsernameBar();
-  await loadUserStats();
-  renderProducts();
-  loadReports();
-  loadLostItems();
-  checkThursdayMode();
-  setInterval(checkThursdayMode, 60 * 60 * 1000);
-  // Load achievements silently
-  await loadAchievements();
-  await checkAchievements();
-  if (isNewUser) {
-    maybeShowOnboarding(true);
-    // Preload The Freshman as starter character
-    await unlockFreshmanStarter(user);
+
+  // Only show app if NOT going into DTSLO via hub tap
+  // (enterDTSLO/revealApp handles showing app in that case)
+  if (!window._pendingDTSLOEntry) {
+    const appEl = document.getElementById('app');
+    if (appEl) { appEl.style.display = 'block'; appEl.style.opacity = '1'; }
   }
-  // If user logged in via DTSLO hub tap, enter DTSLO now
+
+  // Load user data
+  try { renderAvatar(); } catch(e) {}
+  try { updateUsernameBar(); } catch(e) {}
+  try { await loadUserStats(); } catch(e) {}
+  try { renderProducts(); } catch(e) {}
+  try { loadReports(); } catch(e) {}
+  try { loadLostItems(); } catch(e) {}
+  try { checkThursdayMode(); } catch(e) {}
+  try { setInterval(checkThursdayMode, 60 * 60 * 1000); } catch(e) {}
+  try { await loadAchievements(); } catch(e) {}
+  try { await checkAchievements(); } catch(e) {}
+
+  if (isNewUser) {
+    try { maybeShowOnboarding(true); } catch(e) {}
+    try { await unlockFreshmanStarter(user); } catch(e) {}
+  }
+
+  // Enter DTSLO if that's where they were going
   if (window._pendingDTSLOEntry) {
     window._pendingDTSLOEntry = false;
     setTimeout(function() {
-      try { menuHomeEnterDTSLO(); } catch(e) {}
-    }, 500);
+      try { menuHomeEnterDTSLO(); } catch(e) { 
+        // Last resort — just show app
+        var appEl = document.getElementById('app');
+        if (appEl) { appEl.style.display = 'block'; appEl.style.opacity = '1'; }
+      }
+    }, 300);
   } else {
-    // Otherwise just show hub screen
+    // No pending entry — show hub screen
     try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
   }
 }

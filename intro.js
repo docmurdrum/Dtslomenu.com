@@ -5,7 +5,6 @@
 
 (function() {
 
-  var MAPTILER_KEY = 'kiFBCC0bWlsukNO2sHf7';
   var introMap     = null;
   var introTimer   = null;
   var introDone    = false;

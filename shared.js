@@ -3,13 +3,13 @@
 // ══════════════════════════════════════════════
 
 // ── SUPABASE ──
-const supabaseClient = window.supabase.createClient(
+supabaseClient = window.supabase.createClient(
   "https://jwgwufggptpdmgcmmqes.supabase.co",
   "sb_publishable_uIxE2Eol_nC2TFvkT_G1EQ_WxWWt7A3"
 );
 
 // ── GLOBAL STATE ──
-let currentUser  = null;
+// currentUser declared in globals.js
 let userXP       = 0;
 let reportCount  = 0;
 let postCount    = 0;
@@ -283,3 +283,38 @@ function toggleGPSBypassApp(enabled) {
   showToast(enabled ? '⚠️ GPS bypass ON' : '✅ GPS bypass OFF');
 }
 
+// ── XP SYSTEM ──
+async function addXP(amount) {
+  amount = Math.floor(amount || 0);
+  if (amount <= 0) return;
+  if (!currentUser) {
+    // Store locally if not logged in
+    var local = parseInt(localStorage.getItem('dtslo_xp') || '0') + amount;
+    localStorage.setItem('dtslo_xp', local);
+    return;
+  }
+  try {
+    // Load current XP
+    var res = await supabaseClient
+      .from('profiles')
+      .select('xp, level')
+      .eq('id', currentUser.id)
+      .single();
+    
+    if (res.data) {
+      var newXP = (res.data.xp || 0) + amount;
+      var newLevel = Math.floor(newXP / 100) + 1;
+      await supabaseClient
+        .from('profiles')
+        .update({ xp: newXP, level: newLevel })
+        .eq('id', currentUser.id);
+      
+      // Award XP shard materials
+      if (typeof awardXPShard === 'function') awardXPShard(amount);
+      
+      if (typeof showToast === 'function') showToast('⚡ +' + amount + ' XP');
+    }
+  } catch(e) {
+    console.warn('[addXP]', e);
+  }
+}
