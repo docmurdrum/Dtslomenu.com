@@ -48,6 +48,7 @@ function showPage(p) {
   if (p === 'friends')  { try { initFriends(); } catch(e) {} }
   if (p === 'events')   { try { initEvents(); } catch(e) {} }
   if (p === 'line')     { if (typeof loadReports === 'function') loadReports(); }
+  if (p === 'lineskip')  { try { initLineSkip(); } catch(e) {} }
 }
 
 // ── HANDLE VOTE FROM BAR PAGE ──

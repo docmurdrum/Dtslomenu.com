@@ -55,7 +55,7 @@ async function loadBarsFromDB() {
           bars[idx].glow_packed_color    = row.glow_packed_color    || bars[idx].color;
           bars[idx].glow_packed_intensity= row.glow_packed_intensity?? 90;
           bars[idx].glow_nodata_color    = row.glow_nodata_color     || bars[idx].color;
-          bars[idx].glow_nodata_intensity= row.glow_nodata_intensity ?? 10;
+          bars[idx].glow_nodata_intensity= row.glow_nodata_intensity ?? 30;
           try { bars[idx].effects_nodata = JSON.parse(row.effects_nodata || '{}'); } catch(e) { bars[idx].effects_nodata = {}; }
           try { bars[idx].effects_empty  = JSON.parse(row.effects_empty  || '{}'); } catch(e) { bars[idx].effects_empty  = {}; }
           try { bars[idx].effects_busy   = JSON.parse(row.effects_busy   || '{}'); } catch(e) { bars[idx].effects_busy   = {}; }
@@ -453,7 +453,7 @@ function renderBars() {
       Dead:     { color: bar.glow_empty_color  || bar.color, intensity: bar.glow_empty_intensity  ?? 20, effects: bar.effects_empty  || {} },
       Busy:     { color: bar.glow_busy_color   || bar.color, intensity: bar.glow_busy_intensity   ?? 50, effects: bar.effects_busy   || {} },
       Packed:   { color: bar.glow_packed_color || bar.color, intensity: bar.glow_packed_intensity ?? 90, effects: bar.effects_packed || {} },
-      'No Data':{ color: bar.glow_nodata_color || bar.color, intensity: bar.glow_nodata_intensity ?? 10, effects: bar.effects_nodata || {} },
+      'No Data':{ color: bar.glow_nodata_color || bar.color, intensity: bar.glow_nodata_intensity ?? 30, effects: bar.effects_nodata || {} },
     };
     const glow = glowSettings[status] || glowSettings['No Data'];
     const glowAlpha = Math.round(glow.intensity * 2.55).toString(16).padStart(2,'0');

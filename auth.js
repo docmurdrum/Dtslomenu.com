@@ -1,3 +1,27 @@
+
+// ── AUTH BACK TO MAP ──
+function authBackToMap() {
+  // Hide auth, show hub map
+  var auth = document.getElementById('auth-screen');
+  var app  = document.getElementById('app');
+  if (auth) auth.style.display = 'none';
+  if (app)  app.style.display  = 'none';
+  // Re-init hub screen
+  try {
+    if (typeof menuHomeInit === 'function') menuHomeInit();
+  } catch(e) {}
+}
+
+// Show X button on auth when hub screen has been seen
+function maybeShowAuthBackBtn() {
+  var btn = document.getElementById('auth-back-btn');
+  if (btn && localStorage.getItem('menu_open_count')) {
+    btn.style.display = 'flex';
+    btn.style.alignItems = 'center';
+    btn.style.justifyContent = 'center';
+  }
+}
+
 // ══════════════════════════════════════════════
 // AUTH.JS — Login, Signup, Session
 // ══════════════════════════════════════════════
@@ -129,8 +153,16 @@ async function onLogin(user, isNewUser = false) {
     // Preload The Freshman as starter character
     await unlockFreshmanStarter(user);
   }
-  // Always launch hub screen after login
-  try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
+  // If user logged in via DTSLO hub tap, enter DTSLO now
+  if (window._pendingDTSLOEntry) {
+    window._pendingDTSLOEntry = false;
+    setTimeout(function() {
+      try { menuHomeEnterDTSLO(); } catch(e) {}
+    }, 500);
+  } else {
+    // Otherwise just show hub screen
+    try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
+  }
 }
 
 
@@ -167,7 +199,7 @@ async function doSignout() {
   currentUser = null; userXP = 0; reportCount = 0; postCount = 0;
   cart = {};
   document.getElementById('app').style.display = 'none';
-  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('auth-screen').style.display = 'flex'; maybeShowAuthBackBtn();
   showPage('line');
   showToast('👋 Signed out');
 }
@@ -195,32 +227,48 @@ async function doChangePassword() {
 }
 
 // ── SESSION INIT ──
-window.onload = async function () {
-  // MENU intro sequence — if skipped, go straight to hub screen
+// Auth is deferred — hub screen loads first, session only checked when DTSLO hub is tapped.
+// This means the app opens instantly without any login wall.
+
+window.onload = function () {
+  // Always start with hub screen — no auth check on load
   try {
-    if (typeof initIntro === "function") {
-      if (localStorage.getItem('menu_skip_intro') === '1') {
-        if (typeof menuHomeInit === 'function') menuHomeInit();
-      } else {
-        initIntro();
-      }
-    }
+    if (typeof menuHomeInit === 'function') menuHomeInit();
   } catch(e) {}
+
+  // Listen for auth state changes (handles returning logged-in users silently)
+  try {
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user && !currentUser) {
+        await onLogin(session.user);
+      }
+      if (event === 'SIGNED_OUT') {
+        currentUser = null;
+      }
+    });
+  } catch(e) {}
+};
+
+// Called when user taps DTSLO hub — checks session, shows login if needed
+async function requireAuthForDTSLO() {
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session?.user) { await onLogin(session.user); try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {} }
-  } catch (e) {
-    console.log('Session check failed:', e);
+    if (session?.user) {
+      // Already logged in — go straight in
+      if (!currentUser) await onLogin(session.user);
+      menuHomeEnterDTSLO();
+    } else {
+      // Not logged in — show auth screen with back button
+      document.getElementById('auth-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+      maybeShowAuthBackBtn();
+      // Store intent so after login we enter DTSLO
+      window._pendingDTSLOEntry = true;
+    }
+  } catch(e) {
+    // Fallback — show auth
     document.getElementById('auth-screen').style.display = 'flex';
-    document.getElementById('app').style.display = 'none';
+    maybeShowAuthBackBtn();
+    window._pendingDTSLOEntry = true;
   }
-
-  supabaseClient.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session?.user && !currentUser) {
-      await onLogin(session.user);
-    }
-    if (event === 'SIGNED_OUT') {
-      currentUser = null;
-    }
-  });
-};
+}

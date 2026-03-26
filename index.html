@@ -39,7 +39,10 @@
 <!-- ══════════════════ AUTH SCREEN ══════════════════ -->
 <div id="auth-screen">
   <div class="auth-card">
-    <div class="auth-logo">DTSLO</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="auth-logo" style="margin-bottom:0">DTSLO</div>
+      <button id="auth-back-btn" onclick="authBackToMap()" style="display:none;background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;font-family:inherit">✕</button>
+    </div>
     <div class="auth-tagline">Downtown SLO — your night out, sorted.</div>
 
     <div class="auth-tabs">
@@ -617,6 +620,11 @@
         <div class="stat-lbl">L&F Posts</div>
       </div>
     </div>
+
+    <!-- Budget Calculator button -->
+    <button onclick="openBudgetCalculator()" style="width:100%;padding:13px;border-radius:14px;border:1px solid rgba(34,197,94,0.2);background:rgba(34,197,94,0.06);color:#22c55e;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">
+      <span>💰</span> Budget Calculator
+    </button>
 
     <!-- Feedback button -->
     <button onclick="showFeedback()" style="width:100%;padding:13px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.4);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">
@@ -1454,6 +1462,8 @@
 <script src="achievements.js"></script>
 <script src="onboarding.js"></script>
 <script src="intro.js"></script>
+  <script src="line_skip.js"></script>
+  <script src="budget.js"></script>
   <script src="menu_home.js"></script>
   <script src="auth.js"></script>
 

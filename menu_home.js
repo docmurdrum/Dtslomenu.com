@@ -13,6 +13,13 @@
   // ── PUBLIC API ──
   window.menuHomeInit        = init;
   window.menuHomeEnterDTSLO  = enterDTSLO;
+  window.menuHomeRequireAuth = function() {
+    if (typeof requireAuthForDTSLO === 'function') {
+      requireAuthForDTSLO();
+    } else {
+      enterDTSLO(); // fallback
+    }
+  };
   window.menuHomeSkipToggle  = skipToggle;
   window.menuHomePromptYes   = promptYes;
   window.menuHomePromptNo    = promptNo;
@@ -514,7 +521,7 @@
 
     sheet.innerHTML =
       '<div id="mh-bh-inner" style="width:100%;background:linear-gradient(180deg,rgba(2,15,25,0.99),rgba(4,20,35,0.99));border-radius:24px 24px 0 0;border-top:2px solid rgba(6,182,212,0.3);padding:12px 20px 48px;max-height:88vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)">' +
-        '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 14px;cursor:pointer" onclick="menuHomeCloseBeachHub()"></div>' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">' +'<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);flex:1"></div>' +'<button onclick="menuHomeCloseBeachHub()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;margin-left:8px">✕</button>' +'</div>' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
           '<div style="font-size:22px;font-weight:800;font-family:Georgia,serif;color:white">🏖 Beach Hub</div>' +
           '<div style="font-size:11px;color:rgba(6,182,212,0.7);font-weight:700">CENTRAL COAST</div>' +
@@ -1120,30 +1127,424 @@
   }
   window.menuHomeTravelBeach = travelBeach;
 
-  // Plan It placeholder
+  // ── PLAN IT — Claude AI Powered ──
+  var piState = {
+    step: 0,  // 0=form, 1=loading, 2=result
+    groupSize: 2,
+    budget: 'medium',
+    vibe: '',
+    time: 'tonight',
+    imPaying: false,
+    familyFriendly: false,
+    soberFriendly: false,
+    result: null,
+  };
+
   function openTravelPlanIt() {
+    var existing = document.getElementById('mh-planit-sheet');
+    if (existing) existing.remove();
+
+    piState.step = 0;
+    piState.result = null;
+
     var sheet = document.createElement('div');
     sheet.id = 'mh-planit-sheet';
-    sheet.style.cssText = 'position:absolute;inset:0;z-index:23;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
-    sheet.innerHTML = '<div style="width:100%;background:rgba(8,8,20,0.98);border-radius:24px 24px 0 0;border-top:1px solid rgba(255,215,0,0.2);padding:20px 20px 48px;transform:translateY(20px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)" id="mh-pi-inner">' +
-      '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 20px;cursor:pointer" onclick="menuHomeClosePlanIt()"></div>' +
-      '<div style="font-size:28px;margin-bottom:8px">✨</div>' +
-      '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif;margin-bottom:4px">Plan It</div>' +
-      '<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:20px;line-height:1.5">Tell us about your group and what you are looking for — we will build a personalized outing plan.</div>' +
-      '<div style="padding:16px;background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.15);border-radius:14px;font-size:12px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:16px">' +
-        '🚧 Claude AI-powered planning coming next build. Will ask about group size, budget, vibe, time of day and generate a custom itinerary.' +
-      '</div>' +
-      '<button onclick="menuHomeClosePlanIt()" style="width:100%;padding:13px;border-radius:14px;border:none;background:rgba(255,215,0,0.1);color:rgba(255,215,0,0.7);font-size:13px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer">Got it</button>' +
-    '</div>';
+    sheet.style.cssText = 'position:absolute;inset:0;z-index:23;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
+
     document.getElementById('menu-home').appendChild(sheet);
-    setTimeout(function() {
-      sheet.style.opacity = '1';
-      document.getElementById('mh-pi-inner').style.transform = 'translateY(0)';
-    }, 30);
-    sheet.addEventListener('click', function(e) { if (e.target === sheet) sheet.remove(); });
+    setTimeout(function() { sheet.style.opacity = '1'; piRender(); }, 30);
+    sheet.addEventListener('click', function(e) {
+      if (e.target === sheet) menuHomeClosePlanIt();
+    });
   }
   window.menuHomeOpenTravelPlanIt = openTravelPlanIt;
 
+  function piRender() {
+    var sheet = document.getElementById('mh-planit-sheet');
+    if (!sheet) return;
+
+    if (piState.step === 0) {
+      sheet.innerHTML =
+        '<div id="mh-pi-inner" style="width:100%;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(255,215,0,0.25);padding:16px 20px 48px;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)">' +
+
+          '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 14px;cursor:pointer" onclick="menuHomeClosePlanIt()"></div>' +
+
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">' +
+            '<div style="font-size:28px">✨</div>' +
+            '<div><div style="font-size:20px;font-weight:800;font-family:Georgia,serif">Plan It</div>' +
+            '<div style="font-size:11px;color:rgba(255,255,255,0.4)">AI-powered outing planner for SLO</div></div>' +
+          '</div>' +
+
+          // Group size
+          '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">GROUP SIZE</div>' +
+          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+            '<input type="range" id="pi-group-slider" min="1" max="12" value="2" style="flex:1;accent-color:#ffd700" oninput="piUpdateGroup(this.value)">' +
+            '<div id="pi-group-display" style="font-size:22px;font-weight:900;color:#ffd700;min-width:28px">2</div>' +
+          '</div>' +
+          '<div id="pi-group-note" style="padding:8px 12px;border-radius:10px;font-size:11px;margin-bottom:16px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#22c55e">✅ Perfect for a couple or pair</div>' +
+
+          // Budget
+          '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">BUDGET</div>' +
+          '<div style="display:flex;gap:8px;margin-bottom:16px">' +
+            '<button class="pi-opt" onclick="piSelect(this,this.dataset.pfield,this.dataset.pval)" data-pfield="budget" data-pval="cheap" data-val="cheap">💰 Cheap</button>' +
+            '<button class="pi-opt" onclick="piSelect(this,this.dataset.pfield,this.dataset.pval)" data-pfield="budget" data-pval="medium" data-val="medium" style="background:rgba(255,215,0,0.12);border-color:rgba(255,215,0,0.4);color:#ffd700">💵 Medium</button>' +
+            '<button class="pi-opt" onclick="piSelect(this,this.dataset.pfield,this.dataset.pval)" data-pfield="budget" data-pval="splurge" data-val="splurge">💎 Splurge</button>' +
+          '</div>' +
+
+          // Vibe
+          '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">VIBE</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">' +
+            '<button class="pi-opt" onclick="piSelect(this,this.dataset.pfield,this.dataset.pval)" data-pfield="vibe" data-pval="chill" data-val="chill">😌 Chill</button>' +
+            '<button class="pi-opt" onclick="piSelect(this,this.dataset.pfield,this.dataset.pval)" data-pfield="vibe" data-pval="rowdy" data-val="rowdy">🎉 Rowdy</button>' +
+            '<button class="pi-opt" onclick="piSelect(this,this.dataset.pfield,this.dataset.pval)" data-pfield="vibe" data-pval="romantic" data-val="romantic">💑 Romantic</button>' +
+            '<button class="pi-opt" onclick="piSelect(this,this.dataset.pfield,this.dataset.pval)" data-pfield="vibe" data-pval="adventurous" data-val="adventurous">🧗 Adventure</button>' +
+            '<button class="pi-opt" onclick="piSelect(this,this.dataset.pfield,this.dataset.pval)" data-pfield="vibe" data-pval="foodie" data-val="foodie">🍽 Foodie</button>' +
+            '<button class="pi-opt" onclick="piSelect(this,this.dataset.pfield,this.dataset.pval)" data-pfield="vibe" data-pval="outdoor" data-val="outdoor">🌿 Outdoor</button>' +
+          '</div>' +
+
+          // Time
+          '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">WHEN</div>' +
+          '<div style="display:flex;gap:8px;margin-bottom:16px">' +
+            '<button class="pi-opt pi-opt-active" onclick="piSelect(this,this.dataset.pfield,this.dataset.pval)" data-pfield="time" data-pval="tonight" data-val="tonight">🌙 Tonight</button>' +
+            '<button class="pi-opt" onclick="piSelect(this,this.dataset.pfield,this.dataset.pval)" data-pfield="time" data-pval="daytime" data-val="daytime">☀️ Daytime</button>' +
+            '<button class="pi-opt" onclick="piSelect(this,this.dataset.pfield,this.dataset.pval)" data-pfield="time" data-pval="weekend" data-val="weekend">📅 Weekend</button>' +
+          '</div>' +
+
+          // Toggles
+          '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)">' +
+              '<span style="font-size:13px">💳 I am paying for the group</span>' +
+              '<label class="toggle-switch"><input type="checkbox" id="pi-im-paying-toggle" onchange="piState.imPaying=this.checked"><span class="toggle-slider"></span></label>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)">' +
+              '<span style="font-size:13px">👨‍👩‍👧 Family friendly</span>' +
+              '<label class="toggle-switch"><input type="checkbox" id="pi-family-toggle" onchange="piState.familyFriendly=this.checked"><span class="toggle-slider"></span></label>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)">' +
+              '<span style="font-size:13px">🧃 Sober friendly</span>' +
+              '<label class="toggle-switch"><input type="checkbox" id="pi-sober-toggle" onchange="piState.soberFriendly=this.checked"><span class="toggle-slider"></span></label>' +
+            '</div>' +
+          '</div>' +
+
+          '<button onclick="piGenerate()" id="pi-go-btn" style="width:100%;padding:15px;border-radius:16px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:15px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer">✨ Build My Plan</button>' +
+        '</div>';
+
+      setTimeout(function() {
+        var inner = document.getElementById('mh-pi-inner');
+        if (inner) inner.style.transform = 'translateY(0)';
+      }, 30);
+
+      // Inject pi CSS
+      if (!document.getElementById('pi-css')) {
+        var s = document.createElement('style');
+        s.id = 'pi-css';
+        s.textContent = '.pi-opt{padding:8px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);font-size:12px;font-weight:700;cursor:pointer;font-family:Helvetica Neue,sans-serif;transition:all 0.15s}.pi-opt-active,.pi-opt.pi-opt-active{background:rgba(255,215,0,0.12);border-color:rgba(255,215,0,0.4);color:#ffd700}';
+        document.head.appendChild(s);
+      }
+
+    } else if (piState.step === 1) {
+      // Loading state
+      sheet.innerHTML =
+        '<div style="width:100%;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(255,215,0,0.25);padding:40px 20px 60px;display:flex;flex-direction:column;align-items:center;gap:16px">' +
+          '<div style="font-size:48px;animation:pi-spin 2s linear infinite">✨</div>' +
+          '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;color:white">Building your plan...</div>' +
+          '<div id="pi-loading-msg" style="font-size:13px;color:rgba(255,255,255,0.4);text-align:center">Thinking about your vibe...</div>' +
+        '</div>';
+      if (!document.getElementById('pi-spin-css')) {
+        var s2 = document.createElement('style');
+        s2.id = 'pi-spin-css';
+        s2.textContent = '@keyframes pi-spin{0%{transform:scale(1) rotate(0deg)}50%{transform:scale(1.2) rotate(180deg)}100%{transform:scale(1) rotate(360deg)}}';
+        document.head.appendChild(s2);
+      }
+      // Cycle loading messages
+      var msgs = ['Checking the vibe...','Scanning SLO spots...','Calculating ride costs...','Crafting your perfect night...'];
+      var mi = 0;
+      var msgInterval = setInterval(function() {
+        mi = (mi+1) % msgs.length;
+        var el = document.getElementById('pi-loading-msg');
+        if (el) el.textContent = msgs[mi];
+        else clearInterval(msgInterval);
+      }, 1200);
+
+    } else if (piState.step === 2 && piState.result) {
+      piRenderResult(piState.result);
+    }
+  }
+
+  function piUpdateGroup(val) {
+    piState.groupSize = parseInt(val);
+    var display = document.getElementById('pi-group-display');
+    var note = document.getElementById('pi-group-note');
+    if (display) display.textContent = val;
+    if (note) {
+      var n = parseInt(val);
+      if (n === 1) { note.style.color='#06b6d4'; note.textContent='🙋 Solo night out'; }
+      else if (n === 2) { note.style.color='#22c55e'; note.textContent='✅ Perfect for a couple or pair'; }
+      else if (n <= 4) { note.style.color='#22c55e'; note.textContent='✅ Small group — standard ride'; }
+      else if (n <= 6) { note.style.color='#ffd700'; note.textContent='🚐 Uber XL recommended (~1.7x cost)'; }
+      else if (n <= 10) { note.style.color='#f59e0b'; note.textContent='⚠️ Split into 2 vehicles'; }
+      else { note.style.color='#b44fff'; note.textContent='🚌 Large group — consider party transport'; }
+    }
+  }
+  window.piUpdateGroup = piUpdateGroup;
+
+  function piSelect(el, field, val) {
+    var row = el.parentElement;
+    row.querySelectorAll('.pi-opt').forEach(function(b) {
+      b.classList.remove('pi-opt-active');
+      b.style.background = 'rgba(255,255,255,0.04)';
+      b.style.borderColor = 'rgba(255,255,255,0.1)';
+      b.style.color = 'rgba(255,255,255,0.5)';
+    });
+    el.classList.add('pi-opt-active');
+    el.style.background = 'rgba(255,215,0,0.12)';
+    el.style.borderColor = 'rgba(255,215,0,0.4)';
+    el.style.color = '#ffd700';
+    piState[field] = val;
+  }
+  window.piSelect = piSelect;
+
+  async function piGenerate() {
+    if (!piState.vibe) {
+      // Default to chill if nothing selected
+      piState.vibe = 'chill';
+    }
+
+    piState.step = 1;
+    piRender();
+
+    var group = piState.groupSize;
+    var budget = piState.budget;
+    var vibe = piState.vibe;
+    var time = piState.time;
+    var imPaying = piState.imPaying;
+    var family = piState.familyFriendly;
+    var sober = piState.soberFriendly;
+
+    // Build prompt for Claude
+    var budgetDesc = budget === 'cheap' ? 'low budget, free or under $20 per person' :
+                     budget === 'medium' ? 'medium budget, $20-60 per person' :
+                     'splurge, money no object';
+
+    var prompt = 'You are a local SLO (San Luis Obispo, CA) nightlife expert. ' +
+      'Build a practical outing plan. ' +
+      'Group: ' + group + ' people. ' +
+      'Budget: ' + budgetDesc + '. ' +
+      'Vibe: ' + vibe + '. ' +
+      'Time: ' + time + '. ' +
+      (imPaying ? 'One person paying. ' : '') +
+      (family ? 'Family friendly required. ' : '') +
+      (sober ? 'Sober friendly only. ' : '') +
+      'SLO bars: Black Sheep, Frog Peach, Nightcap, Library, High Bar, Sidecar, Feral, BA Start Arcade. ' +
+      'Restaurants: Novo (upscale), Firestone (casual tri-tip), Luna Red (tapas patio), Bear Wren (pizza). ' +
+      'Thursday 6-9pm is Farmers Market on Higuera. Safe Ride free Thu-Sat 10pm-3am. ' +
+      'Return ONLY valid JSON: {headline, summary, stops:[{time,name,type,description,cost,tip}], total_cost, ride_note, pro_tip}';
+
+    try {
+      var resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      var data = await resp.json();
+      var text = (data.content || []).map(function(b) { return b.text || ''; }).join('');
+
+      // Parse JSON from response
+      var jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('No JSON in response');
+      var plan = JSON.parse(jsonMatch[0]);
+
+      piState.result = plan;
+      piState.step = 2;
+      piRender();
+
+    } catch(e) {
+      // Fallback plan if API fails
+      piState.result = {
+        headline: 'A great ' + vibe + ' night in SLO',
+        summary: 'Here is a solid plan for your group of ' + group + ' tonight.',
+        stops: [
+          { time: '7:00 PM', name: 'Dinner', type: 'food', description: budget === 'cheap' ? 'Firestone Grill for legendary tri-tip sandwiches' : 'Novo Restaurant for creekside farm-to-table', cost: budget === 'cheap' ? '$12' : '$35', tip: budget === 'cheap' ? 'Get there before 7pm to beat the line' : 'Ask for the creekside patio' },
+          { time: '9:00 PM', name: 'Nightlife', type: 'bar', description: vibe === 'rowdy' ? 'BA Start Arcade Bar — games and drinks' : 'Black Sheep Bar Cafe for a chill vibe', cost: '$15-25', tip: 'Check DTSLO for live crowd status before heading over' },
+        ],
+        total_cost: budget === 'cheap' ? '$30-50' : budget === 'medium' ? '$60-100' : '$100+',
+        ride_note: group >= 5 ? 'Get Uber XL for your group of ' + group : 'Standard Uber works fine',
+        vibe_match: 'Picked for a ' + vibe + ' ' + time + ' with ' + group,
+        pro_tip: 'Check crowd reports on DTSLO before heading to any bar'
+      };
+      piState.step = 2;
+      piRender();
+    }
+  }
+  window.piGenerate = piGenerate;
+
+  function piRenderResult(plan) {
+    var sheet = document.getElementById('mh-planit-sheet');
+    if (!sheet) return;
+
+    var stops = (plan.stops || []).map(function(s, i) {
+      return '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:14px;border:1px solid rgba(255,255,255,0.07);margin-bottom:8px">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+          '<div style="font-size:10px;font-weight:800;color:#ffd700;background:rgba(255,215,0,0.1);padding:3px 8px;border-radius:20px">' + (s.time||'') + '</div>' +
+          '<div style="font-size:13px;font-weight:800">' + (s.name||'') + '</div>' +
+        '</div>' +
+        '<div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5;margin-bottom:4px">' + (s.description||'') + '</div>' +
+        (s.tip ? '<div style="font-size:11px;color:#ffd700">💡 ' + s.tip + '</div>' : '') +
+        (s.cost ? '<div style="font-size:11px;color:#22c55e;margin-top:4px">~' + s.cost + '</div>' : '') +
+      '</div>';
+    }).join('');
+
+    sheet.innerHTML =
+      '<div style="width:100%;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(255,215,0,0.3);padding:16px 20px 48px;max-height:90vh;overflow-y:auto">' +
+        '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 14px;cursor:pointer" onclick="menuHomeClosePlanIt()"></div>' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">' +
+          '<div style="font-size:22px">✨</div>' +
+          '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif">' + (plan.headline||'Your Plan') + '</div>' +
+        '</div>' +
+        '<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-bottom:16px;line-height:1.5">' + (plan.summary||'') + '</div>' +
+
+        '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">TONIGHTS STOPS</div>' +
+        stops +
+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">' +
+          '<div style="padding:10px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.07)">' +
+            '<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:2px">TOTAL COST</div>' +
+            '<div style="font-size:13px;font-weight:800;color:#22c55e">' + (plan.total_cost||'') + '</div>' +
+          '</div>' +
+          '<div style="padding:10px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.07)">' +
+            '<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:2px">GETTING AROUND</div>' +
+            '<div style="font-size:11px;font-weight:700;color:#06b6d4">' + (plan.ride_note||'') + '</div>' +
+          '</div>' +
+        '</div>' +
+
+        (plan.pro_tip ? '<div style="padding:12px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.15);border-radius:12px;font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:16px">💡 <strong style="color:#ffd700">Pro tip:</strong> ' + plan.pro_tip + '</div>' : '') +
+
+        '<div style="display:flex;gap:10px">' +
+          '<button onclick="piState.step=0;piRender()" style="flex:1;padding:13px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:13px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer">← Change It</button>' +
+          '<button onclick="menuHomeClosePlanIt()" style="flex:1;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:13px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer">Lets Go →</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+
+
+
+  // ── PIN MOVER TOOL ──
+  var pinMoverActive = false;
+  var pinMoverTarget = null;
+
+  function openPinMover() {
+    var existing = document.getElementById('mh-pin-mover');
+    if (existing) existing.remove();
+
+    // Close tools drawer
+    closeDrawer();
+
+    var sheet = document.createElement('div');
+    sheet.id = 'mh-pin-mover';
+    sheet.style.cssText = 'position:absolute;bottom:0;left:0;right:0;z-index:23;background:rgba(8,8,20,0.97);border-radius:20px 20px 0 0;border-top:2px solid rgba(255,215,0,0.3);padding:14px 20px 36px;transition:transform 0.3s ease';
+
+    // Get all hub pins on map
+    var hubPins = [
+      {id:'dtslo',   label:'DTSLO',       coords:[-120.6650,35.2803]},
+      {id:'beach',   label:'Beach Hub',   coords:[-120.6750,35.2680]},
+      {id:'restaurants', label:'Restaurants', coords:[-120.6655,35.2808]},
+      {id:'calpoly', label:'Cal Poly',    coords:[-120.6600,35.3050]},
+      {id:'city',    label:'City Hub',    coords:[-120.6590,35.2820]},
+    ];
+
+    sheet.innerHTML =
+      '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 14px"></div>' +
+      '<div style="font-size:16px;font-weight:800;font-family:Georgia,serif;margin-bottom:4px">📍 Pin Mover</div>' +
+      '<div id="mh-pm-status" style="font-size:12px;color:rgba(255,215,0,0.7);margin-bottom:14px">Select a pin to reposition it on the map</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px" id="mh-pm-pins">' +
+        hubPins.map(function(p) {
+          return '<div class="mh-pm-pin-btn" onclick="menuHomeSelectPinToMove(this,this.dataset.id)" data-id="' + p.id + '" style="padding:10px 14px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all 0.15s">' +
+            '<span style="font-size:13px;font-weight:700">' + p.label + '</span>' +
+            '<span style="font-size:11px;color:rgba(255,255,255,0.3)">' + p.coords[1].toFixed(4) + ', ' + p.coords[0].toFixed(4) + '</span>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<div style="display:flex;gap:8px">' +
+        '<button onclick="menuHomeClosePinMover()" style="flex:1;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:13px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer">Cancel</button>' +
+        '<button id="mh-pm-save-btn" onclick="menuHomeSavePinPosition()" style="display:none;flex:1;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:13px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer">Save Position</button>' +
+      '</div>';
+
+    document.getElementById('menu-home').appendChild(sheet);
+
+    // Tap on map to place pin
+    if (homeMap) {
+      homeMap.getCanvas().style.cursor = 'default';
+    }
+  }
+  window.menuHomePinMover = openPinMover;
+
+  function selectPinToMove(el, pinId) {
+    document.querySelectorAll('.mh-pm-pin-btn').forEach(function(b) {
+      b.style.background = 'rgba(255,255,255,0.04)';
+      b.style.borderColor = 'rgba(255,255,255,0.08)';
+    });
+    el.style.background = 'rgba(255,215,0,0.1)';
+    el.style.borderColor = 'rgba(255,215,0,0.4)';
+    pinMoverTarget = pinId;
+
+    var status = document.getElementById('mh-pm-status');
+    if (status) status.textContent = 'Tap anywhere on the map to place the ' + pinId + ' pin';
+
+    // Enable map tap listener
+    if (homeMap) {
+      homeMap.getCanvas().style.cursor = 'crosshair';
+      homeMap.once('click', function(e) {
+        var lng = e.lngLat.lng.toFixed(4);
+        var lat = e.lngLat.lat.toFixed(4);
+        if (status) status.textContent = pinId + ' pin moved to ' + lat + ', ' + lng;
+        homeMap.getCanvas().style.cursor = 'default';
+        window._newPinCoords = [parseFloat(lng), parseFloat(lat)];
+        // Show save button
+        var saveBtn = document.getElementById('mh-pm-save-btn');
+        if (saveBtn) saveBtn.style.display = 'block';
+      });
+    }
+  }
+  window.menuHomeSelectPinToMove = selectPinToMove;
+
+  async function savePinPosition() {
+    if (!pinMoverTarget || !window._newPinCoords) return;
+    var saveBtn = document.getElementById('mh-pm-save-btn');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
+    try {
+      var sb = window.supabaseClient;
+      if (sb) {
+        await sb.from('app_settings').upsert({
+          key: 'hub_pin_' + pinMoverTarget,
+          value: JSON.stringify({ coords: window._newPinCoords })
+        });
+      }
+      if (typeof showToast === 'function') showToast('📍 Pin position saved!');
+      menuHomeClosePinMover();
+    } catch(e) {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save Position'; }
+      if (typeof showToast === 'function') showToast('❌ Save failed');
+    }
+  }
+  window.menuHomeSavePinPosition = savePinPosition;
+
+  function closePinMover() {
+    var s = document.getElementById('mh-pin-mover');
+    if (s) s.remove();
+    if (homeMap) homeMap.getCanvas().style.cursor = 'default';
+    pinMoverActive = false;
+    pinMoverTarget = null;
+    window._newPinCoords = null;
+  }
+  window.menuHomeClosePinMover = closePinMover;
+
+  // Hub Placement tool handler
   // ── TOOL SHEETS ──
   function openTool(id) {
     // Remove existing tool sheet
@@ -1331,6 +1732,11 @@
       ].join('');
     }
 
+    if (id === 'hub_placement') {
+      menuHomeClosePinMover();
+      openPinMover();
+      return handle + '';
+    }
     if (id === 'rides') {
       return handle + [
         '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:4px">🚗 Rides</div>',
@@ -1729,7 +2135,7 @@
       el.className = 'mh-hub-marker';
       el.innerHTML = [
         '<div class="mh-hub-pin' + (hub.active ? ' mh-hub-active' : ' mh-hub-dim') + '"',
-          hub.active ? ' onclick="' + hub.onclick + '"' : '',
+          hub.active ? ' onclick="' + (hub.onclick === 'menuHomeEnterDTSLO()' ? 'menuHomeRequireAuth()' : hub.onclick) + '"' : '',
           '>',
           '<div class="mh-hub-dot" style="background:' + hub.color + '">',
             '<span class="mh-hub-icon">' + hub.icon + '</span>',
@@ -1768,7 +2174,7 @@
         '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
         '<div class="mh-drawer-title">Hubs</div>',
         '<div class="mh-hub-cards">',
-          '<div class="mh-hub-card mh-hub-card-active" onclick="menuHomeEnterDTSLO()">',
+          '<div class="mh-hub-card mh-hub-card-active" onclick="menuHomeRequireAuth()">',
             '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#ff2d78,#b44fff)">🌃</div>',
             '<div class="mh-hub-card-info"><div class="mh-hub-card-name">DTSLO</div><div class="mh-hub-card-sub">Nightlife · Active Now</div></div>',
             '<div class="mh-hub-card-arrow" style="color:#ffd700">→</div>',
@@ -1943,29 +2349,18 @@
           '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="gas"><div class="mh-tool-icon">⛽</div><div>Gas</div></button>',
           '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="parking"><div class="mh-tool-icon">🅿️</div><div>Parking</div></button>',
         '</div>',
-
-        '<div class="mh-section-label">🌤 WEATHER & OUTDOORS</div>',
+        '<div class="mh-section-label">📍 MAP TOOLS</div>',
         '<div class="mh-tools-grid">',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="surf"><div class="mh-tool-icon">🏄</div><div>Surf</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="weather"><div class="mh-tool-icon">🌤</div><div>Weather</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="uv"><div class="mh-tool-icon">☀️</div><div>UV Index</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="tides"><div class="mh-tool-icon">🌊</div><div>Tides</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomePinMover()"><div class="mh-tool-icon">📍</div><div>Move Pin</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="hub_placement"><div class="mh-tool-icon">🏙</div><div>Hub Pins</div></button>',
         '</div>',
 
         '<div class="mh-section-label">🏙 DOWNTOWN</div>',
         '<div class="mh-tools-grid">',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="parking"><div class="mh-tool-icon">🅿️</div><div>Parking</div></button>',
           '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="atms"><div class="mh-tool-icon">🏧</div><div>ATMs</div></button>',
           '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="traffic"><div class="mh-tool-icon">📡</div><div>Traffic</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="restrooms"><div class="mh-tool-icon">🚻</div><div>Restrooms</div></button>',
           '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="wifi"><div class="mh-tool-icon">📶</div><div>Free WiFi</div></button>',
-        '</div>',
-
-        '<div class="mh-section-label">🎉 EVENTS & NIGHTLIFE</div>',
-        '<div class="mh-tools-grid">',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="events"><div class="mh-tool-icon">📅</div><div>Events</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="farmers_market"><div class="mh-tool-icon">🌽</div><div>Farmers Mkt</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="live_music"><div class="mh-tool-icon">🎸</div><div>Live Music</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="happy_hour"><div class="mh-tool-icon">🍹</div><div>Happy Hour</div></button>',
         '</div>',
 
         '<div class="mh-section-label">🛡 SAFETY & EMERGENCY</div>',
@@ -2143,3 +2538,314 @@
   }
 
 })();
+
+  // ══════════════════════════════════════════════
+  // RESTAURANT HUB
+  // ══════════════════════════════════════════════
+
+  var RESTAURANT_CATEGORIES = [
+    {id:'all',label:'All',emoji:'🍽',color:'#ff2d78'},
+    {id:'italian',label:'Italian',emoji:'🍕',color:'#ef4444'},
+    {id:'american',label:'American',emoji:'🥩',color:'#f59e0b'},
+    {id:'mexican',label:'Mexican',emoji:'🌮',color:'#22c55e'},
+    {id:'japanese',label:'Japanese',emoji:'🍱',color:'#06b6d4'},
+    {id:'tapas',label:'Tapas',emoji:'🫒',color:'#a855f7'},
+    {id:'cafe',label:'Cafe',emoji:'☕',color:'#d97706'},
+    {id:'pizza',label:'Pizza',emoji:'🍕',color:'#dc2626'},
+    {id:'bbq',label:'BBQ',emoji:'🔥',color:'#ea580c'},
+    {id:'peruvian',label:'Peruvian',emoji:'🌶',color:'#16a34a'},
+    {id:'steakhouse',label:'Steakhouse',emoji:'🥩',color:'#92400e'},
+    {id:'deli',label:'Deli',emoji:'🥪',color:'#65a30d'},
+    {id:'greek',label:'Greek',emoji:'🫙',color:'#0284c7'},
+    {id:'upscale',label:'Upscale',emoji:'⭐',color:'#ffd700'},
+  ];
+
+  var RESTAURANT_COORDS = {
+    'Novo Restaurant & Lounge':   [-120.6660,35.2815],
+    'Mistura':                    [-120.6663,35.2818],
+    "Giuseppe's Cucina Rustica":  [-120.6630,35.2800],
+    'Luna Red':                   [-120.6642,35.2797],
+    "Nate's on Marsh":            [-120.6635,35.2786],
+    'Firestone Grill':            [-120.6638,35.2792],
+    'Bear & The Wren':            [-120.6663,35.2818],
+    'Flour House SLO':            [-120.6661,35.2816],
+    'High Street Deli':           [-120.6599,35.2746],
+    'Scout Coffee Co.':           [-120.6640,35.2791],
+    'Ox + Anchor':                [-120.6638,35.2797],
+    "Mama's Meatball":            [-120.6637,35.2792],
+    'Old San Luis BBQ Co.':       [-120.6662,35.2817],
+    'Goshi Japanese Restaurant':  [-120.6663,35.2817],
+    'Greek Bistro':               [-120.6637,35.2792],
+    'The Naked Fish':             [-120.6655,35.2808],
+    'Kombu Sushi':                [-120.6650,35.2800],
+    'San Luis Taqueria':          [-120.6654,35.2800],
+    "Sally Loo's Wholesome Cafe": [-120.6622,35.2810],
+    "Louisa's Place":             [-120.6648,35.2801],
+    'Buona Tavola':               [-120.6632,35.2800],
+    'Cafe Roma':                  [-120.6622,35.2780],
+  };
+
+  var restaurantVenueCache = null;
+  var restaurantMarkersActive = [];
+  var rhCurrentFilter = 'all';
+
+  function openRestaurantHub() {
+    var existing = document.getElementById('mh-restaurant-hub');
+    if (existing) existing.remove();
+
+    if (!document.getElementById('mh-rh-css')) {
+      var s = document.createElement('style');
+      s.id = 'mh-rh-css';
+      s.textContent = [
+        '.mh-rh-cat-row{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0 20px 2px;scrollbar-width:none;margin-bottom:12px}',
+        '.mh-rh-cat-row::-webkit-scrollbar{display:none}',
+        '.mh-rh-cat-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 12px;border-radius:14px;border:1.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);cursor:pointer;flex-shrink:0;transition:all 0.2s;min-width:56px}',
+        '.mh-rh-cat-btn:active{transform:scale(0.95)}',
+        '.mh-rh-cat-emoji{font-size:22px}',
+        '.mh-rh-cat-label{font-size:9px;font-weight:700;color:rgba(255,255,255,0.4);white-space:nowrap}',
+        '.mh-rh-venue-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:all 0.15s;margin-bottom:8px;animation:rh-slide 0.3s ease both}',
+        '.mh-rh-venue-card:active{background:rgba(255,45,120,0.08);transform:scale(0.98)}',
+        '@keyframes rh-slide{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}',
+        '.mh-rh-venue-emoji{font-size:26px;flex-shrink:0;width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center}',
+        '.mh-rh-filter-row{display:flex;gap:6px;padding:0 20px;margin-bottom:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}',
+        '.mh-rh-filter-row::-webkit-scrollbar{display:none}',
+        '.mh-rh-filter{padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:Helvetica Neue,sans-serif;flex-shrink:0;transition:all 0.15s}',
+        '.mh-rh-filter.rh-f-active{background:rgba(255,45,120,0.1);border-color:rgba(255,45,120,0.4);color:#ff2d78}',
+      ].join('');
+      document.head.appendChild(s);
+    }
+
+    var hub = document.createElement('div');
+    hub.id = 'mh-restaurant-hub';
+    hub.style.cssText = 'position:absolute;inset:0;z-index:22;display:flex;flex-direction:column;background:rgba(6,6,15,0.95);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
+    // Floating X close button
+    var rhClose = document.createElement('button');
+    rhClose.style.cssText = 'position:absolute;top:56px;right:16px;z-index:25;background:rgba(255,255,255,0.12);border:none;color:white;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)';
+    rhClose.textContent = '✕';
+    rhClose.onclick = function() { menuHomeCloseRestaurantHub(); };
+    hub.appendChild(rhClose);
+
+    hub.innerHTML =
+      '<div style="padding:52px 20px 0;flex-shrink:0">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">' +
+          '<button onclick="menuHomeCloseRestaurantHub()" style="background:rgba(255,255,255,0.08);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer;flex-shrink:0">←</button>' +
+          '<div style="flex:1"><div style="font-size:20px;font-weight:800;font-family:Georgia,serif">🍽 Restaurants</div>' +
+          '<div id="mh-rh-subtitle" style="font-size:11px;color:rgba(255,255,255,0.4)">Select a category</div></div>' +
+          '<div id="mh-rh-count" style="font-size:12px;color:rgba(255,255,255,0.3)"></div>' +
+        '</div>' +
+        '<div class="mh-rh-cat-row" id="mh-rh-cats">' +
+          RESTAURANT_CATEGORIES.map(function(c,i) {
+            return '<div class="mh-rh-cat-btn' + (i===0?' mh-rh-cat-active':'') + '" onclick="menuHomeRhSelectCat(this,this.dataset.cat)" data-cat="' + c.id + '" style="' + (i===0?'border-color:'+c.color+';background:'+c.color+'18':'') + '">' +
+              '<div class="mh-rh-cat-emoji">' + c.emoji + '</div>' +
+              '<div class="mh-rh-cat-label">' + c.label + '</div></div>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div id="mh-rh-building-zone" style="height:0;overflow:hidden;transition:height 0.4s ease;flex-shrink:0">' +
+        '<div style="padding:8px 20px;display:flex;gap:8px;align-items:flex-end" id="mh-rh-buildings"></div>' +
+      '</div>' +
+      '<div class="mh-rh-filter-row">' +
+        '<div class="mh-rh-filter rh-f-active" onclick="menuHomeRhFilter(this,\'all\')">All</div>' +
+        '<div class="mh-rh-filter" onclick="menuHomeRhFilter(this,\'top\')">⭐ Top Rated</div>' +
+        '<div class="mh-rh-filter" onclick="menuHomeRhFilter(this,\'cheap\')">💰 Budget</div>' +
+        '<div class="mh-rh-filter" onclick="menuHomeRhFilter(this,\'romantic\')">💑 Romantic</div>' +
+        '<div class="mh-rh-filter" onclick="menuHomeRhFilter(this,\'patio\')">🌿 Patio</div>' +
+        '<div class="mh-rh-filter" onclick="menuHomeRhFilter(this,\'happy_hour\')">🍹 Happy Hour</div>' +
+      '</div>' +
+      '<div id="mh-rh-list" style="flex:1;overflow-y:auto;padding:0 20px 48px">' +
+        '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.3);font-size:13px">Loading restaurants...</div>' +
+      '</div>';
+
+    document.getElementById('menu-home').appendChild(hub);
+    setTimeout(function() {
+      hub.style.opacity = '1';
+      loadRestaurantHubVenues('all');
+    }, 30);
+  }
+  window.menuHomeOpenRestaurantHub = openRestaurantHub;
+
+  function closeRestaurantHub() {
+    var h = document.getElementById('mh-restaurant-hub');
+    if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
+    restaurantMarkersActive.forEach(function(m) { try { m.remove(); } catch(e) {} });
+    restaurantMarkersActive = [];
+  }
+  window.menuHomeCloseRestaurantHub = closeRestaurantHub;
+
+  function rhSelectCat(el, catId) {
+    document.querySelectorAll('.mh-rh-cat-btn').forEach(function(b) {
+      b.classList.remove('mh-rh-cat-active');
+      b.style.borderColor = 'rgba(255,255,255,0.08)';
+      b.style.background = 'rgba(255,255,255,0.04)';
+    });
+    var cat = null;
+    for (var i=0;i<RESTAURANT_CATEGORIES.length;i++) { if (RESTAURANT_CATEGORIES[i].id===catId) { cat=RESTAURANT_CATEGORIES[i]; break; } }
+    el.classList.add('mh-rh-cat-active');
+    if (cat) { el.style.borderColor = cat.color; el.style.background = cat.color + '18'; }
+    rhTriggerBuildingPop(catId, cat ? cat.color : '#ff2d78');
+    loadRestaurantHubVenues(catId);
+  }
+  window.menuHomeRhSelectCat = rhSelectCat;
+
+  function rhTriggerBuildingPop(catId, color) {
+    var zone = document.getElementById('mh-rh-building-zone');
+    var bldgs = document.getElementById('mh-rh-buildings');
+    if (!zone || !bldgs) return;
+    var venues = restaurantVenueCache || [];
+    var sample = (catId==='all' ? venues : venues.filter(function(v){return v.category===catId;})).slice(0,7);
+    if (!sample.length) { zone.style.height='0'; return; }
+    zone.style.height = '80px';
+    if (!document.getElementById('rh-bldg-kf')) {
+      var s = document.createElement('style');
+      s.id = 'rh-bldg-kf';
+      s.textContent = '@keyframes rh-bpop{from{opacity:0;transform:scaleY(0) translateY(8px)}to{opacity:1;transform:scaleY(1) translateY(0)}}';
+      document.head.appendChild(s);
+    }
+    bldgs.innerHTML = sample.map(function(v,i) {
+      var h = 30 + Math.floor(Math.random()*28);
+      var emoji = getRhEmoji(v.category);
+      return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;animation:rh-bpop 0.4s ease '+((i*0.06).toFixed(2))+'s both">' +
+        '<div style="font-size:12px">' + emoji + '</div>' +
+        '<div style="width:32px;height:'+h+'px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,'+color+'55,'+color+'22);border:1px solid '+color+'44;display:flex;align-items:flex-start;justify-content:center;padding-top:3px">' +
+          '<div style="width:6px;height:6px;border-radius:50%;background:'+color+';box-shadow:0 0 5px '+color+'"></div></div></div>';
+    }).join('');
+    rhAddMapPins(sample, color);
+    if (window._rhBldgTimer) clearTimeout(window._rhBldgTimer);
+    window._rhBldgTimer = setTimeout(function() { zone.style.height='0'; }, 1800);
+  }
+
+  function rhAddMapPins(venues, color) {
+    restaurantMarkersActive.forEach(function(m) { try { m.remove(); } catch(e) {} });
+    restaurantMarkersActive = [];
+    if (!homeMap || !window.maplibregl) return;
+    venues.forEach(function(v) {
+      var coords = RESTAURANT_COORDS[v.name];
+      if (!coords) return;
+      var el = document.createElement('div');
+      el.style.cssText = 'width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 0 8px '+color+';border:2px solid '+color+';background:rgba(6,6,15,0.9);cursor:pointer';
+      el.textContent = getRhEmoji(v.category);
+      el.title = v.name;
+      el.onclick = function() { rhShowVenueDetail(v); };
+      try {
+        var marker = new maplibregl.Marker({element:el,anchor:'center'}).setLngLat(coords).addTo(homeMap);
+        restaurantMarkersActive.push(marker);
+      } catch(e) {}
+    });
+  }
+
+  function getRhEmoji(cat) {
+    var map = {'world fusion':'🌊','italian':'🍕','american':'🥩','tapas':'🫒','upscale':'⭐','pizza':'🍕','bbq':'🔥','japanese':'🍱','sushi':'🍣','mexican':'🌮','cafe':'☕','greek':'🫙','deli':'🥪','peruvian':'🌶','steakhouse':'🥩','seafood':'🐟'};
+    return map[(cat||'').toLowerCase()] || '🍽';
+  }
+
+  function rhFilter(el, filterId) {
+    document.querySelectorAll('.mh-rh-filter').forEach(function(f) { f.classList.remove('rh-f-active'); });
+    el.classList.add('rh-f-active');
+    rhCurrentFilter = filterId;
+    rhRenderList(restaurantVenueCache || [], filterId);
+  }
+  window.menuHomeRhFilter = rhFilter;
+
+  var RH_HAPPY_HOUR  = ['Luna Red','Novo Restaurant & Lounge'];
+  var RH_PATIO       = ['Novo Restaurant & Lounge','Luna Red','Flour House SLO'];
+  var RH_ROMANTIC    = ["Nate's on Marsh","Mistura","Giuseppe's Cucina Rustica","Novo Restaurant & Lounge"];
+
+  async function loadRestaurantHubVenues(catId) {
+    var list = document.getElementById('mh-rh-list');
+    var sub  = document.getElementById('mh-rh-subtitle');
+    var cnt  = document.getElementById('mh-rh-count');
+    if (!list) return;
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:rgba(255,255,255,0.3);font-size:12px">Loading...</div>';
+    try {
+      var sb = window.supabaseClient;
+      var q = sb.from('venues').select('*').eq('type','restaurant').order('rating',{ascending:false});
+      if (catId !== 'all') q = q.eq('category', catId);
+      var result = await q;
+      var venues = result.data || [];
+      restaurantVenueCache = venues;
+      var catObj = null;
+      for (var i=0;i<RESTAURANT_CATEGORIES.length;i++) { if (RESTAURANT_CATEGORIES[i].id===catId) { catObj=RESTAURANT_CATEGORIES[i]; break; } }
+      if (sub) sub.textContent = catId==='all' ? 'All restaurants in SLO' : (catObj ? catObj.label+' restaurants' : '');
+      if (cnt) cnt.textContent = venues.length + ' spots';
+      rhTriggerBuildingPop(catId, catObj ? catObj.color : '#ff2d78');
+      rhRenderList(venues, rhCurrentFilter);
+    } catch(e) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;color:rgba(255,255,255,0.3);font-size:12px">Could not load — check connection</div>';
+    }
+  }
+
+  function rhRenderList(venues, filter) {
+    var list = document.getElementById('mh-rh-list');
+    if (!list) return;
+    var filtered = venues;
+    if (filter==='top')        filtered = venues.filter(function(v){return (v.rating||0)>=4.4;});
+    if (filter==='cheap')      filtered = venues.filter(function(v){return (v.price_range||3)<=1;});
+    if (filter==='romantic')   filtered = venues.filter(function(v){return RH_ROMANTIC.indexOf(v.name)>=0;});
+    if (filter==='patio')      filtered = venues.filter(function(v){return RH_PATIO.indexOf(v.name)>=0;});
+    if (filter==='happy_hour') filtered = venues.filter(function(v){return RH_HAPPY_HOUR.indexOf(v.name)>=0;});
+    if (!filtered.length) { list.innerHTML = '<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.3);font-size:13px">No matches</div>'; return; }
+    list.innerHTML = filtered.map(function(v,i) {
+      var price = '$'.repeat(v.price_range||2);
+      var rating = v.rating||0;
+      var stars = '';
+      for (var s=1;s<=5;s++) stars += '<div style="width:7px;height:7px;border-radius:50%;background:'+(s<=Math.round(rating)?'#ffd700':'rgba(255,255,255,0.15)')+';margin-right:2px;display:inline-block"></div>';
+      return '<div class="mh-rh-venue-card" onclick="menuHomeRhVenueDetail(this)" data-idx="'+i+'" style="animation-delay:'+(i*0.04)+'s">' +
+        '<div class="mh-rh-venue-emoji">'+getRhEmoji(v.category)+'</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:13px;font-weight:800;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+v.name+'</div>' +
+          '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">'+stars+'<span style="font-size:10px;color:rgba(255,255,255,0.35)">'+( rating>0?rating.toFixed(1):'' )+'</span></div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,0.35)">'+(v.category?v.category.charAt(0).toUpperCase()+v.category.slice(1):'') +' · '+price+'</div>' +
+        '</div>' +
+        '<span style="color:rgba(255,255,255,0.2);font-size:18px">›</span></div>';
+    }).join('');
+    // Store for detail lookup
+    window._rhCurrentList = filtered;
+  }
+
+  function rhVenueDetail(el) {
+    var idx = parseInt(el.dataset.idx);
+    var venue = window._rhCurrentList && window._rhCurrentList[idx];
+    if (!venue) return;
+    rhShowVenueDetail(venue);
+  }
+  window.menuHomeRhVenueDetail = rhVenueDetail;
+
+  function rhShowVenueDetail(venue) {
+    var existing = document.getElementById('mh-rh-detail');
+    if (existing) existing.remove();
+    var price = '$'.repeat(venue.price_range||2);
+    var sheet = document.createElement('div');
+    sheet.id = 'mh-rh-detail';
+    sheet.style.cssText = 'position:absolute;inset:0;z-index:24;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
+    sheet.innerHTML =
+      '<div id="mh-rh-det-inner" style="width:100%;background:rgba(8,8,20,0.98);border-radius:24px 24px 0 0;border-top:1px solid rgba(255,45,120,0.2);padding:12px 20px 48px;max-height:85vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)">' +
+      '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 16px;cursor:pointer" onclick="menuHomeRhCloseDetail()"></div>' +
+      '<div style="font-size:32px;margin-bottom:8px">'+getRhEmoji(venue.category)+'</div>' +
+      '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif;margin-bottom:4px">'+venue.name+'</div>' +
+      '<div style="display:flex;gap:10px;margin-bottom:12px;font-size:12px;color:rgba(255,255,255,0.5)">' +
+        '<span>'+(venue.category?venue.category.charAt(0).toUpperCase()+venue.category.slice(1):'')+'</span>' +
+        '<span>'+price+'</span>' +
+        (venue.rating ? '<span>⭐ '+venue.rating.toFixed(1)+'</span>' : '') +
+      '</div>' +
+      (venue.description ? '<div style="font-size:13px;color:rgba(255,255,255,0.65);line-height:1.6;margin-bottom:12px">'+venue.description+'</div>' : '') +
+      (venue.address ? '<div style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:16px">📍 '+venue.address+'</div>' : '') +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
+        '<a href="https://www.google.com/maps/search/'+encodeURIComponent((venue.name||'')+' San Luis Obispo CA')+'" target="_blank" style="display:block;padding:13px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);text-decoration:none;font-size:13px;font-weight:700;text-align:center">Get Directions ↗</a>' +
+        '<a href="https://www.google.com/search?q='+encodeURIComponent((venue.name||'')+' San Luis Obispo reservation')+'" target="_blank" style="display:block;padding:13px;border-radius:14px;background:rgba(255,45,120,0.08);border:1px solid rgba(255,45,120,0.25);color:#ff2d78;text-decoration:none;font-size:13px;font-weight:700;text-align:center">Reserve a Table ↗</a>' +
+      '</div>' +
+      '<button onclick="menuHomeRhCloseDetail()" style="width:100%;margin-top:10px;padding:13px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer">Close</button>' +
+      '</div>';
+    document.getElementById('menu-home').appendChild(sheet);
+    setTimeout(function() {
+      sheet.style.opacity = '1';
+      document.getElementById('mh-rh-det-inner').style.transform = 'translateY(0)';
+    }, 30);
+    sheet.addEventListener('click', function(e) { if (e.target===sheet) menuHomeRhCloseDetail(); });
+  }
+
+  function rhCloseDetail() {
+    var s = document.getElementById('mh-rh-detail');
+    if (s) { s.style.opacity='0'; setTimeout(function(){s.remove();},300); }
+  }
+  window.menuHomeRhCloseDetail = rhCloseDetail;
+
