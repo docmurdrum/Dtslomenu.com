@@ -59,9 +59,9 @@ async function devLogin() {
     });
 
     if (!error && data.session) {
+      window._pendingDTSLOEntry = true;
       await onLogin(data.user);
       showToast('🛠️ Dev login active');
-      window._pendingDTSLOEntry = true;
       return;
     }
 
@@ -74,9 +74,9 @@ async function devLogin() {
     if (signUpError) throw signUpError;
 
     if (signUpData.session) {
+      window._pendingDTSLOEntry = true;
       await onLogin(signUpData.user);
       showToast('🛠️ Dev account created + logged in');
-      window._pendingDTSLOEntry = true;
       return;
     }
 
@@ -156,39 +156,43 @@ async function doSignup() {
 async function onLogin(user, isNewUser = false) {
   currentUser = user;
 
+  // Capture the flag NOW before any async work
+  const goingToDTSLO = !!window._pendingDTSLOEntry;
+
   // Hide auth screen always
   const authEl = document.getElementById('auth-screen');
   if (authEl) authEl.style.display = 'none';
 
-  // Only show app if NOT going into DTSLO via hub tap
-  // (enterDTSLO/revealApp handles showing app in that case)
-  if (!window._pendingDTSLOEntry) {
+  // If going to DTSLO, call it immediately — don't wait for data loads
+  if (goingToDTSLO) {
+    goToDTSLO();
+  } else {
+    // Show app for non-DTSLO login paths
     const appEl = document.getElementById('app');
     if (appEl) { appEl.style.display = 'block'; appEl.style.opacity = '1'; }
   }
 
-  // Load user data
+  // Load user data in background — non-blocking
   try { renderAvatar(); } catch(e) {}
   try { updateUsernameBar(); } catch(e) {}
-  try { await loadUserStats(); } catch(e) {}
+  try { loadUserStats(); } catch(e) {}
   try { renderProducts(); } catch(e) {}
   try { loadReports(); } catch(e) {}
   try { loadLostItems(); } catch(e) {}
   try { checkThursdayMode(); } catch(e) {}
-  try { setInterval(checkThursdayMode, 60 * 60 * 1000); } catch(e) {}
-  try { await loadAchievements(); } catch(e) {}
-  try { await checkAchievements(); } catch(e) {}
 
-  if (isNewUser) {
-    try { maybeShowOnboarding(true); } catch(e) {}
-    try { await unlockFreshmanStarter(user); } catch(e) {}
-  }
+  // These can run after — don't block entry
+  setTimeout(async function() {
+    try { await loadAchievements(); } catch(e) {}
+    try { await checkAchievements(); } catch(e) {}
+    if (isNewUser) {
+      try { maybeShowOnboarding(true); } catch(e) {}
+      try { await unlockFreshmanStarter(user); } catch(e) {}
+    }
+  }, 500);
 
-  // Enter DTSLO if that's where they were going
-  if (window._pendingDTSLOEntry) {
-    goToDTSLO();
-  } else {
-    // No pending entry — re-init hub screen
+  // If NOT going to DTSLO, show hub screen
+  if (!goingToDTSLO) {
     try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
   }
 }
