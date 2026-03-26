@@ -178,7 +178,7 @@ function addHubGlowLayer(hub, visible) {
         homeMap.setPaintProperty(ringId, 'circle-radius', radius);
         homeMap.setPaintProperty(ringId, 'circle-opacity', opacity);
       } catch(e) {}
-    }, 60);
+    }, 500);
 
   } catch(e) { console.warn('[hubGlow]', hub.id, e); }
 }

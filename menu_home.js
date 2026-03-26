@@ -232,15 +232,21 @@ function loadHomeMap() {
       try { if (typeof initHubGlowLayers === 'function') initHubGlowLayers(); } catch(e) {}
     }, 2000);
 
+    // Use localStorage coords only — skip Supabase lookup on map load (avoids network hang)
     try {
-      if (typeof loadSavedPinCoords === 'function') {
-        loadSavedPinCoords().then(function(coords) {
-          try { addHubMarkers(coords); } catch(e) { addHubMarkers({}); }
-        }).catch(function() { try { addHubMarkers({}); } catch(e) {} });
-      } else {
-        addHubMarkers({});
-      }
+      var localPins = {};
+      try { localPins = JSON.parse(localStorage.getItem('dtslo_hub_pins') || '{}'); } catch(e) {}
+      addHubMarkers(localPins);
     } catch(e) { try { addHubMarkers({}); } catch(e2) {} }
+
+    // Sync pin coords from Supabase in background — updates on next load
+    setTimeout(function() {
+      try {
+        if (typeof loadSavedPinCoords === 'function') {
+          loadSavedPinCoords().catch(function(){});
+        }
+      } catch(e) {}
+    }, 5000);
 
     // Smart Start — delayed well after map settles
     setTimeout(function() {
@@ -309,7 +315,7 @@ window.menuHomeReturnToSLO = function() {
 // ── BUILDING GLOW SYSTEM ──
 var _glowInterval = null;
 var _glowSettings = {
-  on: true,
+  on: false,
   color: '#1e3a6e',     // base color
   glowColor: '#2d6abf', // peak glow color
   speed: 3000,          // ms per full cycle
@@ -335,7 +341,7 @@ function startBuildingGlow() {
       homeMap.setPaintProperty('mh-3d-buildings', 'fill-extrusion-color', color);
       homeMap.setPaintProperty('mh-3d-buildings', 'fill-extrusion-opacity', opacity * _glowSettings.intensity);
     } catch(e) {}
-  }, 50);
+  }, 500);
 }
 window.startBuildingGlow = startBuildingGlow;
 
