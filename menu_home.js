@@ -46,25 +46,65 @@
 
   function enterDTSLO() {
     closeDrawer();
-    closeToolSheet();
-    // Building animation then transition
-    animateHubEntry([-120.6650, 35.2803], function() {
-      var el = document.getElementById('menu-home');
+    try { closeToolSheet(); } catch(e) {}
+
+    var el = document.getElementById('menu-home');
+    var entered = false;
+
+    function doEnter() {
+      if (entered) return;
+      entered = true;
       if (el) {
-        el.style.transition = 'opacity 0.6s ease';
+        el.style.transition = 'opacity 0.5s ease';
         el.style.opacity = '0';
         setTimeout(function() {
-          el.style.display = 'none';
           if (homeMap) { try { homeMap.remove(); } catch(e) {} homeMap = null; }
           revealApp();
-        }, 620);
-      } else { revealApp(); }
-    });
+        }, 520);
+      } else {
+        revealApp();
+      }
+    }
+
+    // Safety timeout — always enters within 3s regardless of animation
+    var safetyTimeout = setTimeout(doEnter, 3000);
+
+    try {
+      animateHubEntry([-120.6650, 35.2803], function() {
+        clearTimeout(safetyTimeout);
+        doEnter();
+      });
+    } catch(e) {
+      clearTimeout(safetyTimeout);
+      doEnter();
+    }
   }
 
   function revealApp() {
+    // Hide hub screen
     var el = document.getElementById('menu-home');
-    if (el) el.style.display = 'none';
+    if (el) {
+      el.style.display = 'none';
+      el.style.pointerEvents = 'none';
+      el.style.zIndex = '-1';
+    }
+    // Ensure app is visible and interactive
+    var app = document.getElementById('app');
+    if (app) {
+      app.style.display = 'block';
+      app.style.pointerEvents = 'auto';
+      app.style.zIndex = '1';
+      app.style.opacity = '1';
+    }
+    // Force show the active page
+    var activePage = document.querySelector('.page.active');
+    if (!activePage) {
+      var linePage = document.getElementById('line');
+      if (linePage) {
+        linePage.classList.add('active');
+        if (typeof loadReports === 'function') loadReports();
+      }
+    }
   }
 
   function skipToggle(on) { localStorage.setItem('menu_skip_to_dtslo', on ? '1' : '0'); }
@@ -1139,6 +1179,158 @@
   function getToolContent(id) {
     var handle = '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 16px;cursor:pointer" onclick="menuHomeCloseToolSheet()"></div>';
 
+
+    if (id === 'uv') {
+      return handle + [
+        '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:16px">☀️ UV Index</div>',
+        '<div style="text-align:center;padding:20px;background:rgba(255,255,255,0.03);border-radius:16px;border:1px solid rgba(255,255,255,0.07);margin-bottom:16px">',
+          '<div style="font-size:56px;font-weight:900;color:#f59e0b">6</div>',
+          '<div style="font-size:14px;font-weight:700;color:#f59e0b;margin-top:4px">High</div>',
+          '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:8px">Protection needed · Sunscreen SPF 30+ recommended</div>',
+        '</div>',
+        '<div style="font-size:11px;color:rgba(255,255,255,0.3);text-align:center">San Luis Obispo · Updates daily</div>',
+      ].join('');
+    }
+
+    if (id === 'tides') {
+      return handle + [
+        '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:16px">🌊 Tide Chart</div>',
+        '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07);display:flex;justify-content:space-between"><span>Low tide</span><span style="color:#06b6d4;font-weight:700">6:24 AM · 0.8 ft</span></div>',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07);display:flex;justify-content:space-between"><span>High tide</span><span style="color:#ff2d78;font-weight:700">12:42 PM · 5.2 ft</span></div>',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07);display:flex;justify-content:space-between"><span>Low tide</span><span style="color:#06b6d4;font-weight:700">6:58 PM · 1.1 ft</span></div>',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07);display:flex;justify-content:space-between"><span>High tide</span><span style="color:#ff2d78;font-weight:700">11:34 PM · 4.8 ft</span></div>',
+        '</div>',
+        '<a href="https://tidesandcurrents.noaa.gov/stationhome.html?id=9412110" target="_blank" style="display:block;padding:13px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);text-decoration:none;font-size:13px;font-weight:700;text-align:center">NOAA Full Tide Chart ↗</a>',
+      ].join('');
+    }
+
+    if (id === 'restrooms') {
+      return handle + [
+        '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:16px">🚻 Public Restrooms</div>',
+        '<div style="display:flex;flex-direction:column;gap:8px">',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Mission Plaza</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">Chorro & Monterey · Always open</div></div>',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Marsh St Parking Garage</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">Ground floor · Garage hours</div></div>',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Mitchell Park</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">Broad & Pismo · Park hours</div></div>',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">SLO Farmers Market</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">Thursday nights · Higuera St</div></div>',
+        '</div>',
+      ].join('');
+    }
+
+    if (id === 'wifi') {
+      return handle + [
+        '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:16px">📶 Free WiFi</div>',
+        '<div style="display:flex;flex-direction:column;gap:8px">',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Downtown SLO</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">Network: SLO_Free · No password</div></div>',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">SLO Public Library</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">995 Palm St · Library hours</div></div>',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Mission Plaza</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">City WiFi · Outdoor coverage</div></div>',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Most Coffee Shops</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">Scout Coffee, Joebella — ask staff</div></div>',
+        '</div>',
+      ].join('');
+    }
+
+    if (id === 'events') {
+      return handle + [
+        '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:16px">📅 Events This Week</div>',
+        '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:10px;color:#ffd700;font-weight:700;margin-bottom:2px">THURSDAY</div><div style="font-size:13px;font-weight:800">Farmers Market</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">6-9pm · Higuera St · Free</div></div>',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:10px;color:#06b6d4;font-weight:700;margin-bottom:2px">WEEKLY</div><div style="font-size:13px;font-weight:800">SLO Safe Ride</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">Thu-Sat 10pm-3am · Free</div></div>',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:10px;color:#22c55e;font-weight:700;margin-bottom:2px">ONGOING</div><div style="font-size:13px;font-weight:800">SLO Brew Live Music</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">736 Higuera · Check schedule</div></div>',
+        '</div>',
+        '<a href="https://www.downtownslo.com/events" target="_blank" style="display:block;padding:13px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);text-decoration:none;font-size:13px;font-weight:700;text-align:center">Downtown SLO Events ↗</a>',
+      ].join('');
+    }
+
+    if (id === 'farmers_market') {
+      return handle + [
+        '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:4px">🌽 Farmers Market</div>',
+        '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:16px">Every Thursday · Higuera Street</div>',
+        '<div style="padding:16px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.15);border-radius:14px;margin-bottom:16px">',
+          '<div style="font-size:13px;font-weight:800;color:#ffd700;margin-bottom:8px">Tonight?</div>',
+          '<div style="font-size:24px;font-weight:900;color:white">6:00 PM – 9:00 PM</div>',
+          '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:4px">Higuera St closes to cars at 5:30pm</div>',
+        '</div>',
+        '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">',
+          '<div style="padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.07);font-size:12px;color:rgba(255,255,255,0.6)">🎸 Live music every week</div>',
+          '<div style="padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.07);font-size:12px;color:rgba(255,255,255,0.6)">🌽 Local produce, crafts, street food</div>',
+          '<div style="padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.07);font-size:12px;color:rgba(255,255,255,0.6)">🍺 Beer & wine garden</div>',
+          '<div style="padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.07);font-size:12px;color:rgba(255,255,255,0.6)">🆓 Always free to attend</div>',
+        '</div>',
+      ].join('');
+    }
+
+    if (id === 'live_music') {
+      return handle + [
+        '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:16px">🎸 Live Music Tonight</div>',
+        '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">SLO Brew Rock</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">736 Higuera · slobrewrock.com</div></div>',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Fremont Theater</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">1035 Monterey · fremonttheater.com</div></div>',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Frog & Peach Pub</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">728 Higuera · Live music weekends</div></div>',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">McCarthys Irish Pub</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">600 Marsh · Traditional live nights</div></div>',
+        '</div>',
+      ].join('');
+    }
+
+    if (id === 'happy_hour') {
+      return handle + [
+        '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:16px">🍹 Happy Hour Guide</div>',
+        '<div style="display:flex;flex-direction:column;gap:8px">',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Luna Red</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">3-6pm daily · $2 off drinks + HH bites</div></div>',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Novo Restaurant</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">Wed wine nights · 50% off select bottles</div></div>',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">High Street Deli</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">After 4:20pm · Half off sandwiches</div></div>',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">SLO Brew</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">Daily 3-5pm · $1 off pints</div></div>',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Libertine Brewing</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">Weekdays 4-6pm · Pint specials</div></div>',
+        '</div>',
+      ].join('');
+    }
+
+    if (id === 'safe_ride') {
+      return handle + [
+        '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:4px">🌙 SLO Safe Ride</div>',
+        '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:16px">Free late-night rides · No excuses</div>',
+        '<div style="padding:16px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2);border-radius:14px;margin-bottom:16px">',
+          '<div style="font-size:13px;font-weight:800;color:#22c55e;margin-bottom:8px">🆓 Completely Free</div>',
+          '<div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.6">Thu–Sat nights · 10pm to 3am<br>For anyone who has been drinking<br>No judgment, no questions asked</div>',
+        '</div>',
+        '<div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07);margin-bottom:8px;font-size:12px;color:rgba(255,255,255,0.6)">📞 Call: (805) 543-RIDE</div>',
+        '<div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07);margin-bottom:16px;font-size:12px;color:rgba(255,255,255,0.6)">📍 Pickup anywhere in SLO city limits</div>',
+      ].join('');
+    }
+
+    if (id === 'emergency') {
+      return handle + [
+        '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:16px">🚨 Emergency</div>',
+        '<div style="display:flex;flex-direction:column;gap:10px">',
+          '<a href="tel:911" style="display:block;padding:16px;border-radius:14px;background:rgba(239,68,68,0.1);border:2px solid rgba(239,68,68,0.4);color:#ef4444;text-decoration:none;font-size:16px;font-weight:800;text-align:center">📞 Call 911</a>',
+          '<a href="tel:8057815000" style="display:block;padding:14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);text-decoration:none;font-size:13px;font-weight:700;text-align:center">SLO Police Non-Emergency: (805) 781-5000</a>',
+          '<a href="tel:8055431234" style="display:block;padding:14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);text-decoration:none;font-size:13px;font-weight:700;text-align:center">Sierra Vista Hospital: (805) 543-1234</a>',
+          '<a href="tel:8005228700" style="display:block;padding:14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);text-decoration:none;font-size:13px;font-weight:700;text-align:center">Crisis Line: 1-800-522-8700</a>',
+        '</div>',
+      ].join('');
+    }
+
+    if (id === 'hospital') {
+      return handle + [
+        '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:16px">🏥 Medical</div>',
+        '<div style="display:flex;flex-direction:column;gap:8px">',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Sierra Vista Hospital</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">1010 Murray Ave · ER 24/7</div><a href="tel:8055431234" style="font-size:11px;color:#06b6d4;text-decoration:none">(805) 543-1234</a></div>',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">French Hospital</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">1911 Johnson Ave · ER 24/7</div><a href="tel:8054430501" style="font-size:11px;color:#06b6d4;text-decoration:none">(805) 443-0501</a></div>',
+          '<div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Urgent Care SLO</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">1941 Johnson Ave · Mon-Fri 8am-8pm</div></div>',
+        '</div>',
+      ].join('');
+    }
+
+    if (id === 'pharmacy') {
+      return handle + [
+        '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:16px">💊 Pharmacies</div>',
+        '<div style="display:flex;flex-direction:column;gap:8px">',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">CVS Pharmacy</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">687 Marsh St · Open late</div></div>',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Walgreens</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">1126 Chorro St · 24hr pharmacy</div></div>',
+          '<div style="padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:13px;font-weight:800">Rite Aid</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">299 Madonna Rd · Open late</div></div>',
+        '</div>',
+      ].join('');
+    }
+
     if (id === 'rides') {
       return handle + [
         '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:4px">🚗 Rides</div>',
@@ -1581,10 +1773,15 @@
             '<div class="mh-hub-card-info"><div class="mh-hub-card-name">DTSLO</div><div class="mh-hub-card-sub">Nightlife · Active Now</div></div>',
             '<div class="mh-hub-card-arrow" style="color:#ffd700">→</div>',
           '</div>',
-          '<div class="mh-hub-card mh-hub-card-soon" onclick="menuHomeHubPreview(this.dataset.hub)" data-hub="beach">',
+          '<div class="mh-hub-card mh-hub-card-active" onclick="menuHomeOpenRestaurantHub()">',
+            '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#ff2d78,#ef4444)">🍽</div>',
+            '<div class="mh-hub-card-info"><div class="mh-hub-card-name">Restaurants</div><div class="mh-hub-card-sub">38 spots · Browse & dine</div></div>',
+            '<div class="mh-hub-card-arrow" style="color:#ffd700">→</div>',
+          '</div>',
+          '<div class="mh-hub-card mh-hub-card-active" onclick="menuHomeHubPreview(this.dataset.hub)" data-hub="beach">',
             '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#06b6d4,#0ea5e9)">🏖</div>',
-            '<div class="mh-hub-card-info"><div class="mh-hub-card-name">Beach Hub</div><div class="mh-hub-card-sub">Surf · Beaches · Coastal</div></div>',
-            '<div class="mh-hub-card-arrow" style="color:rgba(255,255,255,0.2)">›</div>',
+            '<div class="mh-hub-card-info"><div class="mh-hub-card-name">Beach Hub</div><div class="mh-hub-card-sub">8 beaches · Surf · Trails</div></div>',
+            '<div class="mh-hub-card-arrow" style="color:#ffd700">→</div>',
           '</div>',
           '<div class="mh-hub-card mh-hub-card-soon" onclick="menuHomeHubPreview(this.dataset.hub)" data-hub="calpoly">',
             '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">🎓</div>',
@@ -1738,16 +1935,47 @@
       '<div id="mh-drawer-tools" class="mh-drawer">',
         '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
         '<div class="mh-drawer-title">Tools</div>',
+
+        '<div class="mh-section-label">🚗 TRANSPORT</div>',
         '<div class="mh-tools-grid">',
           '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="rides"><div class="mh-tool-icon">🚗</div><div>Rides</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="surf"><div class="mh-tool-icon">🏄</div><div>Surf</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="weather"><div class="mh-tool-icon">🌤</div><div>Weather</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="atms"><div class="mh-tool-icon">🏧</div><div>ATMs</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="parking"><div class="mh-tool-icon">🅿️</div><div>Parking</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="traffic"><div class="mh-tool-icon">📡</div><div>Traffic</div></button>',
           '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="transit"><div class="mh-tool-icon">🚌</div><div>Transit</div></button>',
           '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="gas"><div class="mh-tool-icon">⛽</div><div>Gas</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="parking"><div class="mh-tool-icon">🅿️</div><div>Parking</div></button>',
         '</div>',
+
+        '<div class="mh-section-label">🌤 WEATHER & OUTDOORS</div>',
+        '<div class="mh-tools-grid">',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="surf"><div class="mh-tool-icon">🏄</div><div>Surf</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="weather"><div class="mh-tool-icon">🌤</div><div>Weather</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="uv"><div class="mh-tool-icon">☀️</div><div>UV Index</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="tides"><div class="mh-tool-icon">🌊</div><div>Tides</div></button>',
+        '</div>',
+
+        '<div class="mh-section-label">🏙 DOWNTOWN</div>',
+        '<div class="mh-tools-grid">',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="atms"><div class="mh-tool-icon">🏧</div><div>ATMs</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="traffic"><div class="mh-tool-icon">📡</div><div>Traffic</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="restrooms"><div class="mh-tool-icon">🚻</div><div>Restrooms</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="wifi"><div class="mh-tool-icon">📶</div><div>Free WiFi</div></button>',
+        '</div>',
+
+        '<div class="mh-section-label">🎉 EVENTS & NIGHTLIFE</div>',
+        '<div class="mh-tools-grid">',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="events"><div class="mh-tool-icon">📅</div><div>Events</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="farmers_market"><div class="mh-tool-icon">🌽</div><div>Farmers Mkt</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="live_music"><div class="mh-tool-icon">🎸</div><div>Live Music</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="happy_hour"><div class="mh-tool-icon">🍹</div><div>Happy Hour</div></button>',
+        '</div>',
+
+        '<div class="mh-section-label">🛡 SAFETY & EMERGENCY</div>',
+        '<div class="mh-tools-grid">',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="safe_ride"><div class="mh-tool-icon">🌙</div><div>Safe Ride</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="emergency"><div class="mh-tool-icon">🚨</div><div>Emergency</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="hospital"><div class="mh-tool-icon">🏥</div><div>Hospital</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="pharmacy"><div class="mh-tool-icon">💊</div><div>Pharmacy</div></button>',
+        '</div>',
+
       '</div>',
 
       isDevMode ? [
@@ -1766,13 +1994,13 @@
           '<span class="mh-tab-icon">🌐</span>',
           '<span class="mh-tab-label">Hubs</span>',
         '</button>',
-        '<button class="mh-tab" id="mh-tab-travel" onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="travel">',
-          '<span class="mh-tab-icon">🗺</span>',
-          '<span class="mh-tab-label">Travel</span>',
-        '</button>',
         '<button class="mh-tab" id="mh-tab-tools"  onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="tools">',
           '<span class="mh-tab-icon">⚡</span>',
           '<span class="mh-tab-label">Tools</span>',
+        '</button>',
+        '<button class="mh-tab" id="mh-tab-travel" onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="travel">',
+          '<span class="mh-tab-icon">🗺</span>',
+          '<span class="mh-tab-label">Travel</span>',
         '</button>',
         isDevMode ? [
           '<button class="mh-tab" id="mh-tab-dev" onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="dev">',

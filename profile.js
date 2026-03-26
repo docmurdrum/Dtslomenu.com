@@ -1,4 +1,62 @@
 
+// ── FEEDBACK ──
+var currentFeedbackType = 'bug';
+
+function showFeedback() {
+  var modal = document.getElementById('feedback-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeFeedback() {
+  var modal = document.getElementById('feedback-modal');
+  if (modal) modal.style.display = 'none';
+  var txt = document.getElementById('feedback-text');
+  if (txt) txt.value = '';
+}
+
+function selectFeedbackType(el, type) {
+  document.querySelectorAll('.fb-type').forEach(function(b) { b.classList.remove('active'); });
+  el.classList.add('active');
+  currentFeedbackType = type;
+}
+
+async function submitFeedback() {
+  var text = document.getElementById('feedback-text')?.value?.trim();
+  var email = document.getElementById('feedback-email')?.value?.trim();
+  var btn = document.getElementById('feedback-submit-btn');
+  if (!text) {
+    document.getElementById('feedback-text').style.borderColor = 'rgba(255,45,120,0.5)';
+    setTimeout(function() {
+      document.getElementById('feedback-text').style.borderColor = 'rgba(255,255,255,0.1)';
+    }, 1500);
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+  try {
+    await supabaseClient.from('feedback').insert([{
+      type: currentFeedbackType,
+      message: text,
+      email: email || null,
+      user_id: currentUser?.id || null,
+      app_version: 'v4.0',
+      created_at: new Date().toISOString()
+    }]);
+    closeFeedback();
+    if (typeof showToast === 'function') showToast('✅ Feedback sent — thank you!');
+  } catch(e) {
+    // Fallback — still show success (save to localStorage)
+    try {
+      var existing = JSON.parse(localStorage.getItem('dtslo_pending_feedback') || '[]');
+      existing.push({ type: currentFeedbackType, message: text, email, ts: Date.now() });
+      localStorage.setItem('dtslo_pending_feedback', JSON.stringify(existing));
+    } catch(le) {}
+    closeFeedback();
+    if (typeof showToast === 'function') showToast('✅ Feedback saved!');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Send Feedback →'; }
+}
+
+
 // ── SKIP INTRO PREFERENCE ──
 function saveSkipIntroPref(on) {
   localStorage.setItem('menu_skip_intro', on ? '1' : '0');
