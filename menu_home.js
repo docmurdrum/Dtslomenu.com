@@ -108,6 +108,7 @@
   function hubPreview(id) {
     // Beach hub is live — open beach selector instead of coming soon
     if (id === 'beach') { openBeachHub(); return; }
+    if (id === 'restaurant') { openRestaurantHub(); return; }
     var hubs = {
       beach: {
         name: 'Beach Hub', emoji: '🏖', color: 'linear-gradient(135deg,#06b6d4,#0ea5e9)',
@@ -1003,7 +1004,11 @@
     }, 30);
     sheet.addEventListener('click', function(e) { if (e.target === sheet) sheet.remove(); });
   }
-  window.menuHomeTravelViewAll = travelViewAll;
+  window.menuHomeTravelViewAll = function(type) {
+    if (type === 'food') { openRestaurantHub(); return; }
+    travelViewAll(type);
+  };
+  var _travelViewAll = travelViewAll;
 
   async function loadAllVenues(type) {
     var list = document.getElementById('mh-va-list');
@@ -1522,6 +1527,7 @@
     var hubs = [
       { coords: [-120.6650, 35.2803], icon: '🌃', label: 'DTSLO',        sub: 'Nightlife',   color: 'linear-gradient(135deg,#ff2d78,#b44fff)', active: true,  onclick: 'menuHomeEnterDTSLO()' },
       { coords: [-120.6750, 35.2680], icon: '🏖',  label: 'Beach Hub',    sub: 'Coming Soon', color: 'linear-gradient(135deg,#06b6d4,#0ea5e9)', active: false },
+      { coords: [-120.6655, 35.2808], icon: '🍽',  label: 'Restaurants',  sub: 'Browse & dine', color: 'linear-gradient(135deg,#ff2d78,#ef4444)', active: true, action: 'restaurant' },
       { coords: [-120.6540, 35.2980], icon: '🎓', label: 'Cal Poly',      sub: 'Coming Soon', color: 'linear-gradient(135deg,#6366f1,#8b5cf6)', active: false },
       { coords: [-120.6590, 35.2840], icon: '🏛',  label: 'City Hub',     sub: 'Coming Soon', color: 'linear-gradient(135deg,#00f5ff,#00ff88)', active: false },
     ];

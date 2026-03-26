@@ -129,6 +129,8 @@ async function onLogin(user, isNewUser = false) {
     // Preload The Freshman as starter character
     await unlockFreshmanStarter(user);
   }
+  // Always launch hub screen after login
+  try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
 }
 
 
