@@ -221,83 +221,10 @@ var BEACHES = [
 
 // ── OPEN BEACH HUB (beach selector) ──
 function openBeachHub() {
-  var existing = document.getElementById('mh-Beachhub');
+  var existing = document.getElementById('mh-beach-hub');
   if (existing) existing.remove();
 
-  // Show spot picker on map, then open hub
-  if (typeof hubShowSpotPicker === 'function') {
-    var _spots = (typeof BEACH_DATA !== 'undefined' ? BEACH_DATA : [])
-      .filter(function(s) { return s.coords; })
-      .map(function(s) { return { id: s.id || s.name, name: s.name, emoji: s.emoji || '🏖', coords: s.coords, meta: s.difficulty || s.type || '' }; });
-    hubShowSpotPicker(_spots, '#06b6d4', '🏖 Beach Hub',
-      function() {
-        // Sort by proximity if user tapped a spot
-        if (window._findHubsUserCenter && typeof sortByProximity === 'function') {
-          _spots = sortByProximity(_spots, window._findHubsUserCenter[0], window._findHubsUserCenter[1]);
-        }
-        openBeachHub('_open');
-      }
-    );
-    if (arguments[0] !== '_open') return;
-  }
-
-
-
-
-  var sheet = document.createElement('div');
-  sheet.id = 'mh-beach-hub';
-  sheet.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px)';
-
-  var ratingColor = {Good:'#22c55e', Fair:'#f59e0b', Poor:'#ef4444'};
-
-  sheet.innerHTML =
-    '<div id="mh-bh-inner" style="width:100%;background:linear-gradient(180deg,rgba(2,15,25,0.99),rgba(4,20,35,0.99));border-radius:24px 24px 0 0;border-top:2px solid rgba(6,182,212,0.3);padding:12px 20px 48px;max-height:88vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">' +'<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);flex:1"></div>' +'<button onclick="menuHomeCloseBeachHub()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;margin-left:8px">✕</button>' +'</div>' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
-        '<div style="font-size:22px;font-weight:800;font-family:Georgia,serif;color:white">🏖 Beach Hub</div>' +
-        '<div style="font-size:11px;color:rgba(6,182,212,0.7);font-weight:700">CENTRAL COAST</div>' +
-      '</div>' +
-      '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:16px">Choose a beach to see conditions, trails, parking & more</div>' +
-
-      // Quick filter row
-      '<div style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;margin-bottom:16px;scrollbar-width:none">' +
-        '<button class="mh-bh-filter active" onclick="menuHomeBhFilter(this,\'all\')">All</button>' +
-        '<button class="mh-bh-filter" onclick="menuHomeBhFilter(this,\'close\')">Closest</button>' +
-        '<button class="mh-bh-filter" onclick="menuHomeBhFilter(this,\'good\')">🟢 Good surf</button>' +
-        '<button class="mh-bh-filter" onclick="menuHomeBhFilter(this,\'dogs\')">🐕 Dog friendly</button>' +
-        '<button class="mh-bh-filter" onclick="menuHomeBhFilter(this,\'trails\')">🥾 Trails</button>' +
-      '</div>' +
-
-      '<div id="mh-bh-beach-list">' +
-        BEACHES.map(function(b) {
-          var rc = ratingColor[b.rating] || 'rgba(255,255,255,0.4)';
-          return '<div class="mh-bh-card" onclick="menuHomeOpenBeach(\'' + b.id + '\')" data-id="' + b.id + '" data-rating="' + b.rating + '" data-drive="' + b.miles + '">' +
-            '<div style="display:flex;align-items:center;gap:12px">' +
-              '<div style="font-size:32px;flex-shrink:0">' + b.emoji + '</div>' +
-              '<div style="flex:1;min-width:0">' +
-                '<div style="font-size:14px;font-weight:800">' + b.name + '</div>' +
-                '<div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px">' + b.vibe + '</div>' +
-              '</div>' +
-              '<div style="text-align:right;flex-shrink:0">' +
-                '<div style="font-size:13px;font-weight:800;color:' + rc + '">' + b.surf + '</div>' +
-                '<div style="font-size:10px;font-weight:700;color:' + rc + '">' + b.rating + '</div>' +
-                '<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:1px">🚗 ' + b.drive + '</div>' +
-              '</div>' +
-            '</div>' +
-          '</div>';
-        }).join('') +
-      '</div>' +
-    '</div>';
-
-  getHubParent().appendChild(sheet);
-  setTimeout(function() {
-    sheet.style.opacity = '1';
-    document.getElementById('mh-bh-inner').style.transform = 'translateY(0)';
-  }, 30);
-  sheet.addEventListener('click', function(e) { if (e.target === sheet) menuHomeCloseBeachHub(); });
-
-  // Inject beach hub CSS once
-  if (!document.getElementById('mh-bh-css')) {
+if (!document.getElementById('mh-bh-css')) {
     var s = document.createElement('style');
     s.id = 'mh-bh-css';
     s.textContent = [

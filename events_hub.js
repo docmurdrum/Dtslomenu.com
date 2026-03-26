@@ -152,30 +152,10 @@ var EVENTS_FILTERS = [
 ];
 
 function openEventsHub() {
-  var existing = document.getElementById('mh-Eventshub');
+  var existing = document.getElementById('mh-events-hub');
   if (existing) existing.remove();
 
-  // Show spot picker on map, then open hub
-  if (typeof hubShowSpotPicker === 'function') {
-    var _spots = (typeof EVENTS_VENUES !== 'undefined' ? EVENTS_VENUES : [])
-      .filter(function(s) { return s.coords; })
-      .map(function(s) { return { id: s.id || s.name, name: s.name, emoji: s.emoji || '🎭', coords: s.coords, meta: s.difficulty || s.type || '' }; });
-    hubShowSpotPicker(_spots, '#ffd700', '🎭 Events Hub',
-      function() {
-        // Sort by proximity if user tapped a spot
-        if (window._findHubsUserCenter && typeof sortByProximity === 'function') {
-          _spots = sortByProximity(_spots, window._findHubsUserCenter[0], window._findHubsUserCenter[1]);
-        }
-        openEventsHub('_open');
-      }
-    );
-    if (arguments[0] !== '_open') return;
-  }
-
-
-
-
-  if (!document.getElementById('events-hub-css')) {
+if (!document.getElementById('events-hub-css')) {
     var s = document.createElement('style');
     s.id = 'events-hub-css';
     s.textContent = [

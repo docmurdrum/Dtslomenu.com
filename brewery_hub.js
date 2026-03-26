@@ -138,30 +138,10 @@ var BEER_STYLES = [
 var brewCrawlList = [];
 
 function openBreweryHub() {
-  var existing = document.getElementById('mh-Breweryhub');
+  var existing = document.getElementById('mh-brewery-hub');
   if (existing) existing.remove();
 
-  // Show spot picker on map, then open hub
-  if (typeof hubShowSpotPicker === 'function') {
-    var _spots = (typeof BREWERY_SPOTS !== 'undefined' ? BREWERY_SPOTS : [])
-      .filter(function(s) { return s.coords; })
-      .map(function(s) { return { id: s.id || s.name, name: s.name, emoji: s.emoji || '🍺', coords: s.coords, meta: s.difficulty || s.type || '' }; });
-    hubShowSpotPicker(_spots, '#f59e0b', '🍺 Craft Beer',
-      function() {
-        // Sort by proximity if user tapped a spot
-        if (window._findHubsUserCenter && typeof sortByProximity === 'function') {
-          _spots = sortByProximity(_spots, window._findHubsUserCenter[0], window._findHubsUserCenter[1]);
-        }
-        openBreweryHub('_open');
-      }
-    );
-    if (arguments[0] !== '_open') return;
-  }
-
-
-
-
-  if (!document.getElementById('brew-hub-css')) {
+if (!document.getElementById('brew-hub-css')) {
     var s = document.createElement('style');
     s.id = 'brew-hub-css';
     s.textContent = [

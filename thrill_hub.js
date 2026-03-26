@@ -170,30 +170,10 @@ var THRILL_CATEGORIES = [
 ];
 
 function openThrillHub() {
-  var existing = document.getElementById('mh-Thrillhub');
+  var existing = document.getElementById('mh-thrill-hub');
   if (existing) existing.remove();
 
-  // Show spot picker on map, then open hub
-  if (typeof hubShowSpotPicker === 'function') {
-    var _spots = (typeof THRILL_SPOTS !== 'undefined' ? THRILL_SPOTS : [])
-      .filter(function(s) { return s.coords; })
-      .map(function(s) { return { id: s.id || s.name, name: s.name, emoji: s.emoji || '⚡', coords: s.coords, meta: s.difficulty || s.type || '' }; });
-    hubShowSpotPicker(_spots, '#ef4444', '⚡ Thrill Hub',
-      function() {
-        // Sort by proximity if user tapped a spot
-        if (window._findHubsUserCenter && typeof sortByProximity === 'function') {
-          _spots = sortByProximity(_spots, window._findHubsUserCenter[0], window._findHubsUserCenter[1]);
-        }
-        openThrillHub('_open');
-      }
-    );
-    if (arguments[0] !== '_open') return;
-  }
-
-
-
-
-  if (!document.getElementById('thrill-hub-css')) {
+if (!document.getElementById('thrill-hub-css')) {
     var s = document.createElement('style');
     s.id = 'thrill-hub-css';
     s.textContent = [
