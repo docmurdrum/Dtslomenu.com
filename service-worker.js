@@ -3,7 +3,7 @@
 // Caches core assets for offline/fast load
 // ══════════════════════════════════════════════
 
-const CACHE_NAME = 'dtslo-v3.1';
+const CACHE_NAME = 'dtslo-v6.0';
 
 const CORE_ASSETS = [
   '/',
