@@ -204,6 +204,9 @@ function loadHomeMap() {
 
         // Start building glow animation
         startBuildingGlow();
+
+        // Init all hub glow layers from HUB_SPOT_DEFS
+        if (typeof initHubGlowLayers === 'function') initHubGlowLayers();
       } catch(e) { console.warn('[3D buildings]', e); }
     }
 
@@ -233,6 +236,43 @@ function loadHomeMap() {
 
   homeMap.on('error', function(e) { console.warn('[Map error]', e); });
 }
+
+function addHubMarkersWithCoords(c) { addHubMarkers(c); }
+
+function addHubMarkers(coordsOverride) {
+  var s = coordsOverride || {};
+  var hubs = [
+    { coords: s['dtslo']       || [-120.6650,35.2803], icon:'🌃', label:'DTSLO',        sub:'Nightlife',           color:'linear-gradient(135deg,#ff2d78,#b44fff)', active:true,  onclick:'menuHomeRequireAuth()' },
+    { coords: s['restaurants'] || [-120.6655,35.2808], icon:'🍽',  label:'Restaurants',  sub:'Browse & dine',       color:'linear-gradient(135deg,#ff6b35,#ef4444)', active:true,  onclick:'menuHomeOpenRestaurantHub()' },
+    { coords: s['beach']       || [-120.6750,35.2680], icon:'🏖',  label:'Beach Hub',    sub:'8 beaches',           color:'linear-gradient(135deg,#06b6d4,#0ea5e9)', active:true,  onclick:'menuHomeOpenBeachHub()' },
+    { coords: s['wine']        || [-120.8200,35.3600], icon:'🍷',  label:'Wine Country', sub:'Paso & SLO wine',     color:'linear-gradient(135deg,#7c2d8e,#b44fff)', active:true,  onclick:'menuHomeOpenWineHub()' },
+    { coords: s['brewery']     || [-120.6595,35.2808], icon:'🍺',  label:'Craft Beer',   sub:'9 breweries',         color:'linear-gradient(135deg,#f59e0b,#d97706)', active:true,  onclick:'menuHomeOpenBreweryHub()' },
+    { coords: s['nature']      || [-120.6785,35.2920], icon:'🌿',  label:'Nature',       sub:'Hikes & parks',       color:'linear-gradient(135deg,#22c55e,#16a34a)', active:true,  onclick:'menuHomeOpenNatureHub()' },
+    { coords: s['thrill']      || [-120.6595,35.2750], icon:'⚡',  label:'Thrill',       sub:'Adventure',           color:'linear-gradient(135deg,#ef4444,#dc2626)', active:true,  onclick:'menuHomeOpenThrillHub()' },
+    { coords: s['events']      || [-120.6590,35.2820], icon:'🎭',  label:'Events',       sub:'Concerts & markets',  color:'linear-gradient(135deg,#ffd700,#ff9500)', active:true,  onclick:'menuHomeOpenEventsHub()' },
+    { coords: s['calpoly']     || [-120.6540,35.2980], icon:'🎓',  label:'Cal Poly',     sub:'Student life',        color:'linear-gradient(135deg,#6366f1,#8b5cf6)', active:true,  onclick:'menuHomeOpenCalPolyHub()' },
+    { coords: s['city']        || [-120.6620,35.2790], icon:'🏛',  label:'City Hub',     sub:'Landmarks & culture', color:'linear-gradient(135deg,#00f5ff,#00ff88)', active:true,  onclick:'menuHomeOpenCityHub()' },
+    { coords: s['shopping']    || [-120.6580,35.2760], icon:'🛒',  label:'Shopping',     sub:'Coming Soon',         color:'linear-gradient(135deg,#22c55e,#16a34a)', active:false },
+  ];
+  hubs.forEach(function(hub) {
+    var el = document.createElement('div');
+    el.className = 'mh-hub-marker';
+    el.innerHTML = [
+      '<div class="mh-hub-pin' + (hub.active ? ' mh-hub-active' : ' mh-hub-dim') + '"' +
+        (hub.active && hub.onclick ? ' onclick="' + hub.onclick + '"' : '') + '>',
+        '<div class="mh-hub-dot" style="background:' + hub.color + '">',
+          '<span class="mh-hub-icon">' + hub.icon + '</span>',
+        '</div>',
+        '<div class="mh-hub-label">' + hub.label + '</div>',
+        hub.active ? '<div class="mh-hub-enter">Tap to Enter</div>' : '<div class="mh-hub-sub">' + hub.sub + '</div>',
+      '</div>'
+    ].join('');
+    new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(hub.coords).addTo(homeMap);
+  });
+}
+window.menuHomeReturnToSLO = function() {
+  if (homeMap) homeMap.flyTo({ center: [-120.6650,35.2803], zoom: 14, pitch: 45, bearing: -20, duration: 800 });
+};
 
 // ── BUILDING GLOW SYSTEM ──
 var _glowInterval = null;
@@ -354,6 +394,8 @@ function openMapSettings() {
         '<input type="range" min="500" max="8000" step="500" value="' + _glowSettings.speed + '" style="width:100%;accent-color:#ffd700" oninput="document.getElementById(\'glow-speed-val\').textContent=(this.value/1000).toFixed(1)+\'s\';updateGlowSettings(\'speed\',parseInt(this.value))">' +
       '</div>' +
 
+      '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:4px">📍 SPOT LAYERS</div>' +
+      buildHubGlowToggles() +
       '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">⚡ PRESETS</div>' +
       '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">' +
         '<button onclick="applyGlowPreset(\'blue\')" style="padding:10px;border-radius:10px;border:1px solid rgba(45,106,191,0.4);background:rgba(45,106,191,0.1);color:#6ba3f5;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">🔵 Blue</button>' +
@@ -396,336 +438,19 @@ function applyGlowPreset(name) {
 }
 window.applyGlowPreset = applyGlowPreset;
 
-function addHubMarkersWithCoords(c) { addHubMarkers(c); }
 
-function addHubMarkers(coordsOverride) {
-  var s = coordsOverride || {};
-  var hubs = [
-    { coords: s['dtslo']       || [-120.6650,35.2803], icon:'🌃', label:'DTSLO',        sub:'Nightlife',           color:'linear-gradient(135deg,#ff2d78,#b44fff)', active:true,  onclick:'menuHomeRequireAuth()' },
-    { coords: s['restaurants'] || [-120.6655,35.2808], icon:'🍽',  label:'Restaurants',  sub:'Browse & dine',       color:'linear-gradient(135deg,#ff6b35,#ef4444)', active:true,  onclick:'menuHomeOpenRestaurantHub()' },
-    { coords: s['beach']       || [-120.6750,35.2680], icon:'🏖',  label:'Beach Hub',    sub:'8 beaches',           color:'linear-gradient(135deg,#06b6d4,#0ea5e9)', active:true,  onclick:'menuHomeOpenBeachHub()' },
-    { coords: s['wine']        || [-120.8200,35.3600], icon:'🍷',  label:'Wine Country', sub:'Paso & SLO wine',     color:'linear-gradient(135deg,#7c2d8e,#b44fff)', active:true,  onclick:'menuHomeOpenWineHub()' },
-    { coords: s['brewery']     || [-120.6595,35.2808], icon:'🍺',  label:'Craft Beer',   sub:'9 breweries',         color:'linear-gradient(135deg,#f59e0b,#d97706)', active:true,  onclick:'menuHomeOpenBreweryHub()' },
-    { coords: s['nature']      || [-120.6785,35.2920], icon:'🌿',  label:'Nature',       sub:'Hikes & parks',       color:'linear-gradient(135deg,#22c55e,#16a34a)', active:true,  onclick:'menuHomeOpenNatureHub()' },
-    { coords: s['thrill']      || [-120.6595,35.2750], icon:'⚡',  label:'Thrill',       sub:'Adventure',           color:'linear-gradient(135deg,#ef4444,#dc2626)', active:true,  onclick:'menuHomeOpenThrillHub()' },
-    { coords: s['events']      || [-120.6590,35.2820], icon:'🎭',  label:'Events',       sub:'Concerts & markets',  color:'linear-gradient(135deg,#ffd700,#ff9500)', active:true,  onclick:'menuHomeOpenEventsHub()' },
-    { coords: s['calpoly']     || [-120.6540,35.2980], icon:'🎓',  label:'Cal Poly',     sub:'Student life',        color:'linear-gradient(135deg,#6366f1,#8b5cf6)', active:true,  onclick:'menuHomeOpenCalPolyHub()' },
-    { coords: s['city']        || [-120.6620,35.2790], icon:'🏛',  label:'City Hub',     sub:'Landmarks & culture', color:'linear-gradient(135deg,#00f5ff,#00ff88)', active:true,  onclick:'menuHomeOpenCityHub()' },
-    { coords: s['shopping']    || [-120.6580,35.2760], icon:'🛒',  label:'Shopping',     sub:'Coming Soon',         color:'linear-gradient(135deg,#22c55e,#16a34a)', active:false },
-  ];
-  hubs.forEach(function(hub) {
-    var el = document.createElement('div');
-    el.className = 'mh-hub-marker';
-    el.innerHTML = [
-      '<div class="mh-hub-pin' + (hub.active ? ' mh-hub-active' : ' mh-hub-dim') + '"' +
-        (hub.active && hub.onclick ? ' onclick="' + hub.onclick + '"' : '') + '>',
-        '<div class="mh-hub-dot" style="background:' + hub.color + '">',
-          '<span class="mh-hub-icon">' + hub.icon + '</span>',
-        '</div>',
-        '<div class="mh-hub-label">' + hub.label + '</div>',
-        hub.active ? '<div class="mh-hub-enter">Tap to Enter</div>' : '<div class="mh-hub-sub">' + hub.sub + '</div>',
-      '</div>'
-    ].join('');
-    new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(hub.coords).addTo(homeMap);
-  });
+// ── DYNAMIC HUB GLOW TOGGLES ──
+// Reads HUB_SPOT_DEFS — new hubs added there appear here automatically
+function buildHubGlowToggles() {
+  if (typeof HUB_SPOT_DEFS === 'undefined') return '';
+  return HUB_SPOT_DEFS.map(function(hub) {
+    var isOn = _hubGlowState && _hubGlowState[hub.id] !== false;
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.07);margin-bottom:6px">' +
+      '<span style="font-size:13px;font-weight:700">' + hub.icon + ' ' + hub.label + '</span>' +
+      '<label style="display:flex;align-items:center">' +
+        '<input type="checkbox" ' + (isOn ? 'checked' : '') + ' onchange="setHubGlowVisible(\'' + hub.id + '\',this.checked)" style="width:18px;height:18px;accent-color:' + hub.color + '">' +
+      '</label>' +
+    '</div>';
+  }).join('');
 }
-window.menuHomeReturnToSLO = menuHomeReturnToSLO;
-
-function openTool(id) { if (typeof buildToolSheet === 'function') buildToolSheet(id); }
-window.menuHomeOpenTool = openTool;
-
-function travelViewAll(type) { if (type === 'food') { try { menuHomeOpenRestaurantHub(); } catch(e) {} } }
-window.menuHomeTravelViewAll = travelViewAll;
-function travelBeach() { try { menuHomeOpenBeachHub(); } catch(e) {} }
-window.menuHomeTravelBeach = travelBeach;
-
-var _userLocationMarker = null, _userLocationWatcher = null;
-
-function menuHomeToggleLocation() {
-  var btn = document.getElementById('mh-location-btn');
-  if (_userLocationMarker) {
-    _userLocationMarker.remove(); _userLocationMarker = null;
-    if (_userLocationWatcher) { navigator.geolocation.clearWatch(_userLocationWatcher); _userLocationWatcher = null; }
-    if (btn) { btn.style.background = 'rgba(8,8,20,0.75)'; btn.style.color = 'rgba(255,255,255,0.8)'; btn.textContent = '📍 Me'; }
-    return;
-  }
-  if (!navigator.geolocation) { if (typeof showToast === 'function') showToast('Location not available'); return; }
-  if (btn) btn.textContent = '⏳';
-  navigator.geolocation.getCurrentPosition(
-    function(pos) {
-      var lng = pos.coords.longitude, lat = pos.coords.latitude;
-      var el = document.createElement('div');
-      el.style.cssText = 'position:relative;width:18px;height:18px';
-      el.innerHTML = '<div style="position:absolute;inset:0;border-radius:50%;background:#4A90E2;border:2px solid white;box-shadow:0 0 0 0 rgba(74,144,226,0.4);animation:location-pulse 2s ease-out infinite;z-index:1"></div>' +
-        '<div style="position:absolute;inset:-8px;border-radius:50%;background:rgba(74,144,226,0.15);animation:location-ring 2s ease-out infinite"></div>';
-      if (!document.getElementById('location-pulse-css')) {
-        var s = document.createElement('style'); s.id = 'location-pulse-css';
-        s.textContent = '@keyframes location-pulse{0%{box-shadow:0 0 0 0 rgba(74,144,226,0.5)}70%{box-shadow:0 0 0 10px rgba(74,144,226,0)}100%{box-shadow:0 0 0 0 rgba(74,144,226,0)}}@keyframes location-ring{0%{transform:scale(0.8);opacity:0.8}100%{transform:scale(1.8);opacity:0}}';
-        document.head.appendChild(s);
-      }
-      try {
-        _userLocationMarker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([lng,lat]).addTo(homeMap);
-        homeMap.flyTo({ center: [lng,lat], zoom: 15, duration: 1000 });
-        if (btn) { btn.textContent = '📍'; btn.style.background = 'rgba(74,144,226,0.3)'; btn.style.color = '#4A90E2'; }
-      } catch(e) {}
-      _userLocationWatcher = navigator.geolocation.watchPosition(
-        function(p) { if (_userLocationMarker) _userLocationMarker.setLngLat([p.coords.longitude, p.coords.latitude]); },
-        null, { enableHighAccuracy: true, maximumAge: 5000 }
-      );
-    },
-    function() { if (btn) btn.textContent = '📍 Me'; if (typeof showToast === 'function') showToast('Location access denied'); },
-    { enableHighAccuracy: true, timeout: 8000 }
-  );
-}
-window.menuHomeToggleLocation = menuHomeToggleLocation;
-
-function injectHTML() {
-  if (document.getElementById('menu-home')) return;
-  var div = document.createElement('div');
-  div.id = 'menu-home';
-  var dev = localStorage.getItem('dtslo_dev_mode') === '1';
-  div.innerHTML = [
-    '<div id="mh-map"></div>',
-    '<div id="mh-map-overlay"></div>',
-    '<div id="mh-header"><div id="mh-logo">MENU</div><div id="mh-city">San Luis Obispo</div></div>',
-    '<button id="mh-location-btn" onclick="menuHomeToggleLocation()" style="position:absolute;top:160px;right:16px;z-index:10;background:rgba(8,8,20,0.75);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);padding:7px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(8px);font-family:Helvetica Neue,sans-serif">📍 Me</button>',
-
-    // HUBS DRAWER
-    '<div id="mh-drawer-hubs" class="mh-drawer">',
-      '<div class="mh-drawer-header">',
-        '<div class="mh-sheet-handle" style="margin:0"></div>',
-        '<div class="mh-drawer-title">Hubs</div>',
-        '<button class="mh-drawer-close" onclick="menuHomeCloseDrawer()">✕</button>',
-      '</div>',
-      '<div class="mh-hub-cards">',
-        mkCard('menuHomeRequireAuth()',       '#ff2d78,#b44fff', '🌃', 'DTSLO',        'Nightlife · Active Now'),
-        mkCard('menuHomeOpenRestaurantHub()', '#ff6b35,#ef4444', '🍽',  'Restaurants',  'Browse & dine'),
-        mkCard('menuHomeOpenBeachHub()',      '#06b6d4,#0ea5e9', '🏖',  'Beach Hub',    '8 beaches · Surf · Trails'),
-        mkCard('menuHomeOpenNatureHub()',     '#22c55e,#16a34a', '🌿',  'Nature Hub',   'Hikes · Parks · Trails'),
-        mkCard('menuHomeOpenThrillHub()',     '#ef4444,#dc2626', '⚡',  'Thrill Hub',   'Zipline · ATV · Adventure'),
-        mkCard('menuHomeOpenEventsHub()',     '#ffd700,#ff9500', '🎭',  'Events Hub',   'Concerts · Markets · Festivals'),
-        mkCard('menuHomeOpenBreweryHub()',    '#f59e0b,#d97706', '🍺',  'Craft Beer',   '9 SLO breweries'),
-        mkCard('menuHomeOpenWineHub()',       '#7c2d8e,#b44fff', '🍷',  'Wine Country', 'Paso Robles · Edna Valley'),
-        mkCard('menuHomeOpenCalPolyHub()',    '#6366f1,#8b5cf6', '🎓',  'Cal Poly Hub', 'Student life · Bars · Eats'),
-        mkCard('menuHomeOpenCityHub()',       '#00f5ff,#00ff88', '🏛',  'City Hub',     'Landmarks · Culture · Art'),
-        '<div class="mh-hub-card mh-hub-card-soon"><div class="mh-hub-card-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">🛒</div><div class="mh-hub-card-info"><div class="mh-hub-card-name">Shopping</div><div class="mh-hub-card-sub">Coming Soon</div></div><div class="mh-hub-card-arrow" style="opacity:0.3">→</div></div>',
-      '</div>',
-    '</div>',
-
-    // TRAVEL DRAWER
-    '<div id="mh-drawer-travel" class="mh-drawer">',
-      '<div class="mh-drawer-header">',
-        '<div class="mh-sheet-handle" style="margin:0"></div>',
-        '<div class="mh-drawer-title">✨ Travel Guide</div>',
-        '<button class="mh-drawer-close" onclick="menuHomeCloseDrawer()">✕</button>',
-      '</div>',
-      '<button class="mh-plan-btn" onclick="menuHomeOpenTravelPlanIt()"><span style="font-size:18px">✨</span><div style="text-align:left;flex:1"><div style="font-size:14px;font-weight:800">Plan It</div><div style="font-size:11px;color:rgba(255,255,255,0.5)">Build your perfect outing with AI</div></div><span style="color:rgba(255,255,255,0.3)">›</span></button>',
-      '<div class="mh-travel-tabs">',
-        '<button class="mh-travel-tab active" onclick="menuHomeTravelTab(this,\'all\')">All</button>',
-        '<button class="mh-travel-tab" onclick="menuHomeTravelTab(this,\'tours\')">🗺 Tours</button>',
-        '<button class="mh-travel-tab" onclick="menuHomeTravelTab(this,\'food\')">🍽 Food</button>',
-        '<button class="mh-travel-tab" onclick="menuHomeTravelTab(this,\'hotels\')">🏨 Hotels</button>',
-        '<button class="mh-travel-tab" onclick="menuHomeTravelTab(this,\'beaches\')">🌊 Beaches</button>',
-      '</div>',
-      '<div class="mh-travel-section" id="mh-tsec-tours">',
-        '<div class="mh-section-label">🗺 SELF-GUIDED TOURS</div>',
-        '<div class="mh-tour-grid">',
-          mkTour('historic','🏛','Historic SLO','90 min · Free'),
-          mkTour('bishop','🥾','Bishop Peak','2.5 hrs · Hard'),
-          mkTour('food','🍕','Food Tour','3 hrs · $40-100'),
-          mkTour('wine','🍷','Wine Trail','4 hrs · Drive'),
-          mkTour('beach','🌊','Beach Day','All day · Drive'),
-          mkTour('morro','🦦','Morro Bay','Half day · Drive'),
-          mkTour('brewery','🍺','Brewery Hop','3 hrs · Walking'),
-          mkTour('bike','🚴','Bike Trail','2-3 hrs · Easy'),
-        '</div>',
-      '</div>',
-      '<div class="mh-travel-section" id="mh-tsec-food">',
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="mh-section-label" style="margin-bottom:0">🍽 RESTAURANTS</div><button onclick="menuHomeTravelViewAll(\'food\')" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">View all →</button></div>',
-        '<div id="mh-restaurant-list"><div style="padding:20px;text-align:center;color:rgba(255,255,255,0.3);font-size:12px">Loading...</div></div>',
-      '</div>',
-      '<div class="mh-travel-section" id="mh-tsec-hotels">',
-        '<div class="mh-section-label">🏨 HOTELS</div>',
-        '<div id="mh-hotel-list"><div style="padding:20px;text-align:center;color:rgba(255,255,255,0.3);font-size:12px">Loading...</div></div>',
-      '</div>',
-      '<div class="mh-travel-section" id="mh-tsec-beaches">',
-        '<div class="mh-section-label">🌊 BEACHES NEARBY</div>',
-        '<div class="mh-venue-list">',
-          mkBeach('avila','🏖','Avila Beach','10 min · Calm water · Dog friendly'),
-          mkBeach('pismo','🌊','Pismo Beach','15 min · Classic vibe · Pier'),
-          mkBeach('shell','🪨','Shell Beach','12 min · Dramatic cliffs · Surfing'),
-          mkBeach('morro','🦦','Morro Bay Beach','30 min · Sea otters · Morro Rock'),
-        '</div>',
-      '</div>',
-    '</div>',
-
-    // TOOLS DRAWER
-    '<div id="mh-drawer-tools" class="mh-drawer">',
-      '<div class="mh-drawer-header">',
-        '<div class="mh-sheet-handle" style="margin:0"></div>',
-        '<div class="mh-drawer-title">Tools</div>',
-        '<button class="mh-drawer-close" onclick="menuHomeCloseDrawer()">✕</button>',
-      '</div>',
-      '<div class="mh-section-label">🚗 TRANSPORT</div>',
-      '<div class="mh-tools-grid">',
-        mkTool('rides','🚗','Rides'), mkTool('transit','🚌','Transit'),
-        mkTool('gas','⛽','Gas'),     mkTool('parking','🅿️','Parking'),
-      '</div>',
-      '<div class="mh-section-label">📍 MAP TOOLS</div>',
-      '<div class="mh-tools-grid">',
-        '<button class="mh-tool-btn" onclick="menuHomePinMover()"><div class="mh-tool-icon">📍</div><div>Move Pins</div></button>',
-        '<button class="mh-tool-btn" onclick="menuHomeReturnToSLO()"><div class="mh-tool-icon">🗺</div><div>Return to SLO</div></button>',
-      '</div>',
-      '<div class="mh-section-label">🏙 DOWNTOWN</div>',
-      '<div class="mh-tools-grid">',
-        mkTool('atms','🏧','ATMs'),        mkTool('traffic','📡','Traffic'),
-        mkTool('wifi','📶','Free WiFi'),   mkTool('safe_ride','🌙','Safe Ride'),
-      '</div>',
-      '<div class="mh-section-label">🛡 SAFETY</div>',
-      '<div class="mh-tools-grid">',
-        mkTool('emergency','🚨','Emergency'), mkTool('hospital','🏥','Hospital'),
-        mkTool('pharmacy','💊','Pharmacy'),
-      '</div>',
-    '</div>',
-
-    dev ? [
-      '<div id="mh-drawer-dev" class="mh-drawer">',
-        '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
-        '<div class="mh-drawer-title">🐛 Dev Tools</div>',
-        '<div id="mh-dev-coords" style="font-size:10px;color:#b44fff;font-family:monospace;margin-bottom:12px"></div>',
-
-
-        '<div class="mh-section-label">🧪 APP</div>',
-        '<div class="mh-tools-grid">',
-          '<button class="mh-tool-btn" onclick="menuHomeEnterDTSLO()"><div class="mh-tool-icon">→</div><div>Skip to DTSLO</div></button>',
-        '</div>',
-      '</div>'
-    ].join('') : '',
-
-    // TOOLBAR
-    '<div id="mh-toolbar">',
-      '<button class="mh-tab" id="mh-tab-hubs"   onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="hubs"><span class="mh-tab-icon">🌐</span><span class="mh-tab-label">Hubs</span></button>',
-      '<button class="mh-tab" id="mh-tab-tools"  onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="tools"><span class="mh-tab-icon">⚡</span><span class="mh-tab-label">Tools</span></button>',
-      '<button class="mh-tab" id="mh-tab-travel" onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="travel"><span class="mh-tab-icon">🗺</span><span class="mh-tab-label">Travel</span></button>',
-      dev ? '<button class="mh-tab" id="mh-tab-dev" onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="dev"><span class="mh-tab-icon">🐛</span><span class="mh-tab-label">Dev</span></button>' : '',
-    '</div>',
-
-    // SKIP PROMPT
-    '<div id="mh-skip-prompt"><div id="mh-skip-sheet"><div class="mh-sheet-handle"></div>',
-      '<div id="mh-skip-title">Go straight to DTSLO?</div>',
-      '<div id="mh-skip-body">Skip the hub screen on future opens. Change this anytime in your profile settings.</div>',
-      '<button class="mh-skip-btn mh-skip-yes" onclick="menuHomePromptYes()">Yes, go straight to DTSLO</button>',
-      '<button class="mh-skip-btn mh-skip-no"  onclick="menuHomePromptNo()">No, show me the hub screen</button>',
-    '</div></div>',
-
-  ].join('');
-  document.body.insertBefore(div, document.body.firstChild);
-  if (dev) setInterval(function() {
-    var el = document.getElementById('mh-dev-coords');
-    if (el && homeMap) { var c = homeMap.getCenter(); el.textContent = 'Center: ' + c.lat.toFixed(4) + ', ' + c.lng.toFixed(4); }
-  }, 500);
-}
-
-// Small helpers to keep injectHTML readable
-function mkCard(fn, colors, icon, name, sub) {
-  return '<div class="mh-hub-card mh-hub-card-active" onclick="' + fn + '">' +
-    '<div class="mh-hub-card-icon" style="background:linear-gradient(135deg,' + colors + ')">' + icon + '</div>' +
-    '<div class="mh-hub-card-info"><div class="mh-hub-card-name">' + name + '</div><div class="mh-hub-card-sub">' + sub + '</div></div>' +
-    '<div class="mh-hub-card-arrow">→</div></div>';
-}
-function mkTour(id, icon, name, meta) {
-  return '<div class="mh-tour-card" onclick="menuHomeTourDetail(this)" data-tour="' + id + '">' +
-    '<div class="mh-tour-icon">' + icon + '</div><div class="mh-tour-name">' + name + '</div><div class="mh-tour-meta">' + meta + '</div></div>';
-}
-function mkBeach(id, icon, name, sub) {
-  return '<div class="mh-venue-row" onclick="menuHomeTravelBeach(\'' + id + '\')">' +
-    '<span class="mh-venue-emoji">' + icon + '</span>' +
-    '<div class="mh-venue-info"><div class="mh-venue-name">' + name + '</div><div class="mh-venue-sub">' + sub + '</div></div>' +
-    '<span style="color:rgba(255,255,255,0.3)">›</span></div>';
-}
-function mkTool(id, icon, label) {
-  return '<button class="mh-tool-btn" onclick="menuHomeOpenTool(this.dataset.tool)" data-tool="' + id + '"><div class="mh-tool-icon">' + icon + '</div><div>' + label + '</div></button>';
-}
-
-function injectCSS() {
-  if (document.getElementById('mh-css')) return;
-  var s = document.createElement('style');
-  s.id = 'mh-css';
-  s.textContent = [
-    '#menu-home{position:fixed;inset:0;z-index:9998;background:#000;display:none}',
-    '#mh-map{position:absolute;inset:0}',
-    '#mh-map-overlay{position:absolute;inset:0;z-index:2;background:#000;opacity:1;transition:opacity 1.5s ease;pointer-events:none}',
-    '#mh-header{position:absolute;top:52px;left:0;right:0;z-index:10;text-align:center;pointer-events:none}',
-    '#mh-logo{font-family:Georgia,serif;font-size:28px;font-weight:700;color:#fff;letter-spacing:-1px;text-shadow:0 2px 20px rgba(0,0,0,0.8)}',
-    '#mh-city{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:3px;font-family:Helvetica Neue,sans-serif}',
-    '#mh-find-hubs{position:absolute;top:120px;right:16px;z-index:10;background:rgba(8,8,20,0.75);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);padding:7px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(8px);font-family:Helvetica Neue,sans-serif;transition:all 0.2s}',
-    '.mh-hub-marker{background:none;border:none}',
-    '.mh-hub-pin{display:flex;flex-direction:column;align-items:center;transition:transform 0.2s}',
-    '.mh-hub-active{cursor:pointer}.mh-hub-active:active{transform:scale(0.95)}',
-    '.mh-hub-dim{opacity:0.3;cursor:default}',
-    '.mh-hub-dot{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,0.2);box-shadow:0 4px 20px rgba(0,0,0,0.5)}',
-    '.mh-hub-active .mh-hub-dot{animation:mh-float 3s ease-in-out infinite}',
-    '@keyframes mh-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}',
-    '.mh-hub-icon{font-size:22px}',
-    '.mh-hub-label{margin-top:4px;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,0.9);white-space:nowrap;font-family:Helvetica Neue,sans-serif}',
-    '.mh-hub-sub{font-size:9px;color:rgba(255,255,255,0.4);font-family:Helvetica Neue,sans-serif;white-space:nowrap}',
-    '.mh-hub-enter{font-size:9px;color:#ffd700;font-family:Helvetica Neue,sans-serif;font-weight:800;white-space:nowrap}',
-    '#mh-toolbar{position:absolute;bottom:0;left:0;right:0;z-index:20;display:flex;background:rgba(6,6,15,0.7);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,0.08);padding:8px 0 28px}',
-    '.mh-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;padding:8px 4px;transition:all 0.15s;font-family:Helvetica Neue,sans-serif}',
-    '.mh-tab-icon{font-size:22px}.mh-tab-label{font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase}',
-    '.mh-tab-active{color:#ffd700}.mh-tab-active .mh-tab-icon{filter:drop-shadow(0 0 6px rgba(255,215,0,0.6))}',
-    '.mh-drawer{position:absolute;bottom:72px;left:0;right:0;z-index:15;background:rgba(6,6,15,0.92);backdrop-filter:blur(24px);border-radius:24px 24px 0 0;border-top:1px solid rgba(255,255,255,0.08);padding:12px 20px 20px;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);max-height:60vh;overflow-y:auto}',
-    '.mh-drawer-open{transform:translateY(0)}',
-    '.mh-drawer-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.15);margin:0 auto 14px;cursor:pointer}',
-    '.mh-drawer-title{font-size:16px;font-weight:800;color:#fff;font-family:Georgia,serif;flex:1}',
-    '.mh-drawer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}',
-    '.mh-drawer-close{width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}',
-    '.mh-hub-cards{display:flex;flex-direction:column;gap:8px}',
-    '.mh-hub-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);cursor:pointer;transition:all 0.15s}',
-    '.mh-hub-card-active{border-color:rgba(255,45,120,0.3);background:rgba(255,45,120,0.06)}.mh-hub-card-active:active{transform:scale(0.98)}',
-    '.mh-hub-card-soon{opacity:0.4;cursor:default}',
-    '.mh-hub-card-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}',
-    '.mh-hub-card-info{flex:1}.mh-hub-card-name{font-size:14px;font-weight:800;color:#fff;font-family:Helvetica Neue,sans-serif}',
-    '.mh-hub-card-sub{font-size:11px;color:rgba(255,255,255,0.4);font-family:Helvetica Neue,sans-serif}',
-    '.mh-hub-card-arrow{font-size:18px;color:#ffd700}',
-    '.mh-tools-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}',
-    '.mh-tool-btn{padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:Helvetica Neue,sans-serif;transition:all 0.15s;text-align:left}',
-    '.mh-tool-btn:active{transform:scale(0.97)}.mh-tool-icon{font-size:22px;margin-bottom:4px}',
-    '.mh-section-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px;margin-top:4px}',
-    '.mh-plan-btn{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border-radius:16px;border:1px solid rgba(255,215,0,0.25);background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,215,0,0.04));cursor:pointer;font-family:Helvetica Neue,sans-serif;color:#fff;margin-bottom:14px;transition:all 0.15s}',
-    '.mh-plan-btn:active{transform:scale(0.98)}',
-    '.mh-travel-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:12px}',
-    '.mh-travel-tab{padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:Helvetica Neue,sans-serif;flex-shrink:0;transition:all 0.15s}',
-    '.mh-travel-tab.active{background:rgba(255,215,0,0.12);border-color:rgba(255,215,0,0.3);color:#ffd700}',
-    '.mh-travel-section{margin-bottom:16px}',
-    '.mh-tour-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
-    '.mh-tour-card{padding:12px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);cursor:pointer;transition:all 0.15s}',
-    '.mh-tour-card:active{transform:scale(0.97);background:rgba(255,215,0,0.08)}',
-    '.mh-tour-icon{font-size:24px;margin-bottom:6px}.mh-tour-name{font-size:12px;font-weight:800;margin-bottom:2px;font-family:Helvetica Neue,sans-serif}',
-    '.mh-tour-meta{font-size:10px;color:rgba(255,255,255,0.4);font-family:Helvetica Neue,sans-serif}',
-    '.mh-venue-list{display:flex;flex-direction:column;gap:6px}',
-    '.mh-venue-row{display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:all 0.15s}',
-    '.mh-venue-row:active{background:rgba(255,255,255,0.06)}.mh-venue-emoji{font-size:22px;flex-shrink:0}.mh-venue-info{flex:1}',
-    '.mh-venue-name{font-size:13px;font-weight:800;font-family:Helvetica Neue,sans-serif}.mh-venue-sub{font-size:11px;color:rgba(255,255,255,0.4);font-family:Helvetica Neue,sans-serif}',
-    '#mh-skip-prompt{position:absolute;inset:0;z-index:25;background:rgba(0,0,0,0.6);display:none;align-items:flex-end;opacity:0;transition:opacity 0.35s;backdrop-filter:blur(4px)}',
-    '#mh-skip-sheet{width:100%;background:rgba(8,8,20,0.97);border-radius:24px 24px 0 0;padding:20px 24px 52px;border-top:1px solid rgba(255,255,255,0.08)}',
-    '#mh-skip-title{font-size:18px;font-weight:800;margin-bottom:8px;font-family:Georgia,serif}',
-    '#mh-skip-body{font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:20px;line-height:1.5}',
-    '.mh-skip-btn{width:100%;padding:14px;border-radius:14px;font-size:14px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer;margin-bottom:8px;transition:all 0.15s}',
-    '.mh-skip-yes{background:linear-gradient(135deg,#ff2d78,#b44fff);border:none;color:#fff}',
-    '.mh-skip-no{background:transparent;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5)}',
-    '#mh-hub-preview{position:absolute;inset:0;z-index:22;background:rgba(0,0,0,0.75);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s;backdrop-filter:blur(4px)}',
-    '#mh-hub-preview.show{opacity:1}',
-    '#mh-hub-preview-inner{width:100%;background:rgba(8,8,20,0.98);border-radius:24px 24px 0 0;padding:20px 20px 48px;max-height:85vh;overflow-y:auto;border-top:1px solid rgba(255,255,255,0.08)}',
-    '.mh-sheet-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.15);margin:0 auto 16px;cursor:pointer}',
-    '.mh-suggestion-tag{padding:6px 12px;border-radius:20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:700;color:rgba(255,255,255,0.5);cursor:pointer;display:inline-block;transition:all 0.15s}',
-    '.mh-suggestion-tag-sel{background:rgba(255,215,0,0.12);border-color:rgba(255,215,0,0.4);color:#ffd700}',
-  ].join('');
-  document.head.appendChild(s);
-}
-
-function devResetMap() {
-  if (!homeMap) return;
-  homeMap.flyTo({ center: [-120.6650, 35.2803], zoom: 14, pitch: 45, bearing: -20, duration: 800 });
-}
-window.devResetMap = devResetMap;
+window.buildHubGlowToggles = buildHubGlowToggles;
