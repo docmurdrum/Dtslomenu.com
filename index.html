@@ -463,6 +463,16 @@ window.closeTopModal = closeTopModal;
       <span style="font-size:11px;opacity:0.7;margin-left:auto">Ride to this bar →</span>
     </button>
 
+    <!-- Plan It + Itinerary row -->
+    <div style="display:flex;gap:8px;margin:0 16px 12px">
+      <button onclick="itinAddBusinessStop(bars[currentBarIndex]&&bars[currentBarIndex].name,'bar',90,bars[currentBarIndex]&&bars[currentBarIndex].cover_charge?'$10-20':'Free','')" style="flex:1;padding:11px;border-radius:14px;border:1px solid rgba(255,215,0,0.25);background:rgba(255,215,0,0.06);color:#ffd700;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+        🗓 Add to Itinerary
+      </button>
+      <button onclick="itinPlanItFor(bars[currentBarIndex]&&bars[currentBarIndex].name,'bar')" style="flex:1;padding:11px;border-radius:14px;border:1px solid rgba(180,79,255,0.25);background:rgba(180,79,255,0.06);color:#b44fff;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+        ✨ Plan It
+      </button>
+    </div>
+
     <!-- Vibe Reports -->
     <div class="bar-section">
       <div class="bar-section-title">📡 Recent Reports</div>

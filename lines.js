@@ -25,46 +25,72 @@ const bars = [
 // ── LOAD BARS FROM SUPABASE ──
 async function loadBarsFromDB() {
   try {
-    const { data, error } = await supabaseClient
-      .from('bars')
+    var res = await supabaseClient
+      .from('businesses')
       .select('*')
-      .eq('published', true)
-      .eq('hidden', false)
+      .eq('type', 'bar')
+      .eq('is_active', true)
       .order('sort_order', { ascending: true });
-    if (error) throw error;
-    if (data && data.length) {
-      // Merge Supabase data into bars array
-      data.forEach(row => {
-        const idx = bars.findIndex(b => b.name === row.name);
-        if (idx > -1) {
-          bars[idx].color       = row.color   || bars[idx].color;
-          bars[idx].emoji       = row.emoji   || bars[idx].emoji;
-          bars[idx].address     = row.address || bars[idx].address;
-          bars[idx].emblem_url  = row.emblem_url || null;
-          bars[idx].emblem_size = row.emblem_size || 48;
-          bars[idx].hours       = row.hours || '';
-          bars[idx].phone       = row.phone || '';
-          bars[idx].tags        = row.tags  || [];
-          bars[idx].db_id                = row.id;
-          bars[idx].emblem_offset        = row.emblem_offset        ?? -36;
-          bars[idx].emblem_radius        = row.emblem_radius        ?? 0;
-          bars[idx].glow_empty_color     = row.glow_empty_color     || bars[idx].color;
-          bars[idx].glow_empty_intensity = row.glow_empty_intensity ?? 20;
-          bars[idx].glow_busy_color      = row.glow_busy_color      || bars[idx].color;
-          bars[idx].glow_busy_intensity  = row.glow_busy_intensity  ?? 50;
-          bars[idx].glow_packed_color    = row.glow_packed_color    || bars[idx].color;
-          bars[idx].glow_packed_intensity= row.glow_packed_intensity?? 90;
-          bars[idx].glow_nodata_color    = row.glow_nodata_color     || bars[idx].color;
-          bars[idx].glow_nodata_intensity= row.glow_nodata_intensity ?? 30;
-          try { bars[idx].effects_nodata = JSON.parse(row.effects_nodata || '{}'); } catch(e) { bars[idx].effects_nodata = {}; }
-          try { bars[idx].effects_empty  = JSON.parse(row.effects_empty  || '{}'); } catch(e) { bars[idx].effects_empty  = {}; }
-          try { bars[idx].effects_busy   = JSON.parse(row.effects_busy   || '{}'); } catch(e) { bars[idx].effects_busy   = {}; }
-          try { bars[idx].effects_packed = JSON.parse(row.effects_packed || '{}'); } catch(e) { bars[idx].effects_packed = {}; }
+    if (res.error) throw res.error;
+    if (!res.data || !res.data.length) return;
+
+    res.data.forEach(function(row) {
+      var idx = bars.findIndex(function(b) { return b.name === row.name; });
+      if (idx > -1) {
+        // Merge DB fields into hardcoded bar
+        if (row.color)      bars[idx].color      = row.color;
+        if (row.emoji)      bars[idx].emoji      = row.emoji;
+        if (row.address)    bars[idx].address    = row.address;
+        if (row.emblem_url) bars[idx].emblem_url = row.emblem_url;
+        if (row.hours)      bars[idx].hours      = row.hours;
+        if (row.phone)      bars[idx].phone      = row.phone;
+        bars[idx].db_id = row.id;
+        bars[idx].happy_hour    = row.happy_hour    || '';
+        bars[idx].cover_charge  = row.cover_charge  || false;
+        bars[idx].jukebox       = row.jukebox       || false;
+        bars[idx].pool_table    = row.pool_table     || false;
+        bars[idx].darts         = row.darts          || false;
+        bars[idx].arcade        = row.arcade         || false;
+        bars[idx].patio         = row.patio          || false;
+        bars[idx].live_music    = row.live_music     || false;
+        bars[idx].karaoke       = row.karaoke        || false;
+        bars[idx].trivia        = row.trivia         || false;
+        bars[idx].bar_golf_eligible = row.bar_golf_eligible || false;
+        // Lat/lng from businesses table
+        if (row.lat && row.lng) {
+          bars[idx].lat = row.lat;
+          bars[idx].lng = row.lng;
         }
-      });
-    }
+      } else {
+        // New bar in DB not in hardcoded list — add it
+        bars.push({
+          name:         row.name,
+          emoji:        row.emoji || '🍺',
+          color:        row.color || '#ff2d78',
+          address:      row.address || '',
+          hours:        row.hours || '',
+          phone:        row.phone || '',
+          emblem_url:   row.emblem_url || null,
+          db_id:        row.id,
+          lat:          row.lat,
+          lng:          row.lng,
+          happy_hour:   row.happy_hour || '',
+          cover_charge: row.cover_charge || false,
+          jukebox:      row.jukebox || false,
+          pool_table:   row.pool_table || false,
+          darts:        row.darts || false,
+          arcade:       row.arcade || false,
+          patio:        row.patio || false,
+          live_music:   row.live_music || false,
+          karaoke:      row.karaoke || false,
+          trivia:       row.trivia || false,
+          bar_golf_eligible: row.bar_golf_eligible || false,
+          tags:         [],
+        });
+      }
+    });
   } catch(e) {
-    console.warn('loadBarsFromDB:', e.message);
+    console.warn('[lines] loadBarsFromDB:', e.message);
   }
 }
 
@@ -1003,6 +1029,9 @@ async function confirmCheckin(type, status, headcount) {
   } catch(e) { console.log('Checkin save failed:', e.message); }
 
   showToast(`📍 Checked in at ${ciBarName} · +${xpGained} XP`);
+
+  // Award bar stamp collectible on first visit
+  try { awardBarStamp(ciBarName, bars[ciBarIndex]); } catch(e) {}
   renderBars();
 
   if (type === 'line') startNudgeTimer();
@@ -1095,3 +1124,78 @@ setInterval(() => {
   });
   if (changed) renderBars();
 }, 60000);
+
+// ── BAR STAMP COLLECTIBLES ──
+async function awardBarStamp(barName, bar) {
+  if (!currentUser || !supabaseClient) return;
+
+  // Build slug from bar name
+  var slug = barName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  var stampKey = 'stamp_' + slug;
+
+  // Check if already earned (localStorage first for speed)
+  var earned = JSON.parse(localStorage.getItem('dtslo_stamps') || '{}');
+  if (earned[slug]) return; // already have it
+
+  // Check Supabase — look for existing stamp in inventory
+  try {
+    var res = await supabaseClient
+      .from('player_inventory')
+      .select('id')
+      .eq('user_id', currentUser.id)
+      .eq('source', stampKey)
+      .limit(1);
+
+    if (res.data && res.data.length) {
+      // Already in DB — mark locally and return
+      earned[slug] = true;
+      localStorage.setItem('dtslo_stamps', JSON.stringify(earned));
+      return;
+    }
+
+    // Find the reward_items entry for this bar's stamp
+    var itemRes = await supabaseClient
+      .from('reward_items')
+      .select('id,name,emoji')
+      .eq('source_value', slug)
+      .eq('source', 'bar_checkin')
+      .eq('is_active', true)
+      .limit(1);
+
+    var itemId = null;
+    var itemName = barName + ' Stamp';
+    var itemEmoji = bar && bar.emoji ? bar.emoji : '🏅';
+
+    if (itemRes.data && itemRes.data.length) {
+      itemId = itemRes.data[0].id;
+      itemName = itemRes.data[0].name;
+      itemEmoji = itemRes.data[0].emoji || itemEmoji;
+    }
+
+    // Grant to inventory
+    await supabaseClient.from('player_inventory').insert({
+      user_id: currentUser.id,
+      item_id: itemId,
+      quantity: 1,
+      source: stampKey,
+      earned_at: new Date().toISOString(),
+    });
+
+    // Mark locally
+    earned[slug] = true;
+    localStorage.setItem('dtslo_stamps', JSON.stringify(earned));
+
+    // Celebrate — show stamp earned toast after the check-in toast
+    setTimeout(function() {
+      if (typeof showToast === 'function') {
+        showToast(itemEmoji + ' ' + itemName + ' stamp earned!');
+      }
+    }, 2000);
+
+    // Award bonus XP for first visit
+    try { gainXP(25); } catch(e) {}
+
+  } catch(e) {
+    console.warn('[stamps]', e.message);
+  }
+}

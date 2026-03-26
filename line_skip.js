@@ -80,12 +80,12 @@ function lineSkipBars() {
   return [
     {id:'ba_start', name:'BA Start Arcade Bar', price:'Free (beta)', note:'Founding partner'},
     {id:'black_sheep', name:'Black Sheep', price:'Free (beta)', note:'Founding partner'},
-    {id:'more_coming', name:'More bars coming soon', price:'', note:'Partner with MENU to be listed'},
+    {id:'coming', name:'More bars joining soon...', price:'', note:'Reach out to partner@dtslomenu.com'},
   ];
 }
 
 function lineSkipGetPass(barId) {
-  if (barId === 'more_coming') return;
+  if (barId === 'coming') return;
   // For beta — free passes, just save locally
   var passes = JSON.parse(localStorage.getItem('dtslo_line_passes') || '[]');
   var barName = barId === 'ba_start' ? 'BA Start Arcade Bar' : 'Black Sheep';

@@ -5,6 +5,25 @@
 
 var ITINERARY_FREE_LIMIT = 3;
 
+// ── GUEST MODE ──
+function getGuestId() {
+  var id = localStorage.getItem('dtslo_guest_id');
+  if (!id) {
+    id = 'guest_' + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem('dtslo_guest_id', id);
+  }
+  return id;
+}
+
+function isGuest() {
+  return typeof currentUser === 'undefined' || !currentUser;
+}
+
+function getEffectiveUserId() {
+  return currentUser ? currentUser.id : getGuestId();
+}
+
+
 // ── STATE ──
 var itin = {
   current: null,      // active itinerary object
@@ -81,13 +100,8 @@ function itinSave(itinObj) {
 }
 
 function itinCheckLimit() {
-  // Check if user has exceeded free limit
   var saved = itinGetSaved();
-  var unlocked = localStorage.getItem('dtslo_itin_unlocked') === '1';
-  if (!unlocked && typeof currentUser !== 'undefined' && currentUser) {
-    // Check Supabase profile flag
-    if (window._itinUnlocked) return true;
-  }
+  var unlocked = localStorage.getItem('dtslo_itin_unlocked') === '1' || window._itinUnlocked;
   return unlocked || saved.length < ITINERARY_FREE_LIMIT;
 }
 
@@ -721,3 +735,118 @@ function itinLogDwell(stop, actualMins) {
     supabaseClient.from('dwell_logs').insert(data).then(function(){}).catch(function(){});
   }
 }
+
+function itinShowSignupForUpgrade() {
+  // Close unlock modal
+  var m = document.getElementById('itin-unlock-modal');
+  if (m) m.remove();
+  // Show auth screen with pending upgrade flag
+  window._pendingItinUpgrade = true;
+  window._pendingDTSLOEntry = false;
+  var authEl = document.getElementById('auth-screen');
+  if (authEl) {
+    authEl.style.display  = 'flex';
+    authEl.style.zIndex   = '9999';
+    authEl.style.position = 'fixed';
+    authEl.style.inset    = '0';
+  }
+  if (typeof maybeShowAuthBackBtn === 'function') maybeShowAuthBackBtn();
+}
+window.itinShowSignupForUpgrade = itinShowSignupForUpgrade;
+
+// ── ADD BUSINESS TO ITINERARY (called from bar/business pages) ──
+function itinAddBusinessStop(name, type, estimatedMins, costRange, tip) {
+  // Create itinerary if none exists
+  if (!itin.current) {
+    itin.current = {
+      id: 'itin_' + Date.now(),
+      share_id: Math.random().toString(36).slice(2,10),
+      name: 'Tonight',
+      mode: 'planned',
+      start_time: '9:00 PM',
+      using_rideshare: false,
+      stops: [],
+      total_cost: '',
+    };
+  }
+
+  var stop = {
+    name: name || 'Stop',
+    type: type || 'bar',
+    estimated_mins: estimatedMins || 60,
+    actual_mins: null,
+    cost: costRange || '',
+    tip: tip || '',
+    status: 'pending',
+  };
+
+  itin.current.stops.push(stop);
+  itinSaveLocal();
+
+  if (typeof showToast === 'function') {
+    showToast('✅ ' + name + ' added to itinerary!');
+  }
+
+  // Show option to open itinerary
+  setTimeout(function() {
+    if (typeof showToast === 'function') showToast('Tap 🗓 to view your plan');
+  }, 2000);
+}
+window.itinAddBusinessStop = itinAddBusinessStop;
+
+// Quick Plan It — opens mini sheet from bar/business page
+function itinPlanItFor(name, type) {
+  var existing = document.getElementById('mh-planit-sheet');
+  if (existing) existing.remove();
+
+  var sheet = document.createElement('div');
+  sheet.id = 'mh-planit-sheet';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:8500;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
+
+  var inner = document.createElement('div');
+  inner.style.cssText = 'width:100%;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(255,215,0,0.25);padding:20px 20px 48px;max-height:85vh;overflow-y:auto';
+
+  var handle = document.createElement('div');
+  handle.style.cssText = 'width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 16px';
+  inner.appendChild(handle);
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:20px;font-weight:800;margin-bottom:6px';
+  title.textContent = '✨ Plan It';
+  inner.appendChild(title);
+
+  var sub = document.createElement('div');
+  sub.style.cssText = 'font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:20px';
+  sub.innerHTML = 'Build tonight around <strong style="color:white">' + name + '</strong>';
+  inner.appendChild(sub);
+
+  var addBtn = document.createElement('button');
+  addBtn.style.cssText = 'width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#f59e0b);color:#000;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;margin-bottom:10px';
+  addBtn.textContent = '+ Add to Itinerary';
+  addBtn.onclick = function() {
+    itinAddBusinessStop(name, type || 'bar', 60, '', '');
+    sheet.remove();
+  };
+  inner.appendChild(addBtn);
+
+  var planBtn = document.createElement('button');
+  planBtn.style.cssText = 'width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,215,0,0.3);background:rgba(255,215,0,0.06);color:#ffd700;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;margin-bottom:10px';
+  planBtn.textContent = '✨ Plan Full Night with AI';
+  planBtn.onclick = function() {
+    sheet.remove();
+    if (typeof menuHomeOpenTravelPlanIt === 'function') menuHomeOpenTravelPlanIt();
+  };
+  inner.appendChild(planBtn);
+
+  var cancelBtn = document.createElement('button');
+  cancelBtn.style.cssText = 'width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.onclick = function() { sheet.remove(); };
+  inner.appendChild(cancelBtn);
+
+  sheet.appendChild(inner);
+  document.body.appendChild(sheet);
+  sheet.addEventListener('click', function(e) { if (e.target === sheet) sheet.remove(); });
+  setTimeout(function() { sheet.style.opacity = '1'; }, 30);
+}
+window.itinPlanItFor = itinPlanItFor;

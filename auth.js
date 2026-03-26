@@ -188,6 +188,13 @@ async function onLogin(user, isNewUser = false) {
     if (isNewUser) {
       try { maybeShowOnboarding(true); } catch(e) {}
       try { await unlockFreshmanStarter(user); } catch(e) {}
+      // Migrate any guest itineraries to the new account
+      try { migrateGuestItineraries(user); } catch(e) {}
+    }
+    // Handle pending itinerary upgrade flow
+    if (window._pendingItinUpgrade) {
+      window._pendingItinUpgrade = false;
+      if (typeof openItinFromSaved === 'function') openItinFromSaved();
     }
   }, 500);
 
@@ -376,3 +383,30 @@ function goToDTSLO() {
   }
 }
 window.goToDTSLO = goToDTSLO;
+
+// ── MIGRATE GUEST ITINERARIES ──
+function migrateGuestItineraries(user) {
+  try {
+    var saved = JSON.parse(localStorage.getItem('dtslo_itineraries') || '[]');
+    if (!saved.length || !supabaseClient) return;
+    // Sync each local plan to Supabase under their new account
+    saved.forEach(function(itin) {
+      supabaseClient.from('itineraries').upsert({
+        id: itin.id,
+        share_id: itin.share_id,
+        user_id: user.id,
+        name: itin.name,
+        mode: itin.mode || 'planned',
+        start_time: itin.start_time,
+        using_rideshare: itin.using_rideshare || false,
+        stops: JSON.stringify(itin.stops || []),
+        total_cost: itin.total_cost || '',
+        is_public: true,
+        updated_at: new Date().toISOString()
+      }).then(function(){}).catch(function(){});
+    });
+    if (saved.length > 0 && typeof showToast === 'function') {
+      showToast('✅ ' + saved.length + ' plan' + (saved.length>1?'s':'') + ' saved to your account!');
+    }
+  } catch(e) {}
+}

@@ -451,6 +451,7 @@ function injectHTML() {
 
     // Find hubs button
     '<button id="mh-find-hubs" onclick="menuHomeFindHubs()">📍 Find Hubs</button>',
+    '<button id="mh-location-btn" onclick="menuHomeToggleLocation()" style="position:absolute;top:160px;right:16px;z-index:10;background:rgba(8,8,20,0.75);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);padding:7px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(8px);font-family:Helvetica Neue,sans-serif">📍 Me</button>',
 
     // Drawers
     '<div id="mh-drawer-hubs" class="mh-drawer">',
@@ -832,6 +833,145 @@ function closeDrawer() {
 }
 
 function findHubs() {
-  if (homeMap) homeMap.flyTo({ center: [-120.6650, 35.2803], zoom: 14.5, pitch: 62, bearing: -25, duration: 1000 });
+  // Open a hub picker sheet — shows all active hubs, tap to enter
+  var existing = document.getElementById('mh-find-hubs-sheet');
+  if (existing) { existing.remove(); return; }
+
+  var hubs = [
+    { id:'dtslo',       icon:'🌃', label:'DTSLO',        sub:'Nightlife · Bars · Games',        color:'linear-gradient(135deg,#ff2d78,#b44fff)', fn:'menuHomeRequireAuth()',        coords:[-120.6650,35.2803] },
+    { id:'restaurants', icon:'🍽',  label:'Restaurants',   sub:'38 venues · All cuisine',          color:'linear-gradient(135deg,#f97316,#ef4444)', fn:'menuHomeOpenRestaurantHub()',  coords:[-120.6655,35.2808] },
+    { id:'nature',      icon:'🌿', label:'Nature Hub',    sub:'10 spots · Hikes · Parks',         color:'linear-gradient(135deg,#22c55e,#16a34a)', fn:'menuHomeOpenNatureHub()',      coords:[-120.6785,35.2920] },
+    { id:'thrill',      icon:'⚡', label:'Thrill Hub',    sub:'9 adventures · Zipline · ATV',     color:'linear-gradient(135deg,#ef4444,#dc2626)', fn:'menuHomeOpenThrillHub()',      coords:[-120.6595,35.2750] },
+    { id:'beach',       icon:'🏖', label:'Beach Hub',     sub:'8 beaches · Conditions · Trails',  color:'linear-gradient(135deg,#06b6d4,#0284c7)', fn:'menuHomeOpenBeachHub()',       coords:[-120.6750,35.2680] },
+    { id:'wine',        icon:'🍷', label:'Wine Country',  sub:'Paso Robles · Edna Valley',        color:'linear-gradient(135deg,#9b2335,#6b1020)', fn:'menuHomeOpenWineHub()',        coords:[-120.8200,35.3600] },
+    { id:'brewery',     icon:'🍺', label:'Craft Beer',    sub:'9 SLO breweries · Crawl builder',  color:'linear-gradient(135deg,#f59e0b,#d97706)', fn:'menuHomeOpenBreweryHub()',     coords:[-120.6595,35.2808] },
+  ];
+
+  var sheet = document.createElement('div');
+  sheet.id = 'mh-find-hubs-sheet';
+  sheet.style.cssText = 'position:absolute;bottom:0;left:0;right:0;z-index:25;background:rgba(8,8,20,0.97);border-radius:24px 24px 0 0;border-top:1px solid rgba(255,255,255,0.1);padding:12px 16px 40px;max-height:70vh;overflow-y:auto;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)';
+
+  // Build sheet content using DOM to avoid quote nesting
+  var dragHandle = document.createElement('div');
+  dragHandle.style.cssText = 'width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.15);margin:0 auto 14px;cursor:pointer';
+  dragHandle.onclick = function() { sheet.remove(); };
+  sheet.appendChild(dragHandle);
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:16px;font-weight:800;margin-bottom:4px';
+  title.textContent = '📍 Find Hubs';
+  sheet.appendChild(title);
+
+  var sub = document.createElement('div');
+  sub.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:14px';
+  sub.textContent = 'Tap a hub to jump there';
+  sheet.appendChild(sub);
+
+  hubs.forEach(function(h) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:14px;margin-bottom:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:background 0.15s';
+    row.innerHTML = '<div style="width:40px;height:40px;border-radius:12px;background:' + h.color + ';display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">' + h.icon + '</div>' +
+      '<div style="flex:1"><div style="font-size:13px;font-weight:800">' + h.label + '</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">' + h.sub + '</div></div>' +
+      '<div style="font-size:14px;color:rgba(255,255,255,0.3)">→</div>';
+    row.addEventListener('mousedown', function() { row.style.background = 'rgba(255,255,255,0.07)'; });
+    row.addEventListener('mouseup', function() { row.style.background = 'rgba(255,255,255,0.03)'; });
+    row.addEventListener('click', function() {
+      sheet.remove();
+      try { if (homeMap) homeMap.flyTo({ center: h.coords, zoom: 14.5, duration: 800 }); } catch(e) {}
+      try { eval(h.fn); } catch(e) {}
+    });
+    sheet.appendChild(row);
+  });
+
+  var returnRow = document.createElement('div');
+  returnRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:14px;margin-top:4px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.08);cursor:pointer';
+  returnRow.innerHTML = '<div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🗺</div><div style="flex:1"><div style="font-size:13px;font-weight:800">Return to SLO</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">Fly back to downtown</div></div>';
+  returnRow.onclick = menuHomeReturnToSLO;
+  sheet.appendChild(returnRow);
+
+  document.getElementById('menu-home').appendChild(sheet);
+  setTimeout(function() { sheet.style.transform = 'translateY(0)'; }, 30);
+
+  // Close on map tap
+  var mapEl = document.getElementById('mh-map');
+  if (mapEl) {
+    function closeOnMapTap() { sheet.remove(); mapEl.removeEventListener('click', closeOnMapTap); }
+    setTimeout(function() { mapEl.addEventListener('click', closeOnMapTap); }, 300);
+  }
 }
 
+// 2. Return to SLO
+function menuHomeReturnToSLO() {
+  var sheet = document.getElementById('mh-find-hubs-sheet');
+  if (sheet) sheet.remove();
+  if (homeMap) {
+    homeMap.flyTo({ center: [-120.6650, 35.2803], zoom: 13.5, pitch: 55, bearing: -25, duration: 1200 });
+  }
+}
+window.menuHomeReturnToSLO = menuHomeReturnToSLO;
+
+// ── USER LOCATION DOT ──
+var _userLocationMarker = null;
+var _userLocationWatcher = null;
+
+function menuHomeToggleLocation() {
+  var btn = document.getElementById('mh-location-btn');
+  if (_userLocationMarker) {
+    // Turn off
+    if (_userLocationMarker) { _userLocationMarker.remove(); _userLocationMarker = null; }
+    if (_userLocationWatcher) { navigator.geolocation.clearWatch(_userLocationWatcher); _userLocationWatcher = null; }
+    if (btn) { btn.style.background = 'rgba(8,8,20,0.75)'; btn.style.color = 'rgba(255,255,255,0.8)'; }
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    if (typeof showToast === 'function') showToast('Location not available on this device');
+    return;
+  }
+
+  if (btn) { btn.textContent = '⏳'; }
+
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      var lng = pos.coords.longitude;
+      var lat = pos.coords.latitude;
+
+      // Create pulsing blue dot element
+      var el = document.createElement('div');
+      el.style.cssText = 'position:relative;width:18px;height:18px';
+      el.innerHTML =
+        '<div style="position:absolute;inset:0;border-radius:50%;background:#4A90E2;border:2px solid white;box-shadow:0 0 0 0 rgba(74,144,226,0.4);animation:location-pulse 2s ease-out infinite;z-index:1"></div>' +
+        '<div style="position:absolute;inset:-8px;border-radius:50%;background:rgba(74,144,226,0.15);animation:location-ring 2s ease-out infinite"></div>';
+
+      if (!document.getElementById('location-pulse-css')) {
+        var s = document.createElement('style');
+        s.id = 'location-pulse-css';
+        s.textContent = '@keyframes location-pulse{0%{box-shadow:0 0 0 0 rgba(74,144,226,0.5)}70%{box-shadow:0 0 0 10px rgba(74,144,226,0)}100%{box-shadow:0 0 0 0 rgba(74,144,226,0)}}' +
+          '@keyframes location-ring{0%{transform:scale(0.8);opacity:0.8}100%{transform:scale(1.8);opacity:0}}';
+        document.head.appendChild(s);
+      }
+
+      try {
+        _userLocationMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([lng, lat])
+          .addTo(homeMap);
+
+        homeMap.flyTo({ center: [lng, lat], zoom: 15, duration: 1000 });
+        if (btn) { btn.textContent = '📍'; btn.style.background = 'rgba(74,144,226,0.3)'; btn.style.color = '#4A90E2'; }
+      } catch(e) {
+        if (typeof showToast === 'function') showToast('Could not place location dot');
+      }
+
+      // Watch for movement
+      _userLocationWatcher = navigator.geolocation.watchPosition(function(p) {
+        if (_userLocationMarker) _userLocationMarker.setLngLat([p.coords.longitude, p.coords.latitude]);
+      }, null, { enableHighAccuracy: true, maximumAge: 5000 });
+    },
+    function(err) {
+      if (btn) { btn.textContent = '📍'; }
+      if (typeof showToast === 'function') showToast('Location access denied');
+    },
+    { enableHighAccuracy: true, timeout: 8000 }
+  );
+}
+window.menuHomeToggleLocation = menuHomeToggleLocation;

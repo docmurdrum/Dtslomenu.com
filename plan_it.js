@@ -25,9 +25,11 @@ function openTravelPlanIt() {
 
   var sheet = document.createElement('div');
   sheet.id = 'mh-planit-sheet';
-  sheet.style.cssText = 'position:absolute;inset:0;z-index:23;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:8500;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
 
-  document.getElementById('menu-home').appendChild(sheet);
+  // Works from both hub screen and inside the app
+  var parent = document.getElementById('menu-home') || document.body;
+  parent.appendChild(sheet);
   setTimeout(function() { sheet.style.opacity = '1'; piRender(); }, 30);
   sheet.addEventListener('click', function(e) {
     if (e.target === sheet) menuHomeClosePlanIt();

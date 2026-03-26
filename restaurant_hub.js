@@ -219,8 +219,8 @@ async function loadRestaurantHubVenues(catId) {
   if (!list) return;
   list.innerHTML = '<div style="text-align:center;padding:30px;color:rgba(255,255,255,0.3);font-size:12px">Loading...</div>';
   try {
-    var sb = window.supabaseClient;
-    var q = sb.from('venues').select('*').eq('type','restaurant').order('rating',{ascending:false});
+    var sb = supabaseClient;
+    var q = sb.from('businesses').select('*').eq('type','restaurant').eq('is_active',true).order('name',{ascending:true});
     if (catId !== 'all') q = q.eq('category', catId);
     var result = await q;
     var venues = result.data || [];
@@ -241,13 +241,13 @@ function rhRenderList(venues, filter) {
   if (!list) return;
   var filtered = venues;
   if (filter==='top')        filtered = venues.filter(function(v){return (v.rating||0)>=4.4;});
-  if (filter==='cheap')      filtered = venues.filter(function(v){return (v.price_range||3)<=1;});
+  if (filter==='cheap')      filtered = venues.filter(function(v){return (v.price_level||3)<=1;});
   if (filter==='romantic')   filtered = venues.filter(function(v){return RH_ROMANTIC.indexOf(v.name)>=0;});
   if (filter==='patio')      filtered = venues.filter(function(v){return RH_PATIO.indexOf(v.name)>=0;});
   if (filter==='happy_hour') filtered = venues.filter(function(v){return RH_HAPPY_HOUR.indexOf(v.name)>=0;});
   if (!filtered.length) { list.innerHTML = '<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.3);font-size:13px">No matches</div>'; return; }
   list.innerHTML = filtered.map(function(v,i) {
-    var price = '$'.repeat(v.price_range||2);
+    var price = '$'.repeat(v.price_level||2);
     var rating = v.rating||0;
     var stars = '';
     for (var s=1;s<=5;s++) stars += '<div style="width:7px;height:7px;border-radius:50%;background:'+(s<=Math.round(rating)?'#ffd700':'rgba(255,255,255,0.15)')+';margin-right:2px;display:inline-block"></div>';

@@ -1100,7 +1100,7 @@ async function loadCharacterImage(level) {
   // Nothing found
   img.style.display = 'none';
   placeholder.style.display = 'flex';
-  placeholder.innerHTML = '<div>🎭</div><span>Image coming soon</span>';
+  placeholder.innerHTML = '<div style="font-size:48px">🎭</div><span style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:6px">No character yet</span>';
 }
 
 // ── SUPABASE STORAGE BASE URL ──
