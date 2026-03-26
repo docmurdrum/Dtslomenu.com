@@ -110,77 +110,96 @@ function hubActivateMapMode(spots, color, onSelect) {
   if (!homeMap || !window.maplibregl) return;
 
   // 1. Hide all existing hub pin markers
-  var existingPins = document.querySelectorAll('.mh-hub-marker');
-  existingPins.forEach(function(el) {
+  document.querySelectorAll('.mh-hub-marker').forEach(function(el) {
     el.style.opacity = '0';
     el.style.pointerEvents = 'none';
   });
 
-  // 2. Inject pulse CSS once
+  // 2. Inject CSS once — no CSS variables, direct values only (mobile safe)
   if (!document.getElementById('hub-spot-css')) {
     var s = document.createElement('style');
     s.id = 'hub-spot-css';
-    s.textContent =
-      '@keyframes spot-pulse{0%{box-shadow:0 0 0 0 rgba(var(--sc),0.8)}70%{box-shadow:0 0 0 18px rgba(var(--sc),0)}100%{box-shadow:0 0 0 0 rgba(var(--sc),0)}}' +
-      '.hub-spot-marker{cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:transform 0.2s}' +
-      '.hub-spot-marker:active{transform:scale(0.9)!important}' +
-      '.hub-spot-dot{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid rgba(255,255,255,0.6);animation:spot-pulse 2.2s ease-out infinite}' +
-      '.hub-spot-lbl{font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,0.75);padding:2px 6px;border-radius:20px;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis;border:1px solid rgba(255,255,255,0.15);backdrop-filter:blur(4px)}';
+    s.textContent = [
+      '@keyframes spot-pulse{',
+        '0%{box-shadow:0 0 0 0 rgba(255,255,255,0.6)}',
+        '70%{box-shadow:0 0 0 16px rgba(255,255,255,0)}',
+        '100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}',
+      '}',
+      '.hs-wrap{',
+        'width:48px;',                          // fixed width — MapLibre needs this for anchor
+        'display:flex;flex-direction:column;align-items:center;gap:3px;',
+        'cursor:pointer;',
+        'transition:transform 0.15s;',
+      '}',
+      '.hs-wrap:active{transform:scale(0.88)!important}',
+      '.hs-dot{',
+        'width:44px;height:44px;border-radius:50%;',
+        'display:flex;align-items:center;justify-content:center;font-size:20px;',
+        'border:2px solid rgba(255,255,255,0.55);',
+        'animation:spot-pulse 2s ease-out infinite;',
+      '}',
+      '.hs-lbl{',
+        'font-size:9px;font-weight:800;color:#fff;',
+        'background:rgba(0,0,0,0.75);',
+        'padding:2px 6px;border-radius:20px;',
+        'white-space:nowrap;max-width:86px;overflow:hidden;text-overflow:ellipsis;',
+        'border:1px solid rgba(255,255,255,0.15);',
+      '}',
+    ].join('');
     document.head.appendChild(s);
   }
 
-  // Parse color to rgb for CSS variable
-  var rgb = hexToRgb(color) || '255,255,255';
-
-  // 3. Place glowing marker for each spot that has coords
+  // 3. Place marker per spot — IIFE captures spot + delay correctly
   spots.forEach(function(spot, idx) {
     if (!spot.coords || spot.coords.length < 2) return;
 
-    var el = document.createElement('div');
-    el.className = 'hub-spot-marker';
-    el.style.cssText = '--sc:' + rgb + ';transform:scale(0);transition:transform 0.4s cubic-bezier(0.34,1.5,0.64,1)';
+    (function(sp, delay) {
+      var wrap = document.createElement('div');
+      wrap.className = 'hs-wrap';
+      wrap.style.transform = 'scale(0)';
+      wrap.style.transition = 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)';
 
-    var dot = document.createElement('div');
-    dot.className = 'hub-spot-dot';
-    dot.style.cssText = 'background:' + color + 'cc;box-shadow:0 0 16px ' + color + '99';
-    dot.textContent = spot.emoji || '📍';
+      var dot = document.createElement('div');
+      dot.className = 'hs-dot';
+      dot.style.background = color;
+      dot.style.boxShadow = '0 0 18px ' + color;
+      dot.textContent = sp.emoji || '📍';
 
-    var lbl = document.createElement('div');
-    lbl.className = 'hub-spot-lbl';
-    lbl.textContent = spot.name;
+      var lbl = document.createElement('div');
+      lbl.className = 'hs-lbl';
+      lbl.textContent = sp.name;
 
-    el.appendChild(dot);
-    el.appendChild(lbl);
+      wrap.appendChild(dot);
+      wrap.appendChild(lbl);
 
-    el.addEventListener('click', function() {
-      // Fly to spot: zoom in, rotate toward it
+      wrap.addEventListener('click', function() {
+        try {
+          homeMap.flyTo({
+            center: sp.coords,
+            zoom: 16,
+            pitch: 55,
+            bearing: (Math.random() * 60) - 30,
+            duration: 900,
+            essential: true
+          });
+        } catch(e) {}
+        window._findHubsUserCenter = [sp.coords[1], sp.coords[0]];
+        setTimeout(function() {
+          if (typeof onSelect === 'function') onSelect(sp.id || sp.name, sp.coords);
+        }, 600);
+      });
+
       try {
-        homeMap.flyTo({
-          center: spot.coords,
-          zoom: 16,
-          pitch: 55,
-          bearing: (Math.random() * 60) - 30, // slight random bearing for drama
-          duration: 900,
-          essential: true
-        });
-      } catch(e) {}
-      // Store user center for proximity sort
-      window._findHubsUserCenter = [spot.coords[1], spot.coords[0]];
-      // Call the hub opener after fly animation
-      setTimeout(function() {
-        if (typeof onSelect === 'function') onSelect(spot.id || spot.name, spot.coords);
-      }, 600);
-    });
+        var marker = new maplibregl.Marker({ element: wrap, anchor: 'bottom' })
+          .setLngLat(sp.coords)
+          .addTo(homeMap);
+        _activeHubMarkers.push(marker);
+      } catch(e) { console.warn('[hubActivate] marker error:', e); }
 
-    try {
-      var marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
-        .setLngLat(spot.coords)
-        .addTo(homeMap);
-      _activeHubMarkers.push(marker);
-    } catch(e) {}
+      // Stagger pop-in — delay captured per IIFE
+      setTimeout(function() { wrap.style.transform = 'scale(1)'; }, delay);
 
-    // Stagger pop-in
-    setTimeout(function() { el.style.transform = 'scale(1)'; }, 40 + idx * 55);
+    })(spot, 50 + idx * 65);
   });
 }
 
