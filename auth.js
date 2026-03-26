@@ -45,28 +45,48 @@ function showAuthError(form, msg) {
 
 // ── DEV LOGIN ──
 async function devLogin() {
-  const devEmail = 'dev_temp_' + Math.random().toString(36).slice(2,8) + '@dtslo.dev';
-  const devPass  = 'devpass123';
-  const btn      = event.target;
+  const btn = event.target;
   btn.disabled = true; btn.textContent = '⏳ Logging in…';
+
+  // Use fixed dev credentials — sign up once, then always sign in
+  const devEmail = 'devtest@dtslomenu.com';
+  const devPass  = 'DTSLOdev2024!';
+
   try {
-    const { data, error } = await supabaseClient.auth.signUp({
-      email: devEmail, password: devPass,
-      options: { data: { username: 'DevUser_' + devEmail.slice(9,15), gender: 'other' } }
+    // Try sign in first
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: devEmail, password: devPass
     });
-    if (error) throw error;
-    if (data.session) {
+
+    if (!error && data.session) {
       await onLogin(data.user);
-      showToast('🛠️ Dev login active — temp account');
-      // Show hub screen after dev login
-      try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
+      showToast('🛠️ Dev login active');
+      window._pendingDTSLOEntry = true;
       return;
     }
-    throw new Error('No session returned');
+
+    // If sign in failed, try to create the account once
+    const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({
+      email: devEmail, password: devPass,
+      options: { data: { username: 'DevUser', gender: 'other' } }
+    });
+
+    if (signUpError) throw signUpError;
+
+    if (signUpData.session) {
+      await onLogin(signUpData.user);
+      showToast('🛠️ Dev account created + logged in');
+      window._pendingDTSLOEntry = true;
+      return;
+    }
+
+    // Account exists but needs email confirm — bypass for dev
+    showAuthError('login', '⚠️ Dev account needs email confirm. Check devtest@dtslomenu.com or disable email confirm in Supabase Auth settings.');
+
   } catch(e) {
     showAuthError('login', '❌ Dev login failed: ' + e.message);
   }
-  btn.disabled = false; btn.textContent = '🛠️ Dev Login (Temp)';
+  btn.disabled = false; btn.textContent = '🛠️ Dev Login';
 }
 
 // ── LOGIN ──
@@ -227,26 +247,48 @@ async function doChangePassword() {
 }
 
 // ── SESSION INIT ──
-// Auth is deferred — hub screen loads first, session only checked when DTSLO hub is tapped.
-// This means the app opens instantly without any login wall.
+// Map loads first. Auth only happens when DTSLO hub is tapped.
+// If a session exists from a previous login, it's silently restored
+// AFTER the map is visible — never as a blocking step on load.
 
 window.onload = function () {
-  // Always start with hub screen — no auth check on load
+  // Step 1: Hide auth screen, show nothing — hub screen takes over
+  var authEl = document.getElementById('auth-screen');
+  var appEl  = document.getElementById('app');
+  if (authEl) authEl.style.display = 'none';
+  if (appEl)  appEl.style.display  = 'none';
+
+  // Step 2: Launch hub map immediately
   try {
     if (typeof menuHomeInit === 'function') menuHomeInit();
   } catch(e) {}
 
-  // Listen for auth state changes (handles returning logged-in users silently)
-  try {
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user && !currentUser) {
-        await onLogin(session.user);
-      }
-      if (event === 'SIGNED_OUT') {
-        currentUser = null;
-      }
-    });
-  } catch(e) {}
+  // Step 3: Silently restore session in background — no UI interruption
+  // Uses a short delay so the map renders first
+  setTimeout(function() {
+    try {
+      supabaseClient.auth.getSession().then(function(result) {
+        var session = result && result.data && result.data.session;
+        if (session && session.user) {
+          // Session found — restore silently, no visible change
+          currentUser = session.user;
+          // Pre-load user data in background without showing app
+          try { loadUserStats(); } catch(e) {}
+          try { renderAvatar(); } catch(e) {}
+        }
+      }).catch(function() {});
+    } catch(e) {}
+
+    // Listen for future auth changes (sign in / sign out)
+    try {
+      supabaseClient.auth.onAuthStateChange(function(event, session) {
+        if (event === 'SIGNED_OUT') {
+          currentUser = null;
+        }
+        // SIGNED_IN is handled by requireAuthForDTSLO — not here
+      });
+    } catch(e) {}
+  }, 800); // Wait for map to render first
 };
 
 // Called when user taps DTSLO hub — checks session, shows login if needed
