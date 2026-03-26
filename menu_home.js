@@ -223,14 +223,14 @@ function loadHomeMap() {
             'fill-extrusion-opacity': 0.9
           }
         }, labelLayer || undefined);
-
-        // Start building glow animation
-        startBuildingGlow();
-
-        // Init all hub glow layers from HUB_SPOT_DEFS
-        if (typeof initHubGlowLayers === 'function') initHubGlowLayers();
       } catch(e) { console.warn('[3D buildings]', e); }
     }
+
+    // Delay all effects — let map render first
+    setTimeout(function() {
+      try { startBuildingGlow(); } catch(e) {}
+      try { if (typeof initHubGlowLayers === 'function') initHubGlowLayers(); } catch(e) {}
+    }, 2000);
 
     try {
       if (typeof loadSavedPinCoords === 'function') {
@@ -242,10 +242,10 @@ function loadHomeMap() {
       }
     } catch(e) { try { addHubMarkers({}); } catch(e2) {} }
 
-    // Smart Start — time-based, social proof, mood-first
+    // Smart Start — delayed well after map settles
     setTimeout(function() {
-      if (typeof smartStartInit === 'function') smartStartInit();
-    }, 1200); // wait for markers + glow layers to settle
+      try { if (typeof smartStartInit === 'function') smartStartInit(); } catch(e) {}
+    }, 4000);
 
     var bearing = -25, rotating = true;
     homeMap.on('mousedown', function() { rotating = false; });
