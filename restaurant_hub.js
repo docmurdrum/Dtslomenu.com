@@ -79,7 +79,7 @@ function openRestaurantHub() {
 
   var hub = document.createElement('div');
   hub.id = 'mh-restaurant-hub';
-  hub.style.cssText = 'position:absolute;inset:0;z-index:22;display:flex;flex-direction:column;background:rgba(6,6,15,0.95);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
+  hub.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;background:rgba(6,6,15,0.95);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
   // Floating X close button
   var rhClose = document.createElement('button');
   rhClose.style.cssText = 'position:absolute;top:56px;right:16px;z-index:25;background:rgba(255,255,255,0.12);border:none;color:white;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)';
@@ -118,7 +118,7 @@ function openRestaurantHub() {
       '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.3);font-size:13px">Loading restaurants...</div>' +
     '</div>';
 
-  document.getElementById('menu-home').appendChild(hub);
+  getHubParent().appendChild(hub);
   setTimeout(function() {
     hub.style.opacity = '1';
     loadRestaurantHubVenues('all');
@@ -127,6 +127,7 @@ function openRestaurantHub() {
 window.menuHomeOpenRestaurantHub = openRestaurantHub;
 
 function closeRestaurantHub() {
+  hubDeactivateMapMode();
   var h = document.getElementById('mh-restaurant-hub');
   if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
   restaurantMarkersActive.forEach(function(m) { try { m.remove(); } catch(e) {} });
@@ -278,7 +279,7 @@ function rhShowVenueDetail(venue) {
   var price = '$'.repeat(venue.price_range||2);
   var sheet = document.createElement('div');
   sheet.id = 'mh-rh-detail';
-  sheet.style.cssText = 'position:absolute;inset:0;z-index:24;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
   sheet.innerHTML =
     '<div id="mh-rh-det-inner" style="width:100%;background:rgba(8,8,20,0.98);border-radius:24px 24px 0 0;border-top:1px solid rgba(255,45,120,0.2);padding:12px 20px 48px;max-height:85vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)">' +
     '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 16px;cursor:pointer" onclick="menuHomeRhCloseDetail()"></div>' +
@@ -297,7 +298,7 @@ function rhShowVenueDetail(venue) {
     '</div>' +
     '<button onclick="menuHomeRhCloseDetail()" style="width:100%;margin-top:10px;padding:13px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer">Close</button>' +
     '</div>';
-  document.getElementById('menu-home').appendChild(sheet);
+  getHubParent().appendChild(sheet);
   setTimeout(function() {
     sheet.style.opacity = '1';
     document.getElementById('mh-rh-det-inner').style.transform = 'translateY(0)';

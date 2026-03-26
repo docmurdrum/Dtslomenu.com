@@ -86,44 +86,94 @@ function openPinMover() {
 window.menuHomePinMover = openPinMover;
 
 function buildPinMoverUI() {
+  // Inject CSS once
+  if (!document.getElementById('pm-css')) {
+    var s = document.createElement('style');
+    s.id = 'pm-css';
+    s.textContent = [
+      '.pm-hub-tile{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;',
+        'background:rgba(255,255,255,0.03);border:1.5px solid rgba(255,255,255,0.08);',
+        'cursor:pointer;transition:all 0.15s;margin-bottom:6px}',
+      '.pm-hub-tile.active{background:rgba(255,215,0,0.08);border-color:rgba(255,215,0,0.4);}',
+      '.pm-hub-tile:active{transform:scale(0.97)}',
+      '.pm-hub-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;',
+        'justify-content:center;font-size:18px;flex-shrink:0}',
+      '.pm-hub-coords{font-size:9px;color:rgba(255,255,255,0.3);font-family:monospace;margin-top:2px}',
+      '.pm-hub-moved{font-size:9px;font-weight:700;color:#ffd700;margin-top:2px}',
+    ].join('');
+    document.head.appendChild(s);
+  }
+
   var sheet = document.createElement('div');
   sheet.id = 'mh-pin-mover';
-  sheet.style.cssText = [
-    'position:absolute;bottom:0;left:0;right:0;z-index:23',
-    'background:rgba(8,8,20,0.96)',
-    'border-radius:20px 20px 0 0',
-    'border-top:2px solid rgba(255,215,0,0.3)',
-    'padding:12px 16px 32px',
-    'max-height:50vh',
-    'overflow-y:auto',
-  ].join(';');
+  sheet.style.cssText = 'position:absolute;bottom:0;left:0;right:0;z-index:23;' +
+    'background:rgba(8,8,20,0.97);border-radius:24px 24px 0 0;' +
+    'border-top:2px solid rgba(255,215,0,0.3);padding:12px 16px 36px;' +
+    'max-height:60vh;overflow-y:auto;backdrop-filter:blur(12px)';
 
-  sheet.innerHTML =
-    '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 12px"></div>' +
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+  // Header
+  var header = document.createElement('div');
+  header.innerHTML =
+    '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 14px"></div>' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
       '<div>' +
-        '<div style="font-size:15px;font-weight:800;font-family:Georgia,serif">📍 Pin Mover</div>' +
-        '<div id="mh-pm-status" style="font-size:11px;color:rgba(255,215,0,0.7);margin-top:2px">Drag any pin on the map to reposition it</div>' +
+        '<div style="font-size:16px;font-weight:800;font-family:Georgia,serif">📍 Pin Mover</div>' +
+        '<div id="mh-pm-status" style="font-size:11px;color:rgba(255,215,0,0.7);margin-top:2px">Drag a glowing pin on the map to reposition</div>' +
       '</div>' +
-      '<button onclick="menuHomeClosePinMover()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer">✕</button>' +
-    '</div>' +
-
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px" id="mh-pm-pins">' +
-      HUB_PIN_DEFS.map(function(h) {
-        var coords = pinMoverCoords[h.id] || h.defaultCoords;
-        return '<div id="pm-hub-' + h.id + '" style="padding:8px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:11px">' +
-          '<div style="font-weight:800;margin-bottom:2px">' + h.icon + ' ' + h.label + '</div>' +
-          '<div id="pm-coords-' + h.id + '" style="font-size:9px;color:rgba(255,255,255,0.3);font-family:monospace">' +
-            coords[1].toFixed(4) + ', ' + coords[0].toFixed(4) +
-          '</div>' +
-        '</div>';
-      }).join('') +
-    '</div>' +
-
-    '<div style="display:flex;gap:8px">' +
-      '<button onclick="pmResetAll()" style="padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer">Reset All</button>' +
-      '<button onclick="menuHomeSavePinPositions()" id="mh-pm-save-btn" style="flex:1;padding:10px;border-radius:12px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:13px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer">Save All Pins</button>' +
+      '<button onclick="menuHomeClosePinMover()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:32px;height:32px;border-radius:50%;font-size:14px;cursor:pointer;flex-shrink:0">✕</button>' +
     '</div>';
+  sheet.appendChild(header);
+
+  // Hub tiles
+  var tilesDiv = document.createElement('div');
+  tilesDiv.id = 'mh-pm-pins';
+
+  HUB_PIN_DEFS.forEach(function(h) {
+    var coords = pinMoverCoords[h.id] || h.defaultCoords;
+    var isDefault = !pinMoverCoords[h.id] ||
+      (pinMoverCoords[h.id][0] === h.defaultCoords[0] &&
+       pinMoverCoords[h.id][1] === h.defaultCoords[1]);
+
+    var tile = document.createElement('div');
+    tile.className = 'pm-hub-tile';
+    tile.id = 'pm-hub-' + h.id;
+
+    tile.innerHTML =
+      '<div class="pm-hub-icon" style="background:' + (h.color || '#ff2d78') + '22;border:1.5px solid ' + (h.color || '#ff2d78') + '44">' +
+        h.icon +
+      '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:12px;font-weight:800;margin-bottom:1px">' + h.label + '</div>' +
+        '<div id="pm-coords-' + h.id + '" class="pm-hub-coords">' +
+          coords[1].toFixed(4) + ', ' + coords[0].toFixed(4) +
+        '</div>' +
+        (!isDefault ? '<div class="pm-hub-moved">● repositioned</div>' : '') +
+      '</div>' +
+      '<div style="font-size:11px;color:rgba(255,255,255,0.2)">⠿</div>';
+
+    // Tap to fly map to this hub
+    tile.addEventListener('click', function() {
+      document.querySelectorAll('.pm-hub-tile').forEach(function(t) { t.classList.remove('active'); });
+      tile.classList.add('active');
+      var c = pinMoverCoords[h.id] || h.defaultCoords;
+      if (homeMap) {
+        try { homeMap.flyTo({ center: c, zoom: 15, duration: 600 }); } catch(e) {}
+      }
+      var status = document.getElementById('mh-pm-status');
+      if (status) status.textContent = h.label + ' selected — drag the glowing pin to move';
+    });
+
+    tilesDiv.appendChild(tile);
+  });
+  sheet.appendChild(tilesDiv);
+
+  // Buttons
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:8px;margin-top:10px';
+  btnRow.innerHTML =
+    '<button onclick="pmResetAll()" style="padding:11px 16px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer;flex-shrink:0">Reset All</button>' +
+    '<button onclick="menuHomeSavePinPositions()" id="mh-pm-save-btn" style="flex:1;padding:11px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:14px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer">💾 Save All Pins</button>';
+  sheet.appendChild(btnRow);
 
   var menuHome = document.getElementById('menu-home');
   if (menuHome) menuHome.appendChild(sheet);
@@ -191,8 +241,18 @@ function spawnDraggableMarkers() {
         // Highlight the row that changed
         var rowEl = document.getElementById('pm-hub-' + hub.id);
         if (rowEl) {
-          rowEl.style.borderColor = hub.color;
-          rowEl.style.background = hub.color + '12';
+          rowEl.style.borderColor = hub.color || '#ffd700';
+          rowEl.style.background = (hub.color || '#ffd700') + '15';
+          var movedEl = rowEl.querySelector('.pm-hub-moved');
+          if (!movedEl) {
+            var badge = document.createElement('div');
+            badge.className = 'pm-hub-moved';
+            badge.textContent = '● repositioned';
+            var infoDiv = rowEl.querySelector('div[style*="flex:1"]');
+            if (infoDiv) infoDiv.appendChild(badge);
+          }
+          document.querySelectorAll('.pm-hub-tile').forEach(function(t) { t.classList.remove('active'); });
+          rowEl.classList.add('active');
         }
 
         // Update status

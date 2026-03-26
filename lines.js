@@ -23,7 +23,9 @@ const bars = [
 
 
 // ── LOAD BARS FROM SUPABASE ──
+var _barsDBLoaded = false;
 async function loadBarsFromDB() {
+  if (_barsDBLoaded) return; // Only load once — emblem_url etc cached in bars array
   try {
     var res = await supabaseClient
       .from('businesses')
@@ -89,6 +91,7 @@ async function loadBarsFromDB() {
         });
       }
     });
+    _barsDBLoaded = true; // Mark as loaded — won't re-fetch on report refreshes
   } catch(e) {
     console.warn('[lines] loadBarsFromDB:', e.message);
   }

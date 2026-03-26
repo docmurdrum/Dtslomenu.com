@@ -173,6 +173,21 @@ function openThrillHub() {
   var existing = document.getElementById('mh-thrill-hub');
   if (existing) existing.remove();
 
+  // Map mode: show glowing spots, open hub on tap
+  var menuHome = document.getElementById('menu-home');
+  var onMap = menuHome && menuHome.style.display !== 'none';
+  if (onMap && arguments[0] !== 'direct') {
+    var mapSpots = (typeof THRILL_SPOTS !== 'undefined' ? THRILL_SPOTS : [])
+      .filter(function(s) { return s.coords; })
+      .map(function(s) { return { id: s.id || s.name, name: s.name, emoji: s.emoji || '⚡', coords: s.coords }; });
+    if (mapSpots.length) {
+      hubActivateMapMode(mapSpots, '#ef4444', function() { openThrillHub('direct'); });
+      return;
+    }
+  }
+  hubDeactivateMapMode();
+
+
   if (!document.getElementById('thrill-hub-css')) {
     var s = document.createElement('style');
     s.id = 'thrill-hub-css';
@@ -187,7 +202,7 @@ function openThrillHub() {
 
   var hub = document.createElement('div');
   hub.id = 'mh-thrill-hub';
-  hub.style.cssText = 'position:absolute;inset:0;z-index:22;display:flex;flex-direction:column;background:rgba(6,6,15,0.96);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
+  hub.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;background:rgba(6,6,15,0.96);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
 
   hub.innerHTML =
     '<div style="padding:52px 20px 0;flex-shrink:0">' +
@@ -209,7 +224,7 @@ function openThrillHub() {
       thrillRenderList(THRILL_SPOTS) +
     '</div>';
 
-  document.getElementById('menu-home').appendChild(hub);
+  getHubParent().appendChild(hub);
   setTimeout(function() { hub.style.opacity = '1'; }, 30);
 
   // If opened via Find Hubs, sort nearest spots first
@@ -230,6 +245,7 @@ function openThrillHub() {
 window.menuHomeOpenThrillHub = openThrillHub;
 
 function closeThrillHub() {
+  hubDeactivateMapMode();
   var h = document.getElementById('mh-thrill-hub');
   if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
 }
@@ -284,7 +300,7 @@ function thrillOpenDetail(id) {
 
   var sheet = document.createElement('div');
   sheet.id = 'mh-thrill-detail';
-  sheet.style.cssText = 'position:absolute;inset:0;z-index:24;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
   sheet.innerHTML =
     '<div id="mh-td-inner" style="width:100%;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(239,68,68,0.25);padding:14px 20px 48px;max-height:85vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)">' +
       '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 16px;cursor:pointer" onclick="document.getElementById(\'mh-thrill-detail\').remove()"></div>' +
@@ -327,7 +343,7 @@ function thrillOpenDetail(id) {
       '</div>' +
     '</div>';
 
-  document.getElementById('menu-home').appendChild(sheet);
+  getHubParent().appendChild(sheet);
   setTimeout(function() {
     sheet.style.opacity = '1';
     document.getElementById('mh-td-inner').style.transform = 'translateY(0)';

@@ -139,6 +139,21 @@ function openCityHub() {
   var existing = document.getElementById('mh-city-hub');
   if (existing) existing.remove();
 
+  // Map mode: show glowing spots, open hub on tap
+  var menuHome = document.getElementById('menu-home');
+  var onMap = menuHome && menuHome.style.display !== 'none';
+  if (onMap && arguments[0] !== 'direct') {
+    var mapSpots = (typeof CITY_SPOTS !== 'undefined' ? CITY_SPOTS : [])
+      .filter(function(s) { return s.coords; })
+      .map(function(s) { return { id: s.id || s.name, name: s.name, emoji: s.emoji || '🏛', coords: s.coords }; });
+    if (mapSpots.length) {
+      hubActivateMapMode(mapSpots, '#00f5ff', function() { openCityHub('direct'); });
+      return;
+    }
+  }
+  hubDeactivateMapMode();
+
+
   if (!document.getElementById('city-hub-css')) {
     var s = document.createElement('style');
     s.id = 'city-hub-css';
@@ -154,7 +169,7 @@ function openCityHub() {
 
   var hub = document.createElement('div');
   hub.id = 'mh-city-hub';
-  hub.style.cssText = 'position:absolute;inset:0;z-index:22;display:flex;flex-direction:column;background:rgba(6,6,15,0.96);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
+  hub.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;background:rgba(6,6,15,0.96);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
 
   hub.innerHTML =
     '<div style="padding:52px 20px 0;flex-shrink:0">' +
@@ -176,12 +191,13 @@ function openCityHub() {
       cityRenderList(CITY_SPOTS) +
     '</div>';
 
-  document.getElementById('menu-home').appendChild(hub);
+  getHubParent().appendChild(hub);
   setTimeout(function() { hub.style.opacity = '1'; }, 30);
 }
 window.menuHomeOpenCityHub = openCityHub;
 
 function closeCityHub() {
+  hubDeactivateMapMode();
   var h = document.getElementById('mh-city-hub');
   if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
 }
@@ -224,7 +240,7 @@ function cityOpenDetail(id) {
 
   var sheet = document.createElement('div');
   sheet.id = 'mh-city-detail';
-  sheet.style.cssText = 'position:absolute;inset:0;z-index:24;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
 
   var inner = document.createElement('div');
   inner.style.cssText = 'width:100%;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(0,245,255,0.2);padding:14px 20px 48px;max-height:85vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)';
@@ -246,7 +262,7 @@ function cityOpenDetail(id) {
     '<a href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(s.address + ' San Luis Obispo CA') + '" target="_blank" style="display:block;width:100%;padding:13px;border-radius:14px;background:rgba(0,245,255,0.08);border:1px solid rgba(0,245,255,0.2);color:#00f5ff;text-decoration:none;font-size:13px;font-weight:800;text-align:center">Get Directions ↗</a>';
 
   sheet.appendChild(inner);
-  document.getElementById('menu-home').appendChild(sheet);
+  getHubParent().appendChild(sheet);
   setTimeout(function() {
     sheet.style.opacity = '1';
     inner.style.transform = 'translateY(0)';

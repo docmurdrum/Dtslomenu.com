@@ -177,9 +177,28 @@ var NATURE_CATEGORIES = [
   { id:'hard',     label:'Challenge',emoji:'💪' },
 ];
 
-function openNatureHub() {
+function openNatureHub(focusSpotId) {
   var existing = document.getElementById('mh-nature-hub');
   if (existing) existing.remove();
+
+  // If on hub screen (map visible) — activate map mode first
+  var menuHome = document.getElementById('menu-home');
+  var onMap = menuHome && menuHome.style.display !== 'none';
+
+  if (onMap && !focusSpotId) {
+    // Place glowing markers on map, open hub when one is tapped
+    hubActivateMapMode(
+      NATURE_SPOTS.filter(function(s) { return s.coords; }).map(function(s) {
+        return { id: s.id, name: s.name, emoji: s.emoji || '🌿', coords: s.coords };
+      }),
+      '#22c55e',
+      function(spotId) { openNatureHub(spotId); }
+    );
+    return;
+  }
+
+  // Close map mode markers when hub opens
+  hubDeactivateMapMode();
 
   if (!document.getElementById('nature-hub-css')) {
     var s = document.createElement('style');
@@ -198,7 +217,7 @@ function openNatureHub() {
 
   var hub = document.createElement('div');
   hub.id = 'mh-nature-hub';
-  hub.style.cssText = 'position:absolute;inset:0;z-index:22;display:flex;flex-direction:column;background:rgba(6,6,15,0.96);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
+  hub.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;background:rgba(6,6,15,0.96);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
 
   hub.innerHTML =
     '<div style="padding:52px 20px 0;flex-shrink:0">' +
@@ -220,7 +239,7 @@ function openNatureHub() {
       natureRenderList(NATURE_SPOTS) +
     '</div>';
 
-  document.getElementById('menu-home').appendChild(hub);
+  getHubParent().appendChild(hub);
   setTimeout(function() { hub.style.opacity = '1'; }, 30);
 
   // If opened via Find Hubs, sort nearest spots first
@@ -243,6 +262,7 @@ window.menuHomeOpenNatureHub = openNatureHub;
 function closeNatureHub() {
   var h = document.getElementById('mh-nature-hub');
   if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
+  hubDeactivateMapMode();
 }
 window.menuHomeCloseNatureHub = closeNatureHub;
 
@@ -294,7 +314,7 @@ function natureOpenDetail(id) {
 
   var sheet = document.createElement('div');
   sheet.id = 'mh-nature-detail';
-  sheet.style.cssText = 'position:absolute;inset:0;z-index:24;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
 
   sheet.innerHTML =
     '<div id="mh-nd-inner" style="width:100%;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(34,197,94,0.25);padding:14px 20px 48px;max-height:85vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)">' +
@@ -337,7 +357,7 @@ function natureOpenDetail(id) {
       '</div>' +
     '</div>';
 
-  document.getElementById('menu-home').appendChild(sheet);
+  getHubParent().appendChild(sheet);
   setTimeout(function() {
     sheet.style.opacity = '1';
     document.getElementById('mh-nd-inner').style.transform = 'translateY(0)';

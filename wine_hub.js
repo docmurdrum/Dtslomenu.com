@@ -70,6 +70,21 @@ function openWineHub() {
   var existing = document.getElementById('mh-wine-hub');
   if (existing) existing.remove();
 
+  // Map mode: show glowing spots, open hub on tap
+  var menuHome = document.getElementById('menu-home');
+  var onMap = menuHome && menuHome.style.display !== 'none';
+  if (onMap && arguments[0] !== 'direct') {
+    var mapSpots = (typeof WINE_SPOTS !== 'undefined' ? WINE_SPOTS : [])
+      .filter(function(s) { return s.coords; })
+      .map(function(s) { return { id: s.id || s.name, name: s.name, emoji: s.emoji || '🍷', coords: s.coords }; });
+    if (mapSpots.length) {
+      hubActivateMapMode(mapSpots, '#9b2335', function() { openWineHub('direct'); });
+      return;
+    }
+  }
+  hubDeactivateMapMode();
+
+
   if (!document.getElementById('wine-hub-css')) {
     var s = document.createElement('style');
     s.id = 'wine-hub-css';
@@ -85,7 +100,7 @@ function openWineHub() {
 
   var hub = document.createElement('div');
   hub.id = 'mh-wine-hub';
-  hub.style.cssText = 'position:absolute;inset:0;z-index:22;display:flex;flex-direction:column;background:rgba(6,6,15,0.96);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
+  hub.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;background:rgba(6,6,15,0.96);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
 
   hub.innerHTML =
     '<div style="padding:52px 20px 0;flex-shrink:0">' +
@@ -107,12 +122,13 @@ function openWineHub() {
       whRenderAll() +
     '</div>';
 
-  document.getElementById('menu-home').appendChild(hub);
+  getHubParent().appendChild(hub);
   setTimeout(function() { hub.style.opacity = '1'; }, 30);
 }
 window.menuHomeOpenWineHub = openWineHub;
 
 function closeWineHub() {
+  hubDeactivateMapMode();
   var h = document.getElementById('mh-wine-hub');
   if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
 }

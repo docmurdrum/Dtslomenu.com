@@ -343,3 +343,36 @@ function itinOpenFromPlanIt() {
   }
 }
 window.itinOpenFromPlanIt = itinOpenFromPlanIt;
+
+// ── UNIVERSAL PLAN IT — callable from anywhere in the app ──
+// Works from hub screen, bar page, lines page, profile, anywhere
+function openPlanIt() {
+  // If hub screen is visible, use the existing travel plan it
+  var menuHome = document.getElementById('menu-home');
+  if (menuHome && menuHome.style.display !== 'none') {
+    openTravelPlanIt();
+    return;
+  }
+  // Inside the app — open directly on body
+  var existing = document.getElementById('mh-planit-sheet');
+  if (existing) existing.remove();
+
+  piState.step = 0;
+  piState.result = null;
+
+  var sheet = document.createElement('div');
+  sheet.id = 'mh-planit-sheet';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
+  document.body.appendChild(sheet);
+  setTimeout(function() { sheet.style.opacity = '1'; piRender(); }, 30);
+  sheet.addEventListener('click', function(e) {
+    if (e.target === sheet) menuHomeClosePlanIt();
+  });
+}
+window.openPlanIt = openPlanIt;
+
+function menuHomeClosePlanIt() {
+  var s = document.getElementById('mh-planit-sheet');
+  if (s) { s.style.opacity = '0'; setTimeout(function() { s.remove(); }, 300); }
+}
+window.menuHomeClosePlanIt = menuHomeClosePlanIt;

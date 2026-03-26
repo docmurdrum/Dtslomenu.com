@@ -224,9 +224,24 @@ function openBeachHub() {
   var existing = document.getElementById('mh-beach-hub');
   if (existing) existing.remove();
 
+  // Map mode: show glowing spots, open hub on tap
+  var menuHome = document.getElementById('menu-home');
+  var onMap = menuHome && menuHome.style.display !== 'none';
+  if (onMap && arguments[0] !== 'direct') {
+    var mapSpots = (typeof BEACH_DATA !== 'undefined' ? BEACH_DATA : [])
+      .filter(function(s) { return s.coords; })
+      .map(function(s) { return { id: s.id || s.name, name: s.name, emoji: s.emoji || '🏖', coords: s.coords }; });
+    if (mapSpots.length) {
+      hubActivateMapMode(mapSpots, '#06b6d4', function() { openBeachHub('direct'); });
+      return;
+    }
+  }
+  hubDeactivateMapMode();
+
+
   var sheet = document.createElement('div');
   sheet.id = 'mh-beach-hub';
-  sheet.style.cssText = 'position:absolute;inset:0;z-index:22;display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px)';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px)';
 
   var ratingColor = {Good:'#22c55e', Fair:'#f59e0b', Poor:'#ef4444'};
 
@@ -269,7 +284,7 @@ function openBeachHub() {
       '</div>' +
     '</div>';
 
-  document.getElementById('menu-home').appendChild(sheet);
+  getHubParent().appendChild(sheet);
   setTimeout(function() {
     sheet.style.opacity = '1';
     document.getElementById('mh-bh-inner').style.transform = 'translateY(0)';
@@ -353,7 +368,7 @@ function showBeachDetail(b) {
 
   var sheet = document.createElement('div');
   sheet.id = 'mh-beach-detail';
-  sheet.style.cssText = 'position:absolute;inset:0;z-index:23;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(2,15,25,0.97),rgba(4,20,35,0.97));opacity:0;transition:opacity 0.4s';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(2,15,25,0.97),rgba(4,20,35,0.97));opacity:0;transition:opacity 0.4s';
 
   sheet.innerHTML =
     // Header
@@ -472,7 +487,7 @@ function showBeachDetail(b) {
 
     '</div>';
 
-  document.getElementById('menu-home').appendChild(sheet);
+  getHubParent().appendChild(sheet);
   setTimeout(function() { sheet.style.opacity = '1'; }, 30);
 }
 

@@ -74,7 +74,7 @@ function openCalPolyHub() {
 
   var hub = document.createElement('div');
   hub.id = 'mh-calpoly-hub';
-  hub.style.cssText = 'position:absolute;inset:0;z-index:22;display:flex;flex-direction:column;background:rgba(6,6,15,0.96);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
+  hub.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;background:rgba(6,6,15,0.96);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
 
   hub.innerHTML =
     '<div style="padding:52px 20px 0;flex-shrink:0">' +
@@ -96,12 +96,13 @@ function openCalPolyHub() {
       cpRenderSection(_cpSection) +
     '</div>';
 
-  document.getElementById('menu-home').appendChild(hub);
+  getHubParent().appendChild(hub);
   setTimeout(function() { hub.style.opacity = '1'; }, 30);
 }
 window.menuHomeOpenCalPolyHub = openCalPolyHub;
 
 function closeCalPolyHub() {
+  hubDeactivateMapMode();
   var h = document.getElementById('mh-calpoly-hub');
   if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
 }

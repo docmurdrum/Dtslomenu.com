@@ -3,7 +3,6 @@
 // Live tracker + Saved planner + Share pages
 // ══════════════════════════════════════════════
 
-var ITINERARY_FREE_LIMIT = 3;
 
 // ── GUEST MODE ──
 function getGuestId() {
@@ -73,6 +72,34 @@ function itinFromPlan(plan, options) {
 }
 window.itinFromPlan = itinFromPlan;
 
+// ── COST CALCULATIONS ──
+function itinCalcCostPerPerson(it) {
+  if (!it || !it.stops || !it.stops.length) return '';
+  var stops = it.stops;
+  // Parse cost strings like "$15-25" into midpoint number
+  function parseMid(costStr) {
+    if (!costStr) return 0;
+    var nums = costStr.match(/\d+/g);
+    if (!nums) return 0;
+    if (nums.length >= 2) return (parseInt(nums[0]) + parseInt(nums[1])) / 2;
+    return parseInt(nums[0]);
+  }
+  var totalPerPerson = stops.reduce(function(a, s) { return a + parseMid(s.cost); }, 0);
+  // Add rideshare costs if enabled
+  if (it.using_rideshare) {
+    totalPerPerson += stops.length * 4; // ~$4 avg per ride
+  }
+  return Math.round(totalPerPerson);
+}
+
+function itinCalcTotalCost(it) {
+  var pp = itinCalcCostPerPerson(it);
+  if (!pp) return '';
+  var group = it.group_size || 2;
+  return pp * group;
+}
+
+
 // ── SAVE / LOAD ──
 function itinGetSaved() {
   try { return JSON.parse(localStorage.getItem('dtslo_itineraries') || '[]'); }
@@ -138,12 +165,7 @@ function openItinFromSaved() {
       '</div>'
     );
   } else {
-    var freeLeft = Math.max(0, ITINERARY_FREE_LIMIT - saved.length);
-    var unlocked = localStorage.getItem('dtslo_itin_unlocked') === '1';
-    var limitNote = unlocked ? '' :
-      '<div style="padding:8px 12px;background:rgba(255,215,0,0.06);border-radius:10px;font-size:11px;color:rgba(255,215,0,0.6);margin-bottom:14px">' +
-        (freeLeft > 0 ? '✨ ' + freeLeft + ' free plan' + (freeLeft>1?'s':'') + ' remaining' : '🔒 Upgrade to save more plans — $2.99 one-time') +
-      '</div>';
+    var limitNote = '';
 
     modal.innerHTML = itinWrap(
       '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:14px">🗓 My Itineraries</div>' +
@@ -166,8 +188,7 @@ function openItinFromSaved() {
           '</div>' +
         '</div>';
       }).join('') +
-      (!unlocked && freeLeft === 0 ?
-        '<button onclick="itinUnlockPrompt()" style="width:100%;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#b44fff,#7c3aed);color:white;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;margin-top:4px">✨ Unlock Unlimited — $2.99</button>' : '') +
+
       '<button onclick="closeItinerary()" style="width:100%;margin-top:8px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Close</button>'
     );
   }
@@ -258,21 +279,26 @@ function itinRenderPlanned() {
     '</div>' +
 
     // Start time + rideshare row
-    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">' +
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">' +
       '<div style="font-size:11px;color:rgba(255,255,255,0.4)">Starts</div>' +
       '<input id="itin-start" type="time" value="' + itinTo24(it.start_time) + '" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;font-size:12px;font-weight:700;padding:4px 8px;font-family:inherit;outline:none" onchange="itinUpdateStart(this.value)">' +
       '<div style="flex:1"></div>' +
-      '<div style="font-size:11px;color:rgba(255,255,255,0.4)">Rideshare</div>' +
+      '<div style="font-size:11px;color:rgba(255,255,255,0.4)">👥</div>' +
+      '<select id="itin-group-size" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;font-size:12px;font-weight:700;padding:4px 6px;font-family:inherit;outline:none" onchange="itin.current.group_size=parseInt(this.value);itinRenderModal()">' +
+        [1,2,3,4,5,6,7,8].map(function(n){ return '<option value="'+n+'"'+(n===(it.group_size||2)?' selected':'')+'>'+n+'</option>'; }).join('') +
+      '</select>' +
+      '<div style="font-size:11px;color:rgba(255,255,255,0.4)">🚗</div>' +
       '<label style="display:flex;align-items:center">' +
         '<input type="checkbox" id="itin-ride-check" ' + (it.using_rideshare?'checked':'') + ' onchange="itin.current.using_rideshare=this.checked;itinRenderModal()" style="accent-color:#22c55e">' +
       '</label>' +
     '</div>' +
 
     // Summary row
-    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">' +
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">' +
       itinSummaryCard('Stops', it.stops.length + '') +
-      itinSummaryCard('Total Time', totalHrs + 'h' + (totalRem?totalRem+'m':'')) +
-      itinSummaryCard('Est. Cost', it.total_cost || '—') +
+      itinSummaryCard('Duration', totalHrs + 'h' + (totalRem?totalRem+'m':'')) +
+      itinSummaryCard('Per Person', itinCalcCostPerPerson(it) ? '$'+itinCalcCostPerPerson(it) : '—') +
+      itinSummaryCard('Total (' + (it.group_size||2) + ')', itinCalcTotalCost(it) ? '$'+itinCalcTotalCost(it) : '—') +
     '</div>' +
 
     // Stop list
@@ -378,7 +404,21 @@ function itinRenderLive() {
         '<div id="itin-live-timer" style="font-size:28px;font-weight:900;color:#22c55e;font-family:monospace">0:00</div>' +
         '<div style="font-size:10px;color:rgba(255,255,255,0.3)">Time here · Est. ' + (activeStop.estimated_mins||60) + 'min</div>' +
       '</div>' +
-      (activeStop.cost ? '<div style="text-align:right"><div style="font-size:16px;font-weight:800;color:#22c55e">' + activeStop.cost + '</div><div style="font-size:10px;color:rgba(255,255,255,0.3)">per person</div></div>' : '') +
+      '<div style="text-align:right">' +
+        (activeStop.cost ? '<div style="font-size:15px;font-weight:800;color:#22c55e">' + activeStop.cost + '</div>' +
+        '<div style="font-size:9px;color:rgba(255,255,255,0.3)">per person</div>' : '') +
+        (it.group_size > 1 && activeStop.cost ?
+          (function(){
+            var nums = (activeStop.cost||'').match(/\d+/g);
+            if (nums && nums.length >= 2) {
+              var mid = Math.round((parseInt(nums[0])+parseInt(nums[1]))/2);
+              return '<div style="font-size:12px;color:#22c55e;font-weight:700;margin-top:2px">~$' + (mid*(it.group_size||2)) + ' total</div>' +
+                     '<div style="font-size:9px;color:rgba(255,255,255,0.3)">group of ' + (it.group_size||2) + '</div>';
+            }
+            return '';
+          })()
+        : '') +
+      '</div>' +
     '</div>' +
     (activeStop.tip ? '<div style="font-size:11px;color:#ffd700;padding:6px 8px;background:rgba(255,215,0,0.06);border-radius:8px">💡 ' + activeStop.tip + '</div>' : '') +
   '</div>' +
@@ -795,58 +835,44 @@ function itinAddBusinessStop(name, type, estimatedMins, costRange, tip) {
 window.itinAddBusinessStop = itinAddBusinessStop;
 
 // Quick Plan It — opens mini sheet from bar/business page
+// itinPlanItFor — shows quick action sheet then delegates to universal openPlanIt
 function itinPlanItFor(name, type) {
-  var existing = document.getElementById('mh-planit-sheet');
+  var existing = document.getElementById('itin-quick-sheet');
   if (existing) existing.remove();
 
   var sheet = document.createElement('div');
-  sheet.id = 'mh-planit-sheet';
-  sheet.style.cssText = 'position:fixed;inset:0;z-index:8500;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
+  sheet.id = 'itin-quick-sheet';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
 
   var inner = document.createElement('div');
-  inner.style.cssText = 'width:100%;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(255,215,0,0.25);padding:20px 20px 48px;max-height:85vh;overflow-y:auto';
+  inner.style.cssText = 'width:100%;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(255,215,0,0.2);padding:16px 20px 48px';
 
-  var handle = document.createElement('div');
-  handle.style.cssText = 'width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 16px';
-  inner.appendChild(handle);
-
-  var title = document.createElement('div');
-  title.style.cssText = 'font-size:20px;font-weight:800;margin-bottom:6px';
-  title.textContent = '✨ Plan It';
-  inner.appendChild(title);
-
-  var sub = document.createElement('div');
-  sub.style.cssText = 'font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:20px';
-  sub.innerHTML = 'Build tonight around <strong style="color:white">' + name + '</strong>';
-  inner.appendChild(sub);
-
-  var addBtn = document.createElement('button');
-  addBtn.style.cssText = 'width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#f59e0b);color:#000;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;margin-bottom:10px';
-  addBtn.textContent = '+ Add to Itinerary';
-  addBtn.onclick = function() {
-    itinAddBusinessStop(name, type || 'bar', 60, '', '');
-    sheet.remove();
-  };
-  inner.appendChild(addBtn);
-
-  var planBtn = document.createElement('button');
-  planBtn.style.cssText = 'width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,215,0,0.3);background:rgba(255,215,0,0.06);color:#ffd700;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;margin-bottom:10px';
-  planBtn.textContent = '✨ Plan Full Night with AI';
-  planBtn.onclick = function() {
-    sheet.remove();
-    if (typeof menuHomeOpenTravelPlanIt === 'function') menuHomeOpenTravelPlanIt();
-  };
-  inner.appendChild(planBtn);
-
-  var cancelBtn = document.createElement('button');
-  cancelBtn.style.cssText = 'width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer';
-  cancelBtn.textContent = 'Cancel';
-  cancelBtn.onclick = function() { sheet.remove(); };
-  inner.appendChild(cancelBtn);
+  inner.innerHTML =
+    '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 16px"></div>' +
+    '<div style="font-size:16px;font-weight:800;margin-bottom:4px">✨ Plan It</div>' +
+    '<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-bottom:20px">Build tonight around <strong style="color:rgba(255,255,255,0.8)">' + name + '</strong></div>' +
+    '<div style="display:flex;flex-direction:column;gap:8px">' +
+      '<button id="itin-quick-add" style="padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#f59e0b);color:#000;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">🗓 Add to Itinerary</button>' +
+      '<button id="itin-quick-plan" style="padding:13px;border-radius:14px;border:1px solid rgba(180,79,255,0.3);background:rgba(180,79,255,0.06);color:#b44fff;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">✨ Plan Full Night with AI</button>' +
+      '<button id="itin-quick-cancel" style="padding:11px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Cancel</button>' +
+    '</div>';
 
   sheet.appendChild(inner);
   document.body.appendChild(sheet);
+
+  setTimeout(function() {
+    sheet.style.opacity = '1';
+    document.getElementById('itin-quick-add').onclick = function() {
+      sheet.remove();
+      itinAddBusinessStop(name, type || 'bar', 60, '', '');
+    };
+    document.getElementById('itin-quick-plan').onclick = function() {
+      sheet.remove();
+      if (typeof openPlanIt === 'function') openPlanIt();
+    };
+    document.getElementById('itin-quick-cancel').onclick = function() { sheet.remove(); };
+  }, 30);
+
   sheet.addEventListener('click', function(e) { if (e.target === sheet) sheet.remove(); });
-  setTimeout(function() { sheet.style.opacity = '1'; }, 30);
 }
 window.itinPlanItFor = itinPlanItFor;

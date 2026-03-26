@@ -62,6 +62,7 @@ async function devLogin() {
       window._pendingDTSLOEntry = true;
       await onLogin(data.user);
       showToast('🛠️ Dev login active');
+      seedDevItinerary();
       return;
     }
 
@@ -409,4 +410,38 @@ function migrateGuestItineraries(user) {
       showToast('✅ ' + saved.length + ' plan' + (saved.length>1?'s':'') + ' saved to your account!');
     }
   } catch(e) {}
+}
+
+// ── DEV ITINERARY SEED ──
+function seedDevItinerary() {
+  try {
+    var existing = JSON.parse(localStorage.getItem('dtslo_itineraries') || '[]');
+    if (existing.some(function(i) { return i.id === 'dev-test-001'; })) return; // already seeded
+
+    var testItin = {
+      id: 'dev-test-001',
+      share_id: 'slo-friday',
+      name: 'Friday Night SLO',
+      mode: 'planned',
+      start_time: '8:00 PM',
+      using_rideshare: true,
+      group_size: 4,
+      total_cost: '$60-100',
+      ride_note: 'Uber XL for 4 people',
+      pro_tip: 'Check crowd reports before each stop',
+      created: Date.now(),
+      stops: [
+        { name: 'Firestone Grill', type: 'restaurant', description: 'Pre-game dinner. Legendary tri-tip sandwiches.', tip: 'Get there before 7pm to beat the line', cost: '$15-20', estimated_mins: 45, actual_mins: null, status: 'pending', address: '1001 Higuera St', coords: null },
+        { name: 'Bulls Tavern', type: 'bar', description: 'SLO institution since 1935. Classic starting point.', tip: 'Best dive bar in SLO - cheap drinks', cost: '$10-15', estimated_mins: 60, actual_mins: null, status: 'pending', address: '709 Higuera St', coords: null },
+        { name: 'Frog & Peach Pub', type: 'bar', description: 'Live music almost every night. Great patio along the creek.', tip: 'Check their calendar for bands tonight', cost: '$15-25', estimated_mins: 75, actual_mins: null, status: 'pending', address: '728 Higuera St', coords: null },
+        { name: 'SLO Brew Rock', type: 'bar', description: 'Best live music venue in SLO. End the night here.', tip: 'Show up by 10pm if there is a show', cost: '$15-30', estimated_mins: 90, actual_mins: null, status: 'pending', address: '736 Higuera St', coords: null },
+      ]
+    };
+
+    existing.unshift(testItin);
+    localStorage.setItem('dtslo_itineraries', JSON.stringify(existing));
+    console.log('[Dev] Test itinerary seeded');
+  } catch(e) {
+    console.warn('[Dev] Could not seed itinerary:', e);
+  }
 }

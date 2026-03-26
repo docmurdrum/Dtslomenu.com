@@ -206,6 +206,20 @@ window.closeTopModal = closeTopModal;
     <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
   </nav>
 
+  <!-- ── GLOBAL ITINERARY FAB ── -->
+  <button id="itin-fab" onclick="openItinFromSaved()" style="
+    position:fixed;bottom:80px;right:16px;z-index:8000;
+    width:52px;height:52px;border-radius:50%;border:none;
+    background:linear-gradient(135deg,#ffd700,#ffaa00);
+    color:#000;font-size:22px;cursor:pointer;
+    box-shadow:0 4px 20px rgba(255,215,0,0.4);
+    display:flex;align-items:center;justify-content:center;
+    transition:transform 0.15s,opacity 0.2s;
+    -webkit-tap-highlight-color:transparent;
+  " onmousedown="this.style.transform='scale(0.92)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+    🗓
+  </button>
+
   <!-- ── LINES PAGE ── -->
   <div id="line" class="page active">
     <div class="streak-pill" id="streak-pill" style="display:none"><span class="streak-fire">🔥</span><span id="streak-count">0</span> week streak</div>

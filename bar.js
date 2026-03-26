@@ -25,7 +25,7 @@ function openUberToBar() {
 // BAR.JS — Full Venue Hub Page
 // ══════════════════════════════════════════════
 
-let currentBarIndex = null;
+// currentBarIndex declared in globals.js
 
 // ── BAR METADATA ──
 const BAR_META = {

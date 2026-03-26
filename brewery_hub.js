@@ -141,6 +141,21 @@ function openBreweryHub() {
   var existing = document.getElementById('mh-brewery-hub');
   if (existing) existing.remove();
 
+  // Map mode: show glowing spots, open hub on tap
+  var menuHome = document.getElementById('menu-home');
+  var onMap = menuHome && menuHome.style.display !== 'none';
+  if (onMap && arguments[0] !== 'direct') {
+    var mapSpots = (typeof BREWERY_SPOTS !== 'undefined' ? BREWERY_SPOTS : [])
+      .filter(function(s) { return s.coords; })
+      .map(function(s) { return { id: s.id || s.name, name: s.name, emoji: s.emoji || '🍺', coords: s.coords }; });
+    if (mapSpots.length) {
+      hubActivateMapMode(mapSpots, '#f59e0b', function() { openBreweryHub('direct'); });
+      return;
+    }
+  }
+  hubDeactivateMapMode();
+
+
   if (!document.getElementById('brew-hub-css')) {
     var s = document.createElement('style');
     s.id = 'brew-hub-css';
@@ -160,7 +175,7 @@ function openBreweryHub() {
 
   var hub = document.createElement('div');
   hub.id = 'mh-brewery-hub';
-  hub.style.cssText = 'position:absolute;inset:0;z-index:22;display:flex;flex-direction:column;background:rgba(6,6,15,0.96);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
+  hub.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;background:rgba(6,6,15,0.96);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
 
   hub.innerHTML =
     '<div style="padding:52px 20px 0;flex-shrink:0">' +
@@ -182,12 +197,13 @@ function openBreweryHub() {
       brewRenderList(SLO_BREWERIES) +
     '</div>';
 
-  document.getElementById('menu-home').appendChild(hub);
+  getHubParent().appendChild(hub);
   setTimeout(function() { hub.style.opacity = '1'; }, 30);
 }
 window.menuHomeOpenBreweryHub = openBreweryHub;
 
 function closeBreweryHub() {
+  hubDeactivateMapMode();
   var h = document.getElementById('mh-brewery-hub');
   if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
 }
@@ -265,7 +281,7 @@ function brewOpenDetail(id) {
 
   var sheet = document.createElement('div');
   sheet.id = 'mh-brew-detail';
-  sheet.style.cssText = 'position:absolute;inset:0;z-index:24;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
 
   var inCrawl = brewCrawlList.indexOf(b.id) >= 0;
 
@@ -301,7 +317,7 @@ function brewOpenDetail(id) {
       '<button onclick="brewCloseDetail()" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Close</button>' +
     '</div>';
 
-  document.getElementById('menu-home').appendChild(sheet);
+  getHubParent().appendChild(sheet);
   setTimeout(function() {
     sheet.style.opacity = '1';
     document.getElementById('mh-bd-inner').style.transform = 'translateY(0)';
