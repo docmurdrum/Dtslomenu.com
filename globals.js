@@ -196,3 +196,195 @@ function setHubGlowVisible(hubId, visible) {
   try { localStorage.setItem('dtslo_hub_glow_state', JSON.stringify(_hubGlowState)); } catch(e) {}
 }
 window.setHubGlowVisible = setHubGlowVisible;
+
+
+// ══════════════════════════════════════════════
+// DEV ERROR OVERLAY
+// Only active when localStorage has dtslo_dev_mode=1
+// OR when logged in as devtest@dtslomenu.com
+// Catches: JS errors, unhandled promise rejections,
+//          console.warn, console.error, try/catch swallows
+// ══════════════════════════════════════════════
+
+(function() {
+  var _errors = [];
+  var _overlay = null;
+  var _badge = null;
+  var _isDevMode = false;
+
+  function checkDevMode() {
+    _isDevMode = localStorage.getItem('dtslo_dev_mode') === '1' ||
+                 localStorage.getItem('dtslo_dev_errors') === '1';
+  }
+
+  function getOverlay() {
+    if (_overlay && document.getElementById('dtslo-err-overlay')) return _overlay;
+
+    var o = document.createElement('div');
+    o.id = 'dtslo-err-overlay';
+    o.style.cssText = [
+      'position:fixed;bottom:80px;left:0;right:0;z-index:99999;',
+      'max-height:55vh;overflow-y:auto;',
+      'background:rgba(6,0,0,0.97);',
+      'border-top:2px solid #ef4444;',
+      'font-family:monospace;font-size:11px;color:#f87171;',
+      'display:none;padding:8px 12px 12px;',
+      'backdrop-filter:blur(8px);'
+    ].join('');
+
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(239,68,68,0.3);';
+    header.innerHTML = '<span style="font-size:12px;font-weight:900;color:#ef4444;letter-spacing:1px">DEV ERROR LOG</span>' +
+      '<div style="display:flex;gap:8px">' +
+        '<button onclick="dtsloErrClear()" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:3px 10px;border-radius:6px;font-size:10px;font-family:monospace;cursor:pointer">Clear</button>' +
+        '<button onclick="dtsloErrClose()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);padding:3px 10px;border-radius:6px;font-size:10px;font-family:monospace;cursor:pointer">Hide</button>' +
+      '</div>';
+    o.appendChild(header);
+
+    var list = document.createElement('div');
+    list.id = 'dtslo-err-list';
+    o.appendChild(list);
+
+    document.body.appendChild(o);
+    _overlay = o;
+    return o;
+  }
+
+  function getBadge() {
+    if (_badge && document.getElementById('dtslo-err-badge')) return _badge;
+    var b = document.createElement('button');
+    b.id = 'dtslo-err-badge';
+    b.onclick = function() { dtsloErrShow(); };
+    b.style.cssText = [
+      'position:fixed;bottom:88px;right:12px;z-index:100000;',
+      'background:#ef4444;color:#fff;',
+      'border:none;border-radius:20px;',
+      'padding:5px 10px;font-size:11px;font-weight:900;',
+      'font-family:monospace;cursor:pointer;',
+      'display:none;box-shadow:0 2px 12px rgba(239,68,68,0.6);',
+      'letter-spacing:0.5px;'
+    ].join('');
+    document.body.appendChild(b);
+    _badge = b;
+    return b;
+  }
+
+  function addError(type, msg, source) {
+    checkDevMode();
+    if (!_isDevMode) return;
+
+    var entry = {
+      type: type,
+      msg: String(msg).substring(0, 300),
+      source: source || '',
+      time: new Date().toLocaleTimeString()
+    };
+    _errors.push(entry);
+
+    // Ensure DOM is ready
+    if (!document.body) {
+      setTimeout(function() { addError(type, msg, source); }, 500);
+      return;
+    }
+
+    var o = getOverlay();
+    var list = document.getElementById('dtslo-err-list');
+    if (!list) return;
+
+    var row = document.createElement('div');
+    row.style.cssText = 'padding:5px 0;border-bottom:1px solid rgba(239,68,68,0.1);line-height:1.5;';
+    var color = type === 'error' ? '#f87171' : type === 'warn' ? '#fbbf24' : '#a78bfa';
+    var icon  = type === 'error' ? '❌' : type === 'warn' ? '⚠️' : '🔵';
+    row.innerHTML =
+      '<span style="color:rgba(255,255,255,0.3);font-size:10px">' + entry.time + '</span> ' +
+      '<span style="color:' + color + ';font-weight:900">' + icon + ' ' + type.toUpperCase() + '</span> ' +
+      '<span style="color:#fca5a5">' + escHtml(entry.msg) + '</span>' +
+      (entry.source ? '<div style="color:rgba(255,255,255,0.25);font-size:10px;margin-top:2px">at ' + escHtml(entry.source) + '</div>' : '');
+    list.appendChild(row);
+    list.scrollTop = list.scrollHeight;
+
+    // Show badge with count
+    var badge = getBadge();
+    var errCount = _errors.filter(function(e) { return e.type === 'error'; }).length;
+    var warnCount = _errors.filter(function(e) { return e.type === 'warn'; }).length;
+    badge.textContent = errCount + ' err' + (warnCount ? ' · ' + warnCount + ' warn' : '');
+    badge.style.display = 'block';
+    badge.style.background = errCount > 0 ? '#ef4444' : '#f59e0b';
+
+    // Auto-show overlay on first error
+    if (_errors.length === 1 && type === 'error') {
+      o.style.display = 'block';
+    }
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── PUBLIC API ──
+  window.dtsloErrShow = function() {
+    var o = getOverlay();
+    if (o) o.style.display = 'block';
+  };
+  window.dtsloErrClose = function() {
+    var o = document.getElementById('dtslo-err-overlay');
+    if (o) o.style.display = 'none';
+  };
+  window.dtsloErrClear = function() {
+    _errors = [];
+    var list = document.getElementById('dtslo-err-list');
+    if (list) list.innerHTML = '';
+    var badge = document.getElementById('dtslo-err-badge');
+    if (badge) badge.style.display = 'none';
+    var o = document.getElementById('dtslo-err-overlay');
+    if (o) o.style.display = 'none';
+  };
+  // Call this after dev login to activate
+  window.dtsloErrEnable = function() {
+    localStorage.setItem('dtslo_dev_mode', '1');
+    _isDevMode = true;
+    addError('info', 'Dev error overlay active — all errors will appear here', '');
+  };
+
+  // ── INTERCEPT window.onerror ──
+  var _origOnerror = window.onerror;
+  window.onerror = function(msg, src, line, col, err) {
+    addError('error',
+      msg + (err && err.stack ? '\n' + err.stack.split('\n').slice(0,3).join('\n') : ''),
+      (src ? src.split('/').pop() : '') + (line ? ':' + line : '')
+    );
+    if (_origOnerror) return _origOnerror.apply(this, arguments);
+    return false;
+  };
+
+  // ── INTERCEPT unhandled promise rejections ──
+  window.addEventListener('unhandledrejection', function(e) {
+    var msg = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+    addError('error', 'Unhandled Promise rejection: ' + msg, '');
+  });
+
+  // ── INTERCEPT console.error and console.warn ──
+  var _origErr  = console.error;
+  var _origWarn = console.warn;
+
+  console.error = function() {
+    var msg = Array.prototype.slice.call(arguments).map(String).join(' ');
+    addError('error', msg, '');
+    _origErr.apply(console, arguments);
+  };
+
+  console.warn = function() {
+    var msg = Array.prototype.slice.call(arguments).map(String).join(' ');
+    // Filter noisy expected warns
+    var noisy = ['[Map error]','[hubGlow]','[SW]','MapLibre','maplibre'];
+    if (noisy.some(function(n){ return msg.indexOf(n) !== -1; })) {
+      _origWarn.apply(console, arguments);
+      return;
+    }
+    addError('warn', msg, '');
+    _origWarn.apply(console, arguments);
+  };
+
+  // Init check
+  checkDevMode();
+})();

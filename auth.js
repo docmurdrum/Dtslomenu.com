@@ -62,6 +62,7 @@ async function devLogin() {
       window._pendingDTSLOEntry = true;
       await onLogin(data.user);
       showToast('🛠️ Dev login active');
+      if (typeof dtsloErrEnable === 'function') dtsloErrEnable();
       seedDevItinerary();
       return;
     }
