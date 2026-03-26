@@ -161,7 +161,29 @@ async function submitSuggestion(hubId) {
 window.menuHomeSubmitSuggestion = submitSuggestion;
 
 function loadHomeMap() {
-  if (!window.maplibregl) return;
+  // If MapLibre hasn't loaded yet from CDN, wait and retry
+  if (!window.maplibregl) {
+    var attempts = 0;
+    var wait = setInterval(function() {
+      attempts++;
+      if (window.maplibregl) {
+        clearInterval(wait);
+        loadHomeMap();
+      } else if (attempts > 20) {
+        clearInterval(wait);
+        // MapLibre failed to load — show a message instead of black screen
+        var container = document.getElementById('mh-map');
+        if (container) {
+          container.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:#06060f';
+          container.innerHTML = '<div style="font-size:32px">🗺</div>' +
+            '<div style="color:rgba(255,255,255,0.7);font-size:14px;font-weight:700;font-family:Helvetica Neue,sans-serif">Map failed to load</div>' +
+            '<div style="color:rgba(255,255,255,0.35);font-size:12px;font-family:Helvetica Neue,sans-serif;text-align:center;padding:0 32px">Check your connection and reload the page</div>' +
+            '<button onclick="location.reload()" style="margin-top:8px;padding:12px 24px;background:#ff2d78;border:none;border-radius:20px;color:#fff;font-size:13px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer">Reload</button>';
+        }
+      }
+    }, 200);
+    return;
+  }
   var container = document.getElementById('mh-map');
   if (!container) return;
 
