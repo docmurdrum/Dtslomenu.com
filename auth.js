@@ -155,8 +155,11 @@ async function doSignup() {
 // ── ON LOGIN ──
 async function onLogin(user, isNewUser = false) {
   currentUser = user;
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
+  // Always hide auth, show app
+  const authEl = document.getElementById('auth-screen');
+  const appEl  = document.getElementById('app');
+  if (authEl) authEl.style.display = 'none';
+  if (appEl)  { appEl.style.display = 'block'; appEl.style.opacity = '1'; }
   renderAvatar();
   updateUsernameBar();
   await loadUserStats();
@@ -296,21 +299,32 @@ async function requireAuthForDTSLO() {
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session?.user) {
-      // Already logged in — go straight in
-      if (!currentUser) await onLogin(session.user);
+      // Already logged in — restore session silently then enter
+      currentUser = session.user;
+      try { await loadUserStats(); } catch(e) {}
+      try { renderAvatar(); } catch(e) {}
+      // Hide auth screen just in case
+      const authEl = document.getElementById('auth-screen');
+      if (authEl) authEl.style.display = 'none';
       menuHomeEnterDTSLO();
     } else {
-      // Not logged in — show auth screen with back button
-      document.getElementById('auth-screen').style.display = 'flex';
-      document.getElementById('app').style.display = 'none';
+      // Not logged in — show auth with back button
+      const authEl = document.getElementById('auth-screen');
+      const appEl  = document.getElementById('app');
+      if (authEl) authEl.style.display = 'flex';
+      if (appEl)  appEl.style.display  = 'none';
       maybeShowAuthBackBtn();
-      // Store intent so after login we enter DTSLO
       window._pendingDTSLOEntry = true;
     }
   } catch(e) {
-    // Fallback — show auth
-    document.getElementById('auth-screen').style.display = 'flex';
-    maybeShowAuthBackBtn();
-    window._pendingDTSLOEntry = true;
+    // On any error — still try to enter if we have a current user
+    if (currentUser) {
+      menuHomeEnterDTSLO();
+    } else {
+      const authEl = document.getElementById('auth-screen');
+      if (authEl) authEl.style.display = 'flex';
+      maybeShowAuthBackBtn();
+      window._pendingDTSLOEntry = true;
+    }
   }
 }

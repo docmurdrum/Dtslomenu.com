@@ -3,6 +3,7 @@
 // ══════════════════════════════════════════════
 
 // ── PLAN IT — Claude AI Powered ──
+// Expose to window for inline onclick handlers
 var piState = {
   step: 0,  // 0=form, 1=loading, 2=result
   groupSize: 2,
@@ -213,7 +214,7 @@ async function piGenerate() {
     'SLO bars: Black Sheep, Frog Peach, Nightcap, Library, High Bar, Sidecar, Feral, BA Start Arcade. ' +
     'Restaurants: Novo (upscale), Firestone (casual tri-tip), Luna Red (tapas patio), Bear Wren (pizza). ' +
     'Thursday 6-9pm is Farmers Market on Higuera. Safe Ride free Thu-Sat 10pm-3am. ' +
-    'Return ONLY valid JSON: {headline, summary, stops:[{time,name,type,description,cost,tip}], total_cost, ride_note, pro_tip}';
+    'Return ONLY valid JSON: {headline, summary, stops:[{time,name,type,description,cost,tip,duration_mins}], total_cost, ride_note, pro_tip}. duration_mins is estimated time at each stop as an integer (e.g. 60 for 1 hour at a restaurant, 45 for a bar stop). cost is per person estimate like $15-25.';
 
   try {
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -300,7 +301,7 @@ function piRenderResult(plan) {
       (plan.pro_tip ? '<div style="padding:12px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.15);border-radius:12px;font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:16px">💡 <strong style="color:#ffd700">Pro tip:</strong> ' + plan.pro_tip + '</div>' : '') +
 
       '<div style="display:flex;gap:10px">' +
-        '<button onclick="piState.step=0;piRender()" style="flex:1;padding:13px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:13px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer">← Change It</button>' +
+        '<button onclick="window.piState.step=0;window.piRender()" style="flex:1;padding:13px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:13px;font-weight:700;font-family:Helvetica Neue,sans-serif;cursor:pointer">← Change It</button>' +
         '<button onclick="menuHomeClosePlanIt()" style="flex:1;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:13px;font-weight:800;font-family:Helvetica Neue,sans-serif;cursor:pointer">Lets Go →</button>' +
       '</div>' +
     '</div>';

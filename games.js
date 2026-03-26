@@ -1008,6 +1008,26 @@ function getLockCountdown() {
 
 // ── INIT GAMES PAGE ──
 function initGamesPage() {
+  // Add Bar Golf card if not already present
+  var gamesPage = document.getElementById('games');
+  if (gamesPage && !document.getElementById('bar-golf-card')) {
+    var card = document.createElement('div');
+    card.id = 'bar-golf-card';
+    card.style.cssText = 'padding:14px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2);border-radius:16px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:12px';
+    card.onclick = function() { openBarGolf(); };
+    card.innerHTML = '<div style="font-size:32px">⛳</div>' +
+      '<div style="flex:1"><div style="font-size:15px;font-weight:800">Bar Golf</div>' +
+      '<div style="font-size:12px;color:rgba(255,255,255,0.5)">Hit every bar · Track your score · Lowest drinks wins</div>' +
+      '<div style="font-size:10px;color:#22c55e;margin-top:4px">3 courses · 4-9 holes</div></div>' +
+      '<div style="font-size:20px;color:rgba(34,197,94,0.6)">→</div>';
+    // Insert at top of games page content
+    var firstChild = gamesPage.querySelector('div');
+    if (firstChild) gamesPage.insertBefore(card, firstChild.nextSibling);
+    else gamesPage.appendChild(card);
+  }
+}
+
+function initGamesPage() {
   // Show grid, hide all panels
   backToGamesGrid();
   // Pre-load data in background
