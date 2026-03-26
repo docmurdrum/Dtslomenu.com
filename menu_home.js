@@ -538,7 +538,25 @@ function injectHTML() {
       '</div>',
     '</div>',
 
-    dev ? '<div id="mh-drawer-dev" class="mh-drawer"><div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div><div class="mh-drawer-title">🐛 Dev</div><div id="mh-dev-coords" style="font-size:10px;color:#b44fff;font-family:monospace;margin-bottom:12px"></div><button class="mh-tool-btn" onclick="menuHomeEnterDTSLO()">→ Skip to DTSLO</button></div>' : '',
+    dev ? [
+      '<div id="mh-drawer-dev" class="mh-drawer">',
+        '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
+        '<div class="mh-drawer-title">🐛 Dev Tools</div>',
+        '<div id="mh-dev-coords" style="font-size:10px;color:#b44fff;font-family:monospace;margin-bottom:12px"></div>',
+
+        '<div class="mh-section-label">🗺 MAP EFFECTS</div>',
+        '<div class="mh-tools-grid" style="margin-bottom:12px">',
+          '<button class="mh-tool-btn" id="dev-pulse-btn" onclick="devTogglePulse()"><div class="mh-tool-icon">💥</div><div>Pulsing Rings</div></button>',
+          '<button class="mh-tool-btn" id="dev-tour-btn" onclick="devToggleTour()"><div class="mh-tool-icon">🌀</div><div>Camera Tour</div></button>',
+        '</div>',
+
+        '<div class="mh-section-label">🧪 APP</div>',
+        '<div class="mh-tools-grid">',
+          '<button class="mh-tool-btn" onclick="menuHomeEnterDTSLO()"><div class="mh-tool-icon">→</div><div>Skip to DTSLO</div></button>',
+          '<button class="mh-tool-btn" onclick="devResetMap()"><div class="mh-tool-icon">🔄</div><div>Reset Map</div></button>',
+        '</div>',
+      '</div>'
+    ].join('') : '',
 
     // TOOLBAR
     '<div id="mh-toolbar">',
@@ -659,3 +677,121 @@ function injectCSS() {
   ].join('');
   document.head.appendChild(s);
 }
+
+// ── DEV MAP EFFECTS ──
+var _devPulseActive = false;
+var _devPulseInterval = null;
+var _devTourActive = false;
+
+function devTogglePulse() {
+  var btn = document.getElementById('dev-pulse-btn');
+  if (_devPulseActive) {
+    // Turn off
+    _devPulseActive = false;
+    if (_devPulseInterval) { clearInterval(_devPulseInterval); _devPulseInterval = null; }
+    if (homeMap) {
+      try { if (homeMap.getLayer('dev-pulse')) homeMap.removeLayer('dev-pulse'); } catch(e) {}
+      try { if (homeMap.getLayer('dev-pulse-core')) homeMap.removeLayer('dev-pulse-core'); } catch(e) {}
+      try { if (homeMap.getSource('dev-pulse-src')) homeMap.removeSource('dev-pulse-src'); } catch(e) {}
+    }
+    if (btn) { btn.style.background = ''; btn.style.borderColor = ''; btn.style.color = ''; }
+    return;
+  }
+
+  _devPulseActive = true;
+  if (btn) { btn.style.background = 'rgba(255,45,120,0.15)'; btn.style.borderColor = '#ff2d78'; btn.style.color = '#ff2d78'; }
+
+  if (!homeMap) return;
+
+  // Hub coords as GeoJSON
+  var features = [
+    { coords: [-120.6650,35.2803], color: '#ff2d78' },
+    { coords: [-120.6655,35.2808], color: '#f97316' },
+    { coords: [-120.6750,35.2680], color: '#06b6d4' },
+    { coords: [-120.8200,35.3600], color: '#9b2335' },
+    { coords: [-120.6595,35.2808], color: '#f59e0b' },
+    { coords: [-120.6785,35.2920], color: '#22c55e' },
+    { coords: [-120.6595,35.2750], color: '#ef4444' },
+    { coords: [-120.6590,35.2820], color: '#ffd700' },
+    { coords: [-120.6540,35.2980], color: '#6366f1' },
+    { coords: [-120.6620,35.2790], color: '#00f5ff' },
+  ].map(function(h) {
+    return { type: 'Feature', geometry: { type: 'Point', coordinates: h.coords }, properties: { color: h.color } };
+  });
+
+  try {
+    homeMap.addSource('dev-pulse-src', { type: 'geojson', data: { type: 'FeatureCollection', features: features } });
+
+    // Outer glow ring
+    homeMap.addLayer({ id: 'dev-pulse', type: 'circle', source: 'dev-pulse-src', paint: {
+      'circle-radius': 28,
+      'circle-color': ['get', 'color'],
+      'circle-opacity': 0.2,
+      'circle-blur': 0.6,
+    }});
+
+    // Solid core
+    homeMap.addLayer({ id: 'dev-pulse-core', type: 'circle', source: 'dev-pulse-src', paint: {
+      'circle-radius': 14,
+      'circle-color': ['get', 'color'],
+      'circle-opacity': 0.9,
+      'circle-stroke-width': 2,
+      'circle-stroke-color': 'rgba(255,255,255,0.5)',
+    }});
+
+    // Animate the ring
+    var r = 20, growing = true;
+    _devPulseInterval = setInterval(function() {
+      if (!homeMap || !homeMap.getLayer('dev-pulse')) return;
+      r += growing ? 2 : -2;
+      if (r > 42) growing = false;
+      if (r < 20) growing = true;
+      homeMap.setPaintProperty('dev-pulse', 'circle-radius', r);
+      homeMap.setPaintProperty('dev-pulse', 'circle-opacity', 0.08 + (r - 20) / 120);
+    }, 60);
+
+    homeMap.flyTo({ center: [-120.6650, 35.2803], zoom: 11, pitch: 20, bearing: 0, duration: 800 });
+  } catch(e) { console.warn('[devPulse]', e); }
+}
+window.devTogglePulse = devTogglePulse;
+
+function devToggleTour() {
+  var btn = document.getElementById('dev-tour-btn');
+  if (_devTourActive) {
+    _devTourActive = false;
+    if (btn) { btn.style.background = ''; btn.style.borderColor = ''; btn.style.color = ''; }
+    homeMap && homeMap.stop();
+    return;
+  }
+
+  _devTourActive = true;
+  if (btn) { btn.style.background = 'rgba(99,102,241,0.15)'; btn.style.borderColor = '#6366f1'; btn.style.color = '#a5b4fc'; }
+
+  var stops = [
+    { center: [-120.6650,35.2803], zoom: 17,   pitch: 70, bearing: 0,   duration: 1400 },
+    { center: [-120.6750,35.2680], zoom: 14.5, pitch: 55, bearing: 90,  duration: 1600 },
+    { center: [-120.8200,35.3600], zoom: 11.5, pitch: 40, bearing: -45, duration: 2000 },
+    { center: [-120.6540,35.2980], zoom: 15,   pitch: 60, bearing: 180, duration: 1600 },
+    { center: [-120.6595,35.2750], zoom: 14,   pitch: 50, bearing: 45,  duration: 1400 },
+    { center: [-120.6650,35.2803], zoom: 13,   pitch: 45, bearing: -20, duration: 1400 },
+  ];
+
+  var i = 0;
+  function next() {
+    if (!_devTourActive || i >= stops.length) {
+      _devTourActive = false;
+      if (btn) { btn.style.background = ''; btn.style.borderColor = ''; btn.style.color = ''; }
+      return;
+    }
+    homeMap.flyTo(stops[i++]);
+    homeMap.once('moveend', function() { setTimeout(next, 400); });
+  }
+  next();
+}
+window.devToggleTour = devToggleTour;
+
+function devResetMap() {
+  if (!homeMap) return;
+  homeMap.flyTo({ center: [-120.6650, 35.2803], zoom: 14, pitch: 45, bearing: -20, duration: 800 });
+}
+window.devResetMap = devResetMap;

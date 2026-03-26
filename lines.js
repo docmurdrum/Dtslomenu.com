@@ -92,6 +92,14 @@ async function loadBarsFromDB() {
       }
     });
     _barsDBLoaded = true; // Mark as loaded — won't re-fetch on report refreshes
+    // Preload all emblem images into browser cache immediately
+    bars.forEach(function(b) {
+      if (b.emblem_url && !b._emblemPreloaded) {
+        var img = new Image();
+        img.src = b.emblem_url;
+        b._emblemPreloaded = true;
+      }
+    });
   } catch(e) {
     console.warn('[lines] loadBarsFromDB:', e.message);
   }
@@ -239,6 +247,70 @@ function updateSummaryStrip() {
   const active = bars.filter(b => getStatus(b) !== 'No Data').length;
   if (active === 0) sub.textContent = 'No reports yet tonight — be the first!';
   else sub.textContent = `${active} bar${active !== 1 ? 's' : ''} reporting · ${total} report${total !== 1 ? 's' : ''} (30min)`;
+}
+
+
+
+// ── SMART UPDATE — only refreshes dynamic parts, preserves emblem images ──
+function renderBarsUpdate() {
+  const c = document.getElementById('bars');
+  if (!c) return;
+
+  const order = { 'Packed': 0, 'Busy': 1, 'Dead': 2, 'No Data': 3 };
+  const sorted = [...bars].map((bar, i) => ({ bar, i }))
+    .sort((a, b) => (order[getStatus(a.bar)] ?? 3) - (order[getStatus(b.bar)] ?? 3));
+
+  // Check if sort order changed — if so, full rebuild needed
+  var cards = Array.from(c.querySelectorAll('.bar-card-v2'));
+  var currentOrder = cards.map(function(card) { return card.dataset.barName; });
+  var newOrder = sorted.map(function(x) { return x.bar.name; });
+  var orderChanged = currentOrder.join(',') !== newOrder.join(',');
+  if (orderChanged) {
+    c.innerHTML = '';
+    renderBars();
+    return;
+  }
+
+  // Update each card's dynamic parts without touching the emblem
+  sorted.forEach(function(x) {
+    var bar = x.bar, i = x.i;
+    var status = getStatus(bar);
+    var st = statusLabel(status);
+    var userReport = bar.reports.find(function(r) { return r.user_id === (currentUser && currentUser.id) && r.time > Date.now() - 30*60*1000; });
+    var userStatus = userReport && userReport.status;
+
+    // Find card by bar name
+    var card = c.querySelector('[data-bar-name="' + bar.name.replace(/"/g,'&quot;') + '"]');
+    if (!card) return;
+
+    // Update status badge
+    var badge = card.querySelector('.bar-status-badge-v2');
+    if (badge) {
+      badge.className = 'bar-status-badge-v2 status-badge-' + status.replace(' ','');
+      badge.textContent = st.text;
+    }
+
+    // Update vote buttons
+    var votes = card.querySelectorAll('.g2-vote');
+    votes.forEach(function(btn) {
+      var s = btn.dataset.status;
+      btn.classList.toggle('sel', s === userStatus);
+    });
+
+    // Update card class for packed/busy glow
+    var isPacked = status === 'Packed';
+    var isBusy   = status === 'Busy';
+    var isCollapsed = status === 'Dead' || status === 'No Data';
+    var cls = 'bar-card-v2';
+    if (isPacked) cls += ' v2-packed';
+    else if (isBusy) cls += ' v2-busy';
+    else if (isCollapsed) cls += ' v2-collapsed';
+    card.className = cls;
+
+    // Update report time
+    var timeEl = card.querySelector('.bar-report-time-v2');
+    if (timeEl) timeEl.textContent = bar.reports[0] ? timeAgo(bar.reports[0].time) : '';
+  });
 }
 
 
@@ -415,6 +487,14 @@ function showFriendsAtBar(barIndex, event) {
 function renderBars() {
   const c = document.getElementById('bars');
   if (!c) return;
+  // Only do a full rebuild if cards don't exist yet
+  // If they exist, update dynamic parts in-place to preserve image cache
+  var existingCards = c.querySelectorAll('.bar-card-v2');
+  var needsFullRebuild = existingCards.length === 0;
+  if (!needsFullRebuild) {
+    renderBarsUpdate();
+    return;
+  }
   c.innerHTML = '';
 
   const tb = document.getElementById('thursday-banner');
@@ -500,6 +580,7 @@ function renderBars() {
     if (fx.shake)  cardClasses += ' emblem-effect-shake';
     if (fx.dim)    cardClasses += ' card-effect-dim';
     el.className = cardClasses;
+    el.dataset.barName = bar.name;
 
     // Line count and inside count from checkins
     const lineCount    = Object.values(activeCheckins).filter(c => c.barName === bar.name && c.type === 'line').length;
@@ -566,13 +647,13 @@ function renderBars() {
       </div>
 
       <div class="vote-row">
-        <button class="vote-btn dead ${userStatus==='Dead'?'selected':''}" onclick="handleVote(event,${i},'Dead')">
+        <button class="vote-btn dead ${userStatus==='Dead'?'selected':''}" onclick="handleVote(event,${i},'Dead')" data-status="Dead">
           <span class="vote-btn-label">Empty</span>
         </button>
-        <button class="vote-btn busy ${userStatus==='Busy'?'selected':''}" onclick="handleVote(event,${i},'Busy')">
+        <button class="vote-btn busy ${userStatus==='Busy'?'selected':''}" onclick="handleVote(event,${i},'Busy')" data-status="Busy">
           <span class="vote-btn-label">Busy</span>
         </button>
-        <button class="vote-btn packed ${userStatus==='Packed'?'selected':''}" onclick="handleVote(event,${i},'Packed')">
+        <button class="vote-btn packed ${userStatus==='Packed'?'selected':''}" onclick="handleVote(event,${i},'Packed')" data-status="Packed">
           <span class="vote-btn-label">Packed</span>
         </button>
       </div>
@@ -676,9 +757,9 @@ function renderGrid2() {
         <div class="g2-addr">${bar.address}</div>
       </div>
       <div class="g2-votes">
-        <button class="g2-vote ${userStatus==='Dead'?'sel':''}" onclick="handleVote(event,${i},'Dead')" style="${userStatus==='Dead'?'color:'+barColor:''}">Empty</button>
-        <button class="g2-vote ${userStatus==='Busy'?'sel':''}" onclick="handleVote(event,${i},'Busy')" style="${userStatus==='Busy'?'color:'+barColor:''}">Busy</button>
-        <button class="g2-vote ${userStatus==='Packed'?'sel':''}" onclick="handleVote(event,${i},'Packed')" style="${userStatus==='Packed'?'color:'+barColor:''}">Packed</button>
+        <button class="g2-vote ${userStatus==='Dead'?'sel':''}" onclick="handleVote(event,${i},'Dead')" data-status="Dead" style="${userStatus==='Dead'?'color:'+barColor:''}">Empty</button>
+        <button class="g2-vote ${userStatus==='Busy'?'sel':''}" onclick="handleVote(event,${i},'Busy')" data-status="Busy" style="${userStatus==='Busy'?'color:'+barColor:''}">Busy</button>
+        <button class="g2-vote ${userStatus==='Packed'?'sel':''}" onclick="handleVote(event,${i},'Packed')" data-status="Packed" style="${userStatus==='Packed'?'color:'+barColor:''}">Packed</button>
       </div>
     `;
     el.addEventListener('click', (e) => { if (!e.target.classList.contains('g2-vote')) openBarPage(i); });

@@ -138,22 +138,27 @@ var BEER_STYLES = [
 var brewCrawlList = [];
 
 function openBreweryHub() {
-  var existing = document.getElementById('mh-brewery-hub');
+  var existing = document.getElementById('mh-Breweryhub');
   if (existing) existing.remove();
 
-  // Map mode: show glowing spots, open hub on tap
-  var menuHome = document.getElementById('menu-home');
-  var onMap = menuHome && menuHome.style.display !== 'none';
-  if (onMap && arguments[0] !== 'direct') {
-    var mapSpots = (typeof BREWERY_SPOTS !== 'undefined' ? BREWERY_SPOTS : [])
+  // Show spot picker on map, then open hub
+  if (typeof hubShowSpotPicker === 'function') {
+    var _spots = (typeof BREWERY_SPOTS !== 'undefined' ? BREWERY_SPOTS : [])
       .filter(function(s) { return s.coords; })
-      .map(function(s) { return { id: s.id || s.name, name: s.name, emoji: s.emoji || '🍺', coords: s.coords }; });
-    if (mapSpots.length) {
-      hubActivateMapMode(mapSpots, '#f59e0b', function() { openBreweryHub('direct'); });
-      return;
-    }
+      .map(function(s) { return { id: s.id || s.name, name: s.name, emoji: s.emoji || '🍺', coords: s.coords, meta: s.difficulty || s.type || '' }; });
+    hubShowSpotPicker(_spots, '#f59e0b', '🍺 Craft Beer',
+      function() {
+        // Sort by proximity if user tapped a spot
+        if (window._findHubsUserCenter && typeof sortByProximity === 'function') {
+          _spots = sortByProximity(_spots, window._findHubsUserCenter[0], window._findHubsUserCenter[1]);
+        }
+        openBreweryHub('_open');
+      }
+    );
+    if (arguments[0] !== '_open') return;
   }
-  hubDeactivateMapMode();
+
+
 
 
   if (!document.getElementById('brew-hub-css')) {

@@ -221,22 +221,27 @@ var BEACHES = [
 
 // ── OPEN BEACH HUB (beach selector) ──
 function openBeachHub() {
-  var existing = document.getElementById('mh-beach-hub');
+  var existing = document.getElementById('mh-Beachhub');
   if (existing) existing.remove();
 
-  // Map mode: show glowing spots, open hub on tap
-  var menuHome = document.getElementById('menu-home');
-  var onMap = menuHome && menuHome.style.display !== 'none';
-  if (onMap && arguments[0] !== 'direct') {
-    var mapSpots = (typeof BEACH_DATA !== 'undefined' ? BEACH_DATA : [])
+  // Show spot picker on map, then open hub
+  if (typeof hubShowSpotPicker === 'function') {
+    var _spots = (typeof BEACH_DATA !== 'undefined' ? BEACH_DATA : [])
       .filter(function(s) { return s.coords; })
-      .map(function(s) { return { id: s.id || s.name, name: s.name, emoji: s.emoji || '🏖', coords: s.coords }; });
-    if (mapSpots.length) {
-      hubActivateMapMode(mapSpots, '#06b6d4', function() { openBeachHub('direct'); });
-      return;
-    }
+      .map(function(s) { return { id: s.id || s.name, name: s.name, emoji: s.emoji || '🏖', coords: s.coords, meta: s.difficulty || s.type || '' }; });
+    hubShowSpotPicker(_spots, '#06b6d4', '🏖 Beach Hub',
+      function() {
+        // Sort by proximity if user tapped a spot
+        if (window._findHubsUserCenter && typeof sortByProximity === 'function') {
+          _spots = sortByProximity(_spots, window._findHubsUserCenter[0], window._findHubsUserCenter[1]);
+        }
+        openBeachHub('_open');
+      }
+    );
+    if (arguments[0] !== '_open') return;
   }
-  hubDeactivateMapMode();
+
+
 
 
   var sheet = document.createElement('div');
