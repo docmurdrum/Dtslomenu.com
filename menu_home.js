@@ -16,7 +16,6 @@ window.menuHomePromptYes   = promptYes;
 window.menuHomePromptNo    = promptNo;
 window.menuHomeOpenDrawer  = openDrawer;
 window.menuHomeCloseDrawer = closeDrawer;
-window.menuHomeFindHubs    = findHubs;
 
 function init() {
   try {
@@ -265,128 +264,6 @@ function addHubMarkers(coordsOverride) {
     new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(hub.coords).addTo(homeMap);
   });
 }
-
-var _findHubsMarkers = [];
-
-var FIND_HUBS_DEFS = [
-  { id:'dtslo',       icon:'🌃', label:'DTSLO',        color:'#ff2d78', fn:'menuHomeRequireAuth()',       coords:[-120.6650,35.2803], glow:'255,45,120'  },
-  { id:'restaurants', icon:'🍽',  label:'Restaurants',  color:'#f97316', fn:'menuHomeOpenRestaurantHub()', coords:[-120.6655,35.2808], glow:'249,115,22'  },
-  { id:'nature',      icon:'🌿', label:'Nature',        color:'#22c55e', fn:'menuHomeOpenNatureHub()',     coords:[-120.6785,35.2920], glow:'34,197,94'   },
-  { id:'thrill',      icon:'⚡', label:'Thrill',        color:'#ef4444', fn:'menuHomeOpenThrillHub()',     coords:[-120.6595,35.2750], glow:'239,68,68'   },
-  { id:'beach',       icon:'🏖', label:'Beach',         color:'#06b6d4', fn:'menuHomeOpenBeachHub()',      coords:[-120.6750,35.2680], glow:'6,182,212'   },
-  { id:'wine',        icon:'🍷', label:'Wine',          color:'#9b2335', fn:'menuHomeOpenWineHub()',       coords:[-120.8200,35.3600], glow:'155,35,53'   },
-  { id:'brewery',     icon:'🍺', label:'Craft Beer',    color:'#f59e0b', fn:'menuHomeOpenBreweryHub()',    coords:[-120.6595,35.2808], glow:'245,158,11'  },
-  { id:'events',      icon:'🎭', label:'Events',        color:'#ffd700', fn:'menuHomeOpenEventsHub()',     coords:[-120.6590,35.2820], glow:'255,215,0'   },
-  { id:'calpoly',     icon:'🎓', label:'Cal Poly',      color:'#6366f1', fn:'menuHomeOpenCalPolyHub()',    coords:[-120.6540,35.2980], glow:'99,102,241'  },
-  { id:'city',        icon:'🏛', label:'City',          color:'#00f5ff', fn:'menuHomeOpenCityHub()',       coords:[-120.6620,35.2790], glow:'0,245,255'   },
-];
-
-function findHubs() {
-  if (window._findHubsActive) { findHubsDeactivate(); return; }
-  findHubsActivate();
-}
-
-function findHubsActivate() {
-  window._findHubsActive = true;
-
-  var btn = document.getElementById('mh-find-hubs');
-  if (btn) { btn.textContent = '✕ Exit'; btn.style.background = 'rgba(255,45,120,0.3)'; btn.style.borderColor = '#ff2d78'; btn.style.color = '#ff2d78'; }
-  if (typeof showToast === 'function') showToast('Tap a glowing hub to open it');
-
-  if (!document.getElementById('find-hubs-css')) {
-    var s = document.createElement('style');
-    s.id = 'find-hubs-css';
-    s.textContent = [
-      '@keyframes fhpulse{',
-        '0%{box-shadow:0 0 0 0 rgba(255,255,255,0.6)}',
-        '70%{box-shadow:0 0 0 14px rgba(255,255,255,0)}',
-        '100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}',
-      '}',
-      '.fh-wrap{',
-        'position:relative;',
-        'width:56px;',
-        'display:flex;flex-direction:column;align-items:center;gap:3px;',
-        'cursor:pointer;',
-        'transform:scale(0);',
-        'transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1);',
-      '}',
-      '.fh-dot{',
-        'width:52px;height:52px;border-radius:50%;',
-        'display:flex;align-items:center;justify-content:center;',
-        'font-size:22px;',
-        'border:2px solid rgba(255,255,255,0.5);',
-        'animation:fhpulse 2s ease-out infinite;',
-      '}',
-      '.fh-lbl{',
-        'font-size:10px;font-weight:800;color:#fff;',
-        'background:rgba(0,0,0,0.75);',
-        'padding:2px 7px;border-radius:20px;',
-        'white-space:nowrap;',
-        'border:1px solid rgba(255,255,255,0.15);',
-        'max-width:80px;overflow:hidden;text-overflow:ellipsis;',
-      '}',
-    ].join('');
-    document.head.appendChild(s);
-  }
-
-  FIND_HUBS_DEFS.forEach(function(h, idx) {
-    // Outer wrapper — fixed 56px wide so MapLibre anchors correctly
-    var wrap = document.createElement('div');
-    wrap.className = 'fh-wrap';
-
-    var dot = document.createElement('div');
-    dot.className = 'fh-dot';
-    dot.style.background = h.color;
-    dot.style.boxShadow = '0 0 18px ' + h.color;
-    dot.textContent = h.icon;
-
-    var lbl = document.createElement('div');
-    lbl.className = 'fh-lbl';
-    lbl.textContent = h.label;
-
-    wrap.appendChild(dot);
-    wrap.appendChild(lbl);
-
-    // Capture h for closure
-    (function(hub, delay) {
-      wrap.addEventListener('click', function() {
-        findHubsDeactivate();
-        try {
-          if (homeMap) {
-            var c = homeMap.getCenter();
-            window._findHubsUserCenter = [c.lat, c.lng];
-          }
-        } catch(e) {}
-        try { if (homeMap) homeMap.flyTo({ center: hub.coords, zoom: 14.5, duration: 600 }); } catch(e) {}
-        setTimeout(function() { try { eval(hub.fn); } catch(e) {} }, 450);
-      });
-
-      try {
-        var marker = new maplibregl.Marker({ element: wrap, anchor: 'bottom' })
-          .setLngLat(hub.coords)
-          .addTo(homeMap);
-        _findHubsMarkers.push(marker);
-      } catch(e) { console.warn('[FindHubs] marker error:', e); }
-
-      // Stagger pop-in — delay captured correctly via IIFE
-      setTimeout(function() { wrap.style.transform = 'scale(1)'; }, delay);
-    })(h, 60 + idx * 70);
-  });
-}
-
-function findHubsDeactivate() {
-  window._findHubsActive = false;
-  var btn = document.getElementById('mh-find-hubs');
-  if (btn) { btn.textContent = '📍 Find Hubs'; btn.style.background = 'rgba(8,8,20,0.75)'; btn.style.borderColor = 'rgba(255,255,255,0.15)'; btn.style.color = 'rgba(255,255,255,0.8)'; }
-  _findHubsMarkers.forEach(function(m) { try { m.remove(); } catch(e) {} });
-  _findHubsMarkers = [];
-}
-window.findHubsDeactivate = findHubsDeactivate;
-
-function menuHomeReturnToSLO() {
-  findHubsDeactivate();
-  if (homeMap) homeMap.flyTo({ center: [-120.6650,35.2803], zoom: 13.5, pitch: 55, bearing: -25, duration: 1200 });
-}
 window.menuHomeReturnToSLO = menuHomeReturnToSLO;
 
 function openTool(id) { if (typeof buildToolSheet === 'function') buildToolSheet(id); }
@@ -446,7 +323,6 @@ function injectHTML() {
     '<div id="mh-map"></div>',
     '<div id="mh-map-overlay"></div>',
     '<div id="mh-header"><div id="mh-logo">MENU</div><div id="mh-city">San Luis Obispo</div></div>',
-    '<button id="mh-find-hubs" onclick="menuHomeFindHubs()">📍 Find Hubs</button>',
     '<button id="mh-location-btn" onclick="menuHomeToggleLocation()" style="position:absolute;top:160px;right:16px;z-index:10;background:rgba(8,8,20,0.75);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);padding:7px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(8px);font-family:Helvetica Neue,sans-serif">📍 Me</button>',
 
     // HUBS DRAWER
@@ -544,16 +420,10 @@ function injectHTML() {
         '<div class="mh-drawer-title">🐛 Dev Tools</div>',
         '<div id="mh-dev-coords" style="font-size:10px;color:#b44fff;font-family:monospace;margin-bottom:12px"></div>',
 
-        '<div class="mh-section-label">🗺 MAP EFFECTS</div>',
-        '<div class="mh-tools-grid" style="margin-bottom:12px">',
-          '<button class="mh-tool-btn" id="dev-pulse-btn" onclick="devTogglePulse()"><div class="mh-tool-icon">💥</div><div>Pulsing Rings</div></button>',
-          '<button class="mh-tool-btn" id="dev-tour-btn" onclick="devToggleTour()"><div class="mh-tool-icon">🌀</div><div>Camera Tour</div></button>',
-        '</div>',
 
         '<div class="mh-section-label">🧪 APP</div>',
         '<div class="mh-tools-grid">',
           '<button class="mh-tool-btn" onclick="menuHomeEnterDTSLO()"><div class="mh-tool-icon">→</div><div>Skip to DTSLO</div></button>',
-          '<button class="mh-tool-btn" onclick="devResetMap()"><div class="mh-tool-icon">🔄</div><div>Reset Map</div></button>',
         '</div>',
       '</div>'
     ].join('') : '',
@@ -677,121 +547,3 @@ function injectCSS() {
   ].join('');
   document.head.appendChild(s);
 }
-
-// ── DEV MAP EFFECTS ──
-var _devPulseActive = false;
-var _devPulseInterval = null;
-var _devTourActive = false;
-
-function devTogglePulse() {
-  var btn = document.getElementById('dev-pulse-btn');
-  if (_devPulseActive) {
-    // Turn off
-    _devPulseActive = false;
-    if (_devPulseInterval) { clearInterval(_devPulseInterval); _devPulseInterval = null; }
-    if (homeMap) {
-      try { if (homeMap.getLayer('dev-pulse')) homeMap.removeLayer('dev-pulse'); } catch(e) {}
-      try { if (homeMap.getLayer('dev-pulse-core')) homeMap.removeLayer('dev-pulse-core'); } catch(e) {}
-      try { if (homeMap.getSource('dev-pulse-src')) homeMap.removeSource('dev-pulse-src'); } catch(e) {}
-    }
-    if (btn) { btn.style.background = ''; btn.style.borderColor = ''; btn.style.color = ''; }
-    return;
-  }
-
-  _devPulseActive = true;
-  if (btn) { btn.style.background = 'rgba(255,45,120,0.15)'; btn.style.borderColor = '#ff2d78'; btn.style.color = '#ff2d78'; }
-
-  if (!homeMap) return;
-
-  // Hub coords as GeoJSON
-  var features = [
-    { coords: [-120.6650,35.2803], color: '#ff2d78' },
-    { coords: [-120.6655,35.2808], color: '#f97316' },
-    { coords: [-120.6750,35.2680], color: '#06b6d4' },
-    { coords: [-120.8200,35.3600], color: '#9b2335' },
-    { coords: [-120.6595,35.2808], color: '#f59e0b' },
-    { coords: [-120.6785,35.2920], color: '#22c55e' },
-    { coords: [-120.6595,35.2750], color: '#ef4444' },
-    { coords: [-120.6590,35.2820], color: '#ffd700' },
-    { coords: [-120.6540,35.2980], color: '#6366f1' },
-    { coords: [-120.6620,35.2790], color: '#00f5ff' },
-  ].map(function(h) {
-    return { type: 'Feature', geometry: { type: 'Point', coordinates: h.coords }, properties: { color: h.color } };
-  });
-
-  try {
-    homeMap.addSource('dev-pulse-src', { type: 'geojson', data: { type: 'FeatureCollection', features: features } });
-
-    // Outer glow ring
-    homeMap.addLayer({ id: 'dev-pulse', type: 'circle', source: 'dev-pulse-src', paint: {
-      'circle-radius': 28,
-      'circle-color': ['get', 'color'],
-      'circle-opacity': 0.2,
-      'circle-blur': 0.6,
-    }});
-
-    // Solid core
-    homeMap.addLayer({ id: 'dev-pulse-core', type: 'circle', source: 'dev-pulse-src', paint: {
-      'circle-radius': 14,
-      'circle-color': ['get', 'color'],
-      'circle-opacity': 0.9,
-      'circle-stroke-width': 2,
-      'circle-stroke-color': 'rgba(255,255,255,0.5)',
-    }});
-
-    // Animate the ring
-    var r = 20, growing = true;
-    _devPulseInterval = setInterval(function() {
-      if (!homeMap || !homeMap.getLayer('dev-pulse')) return;
-      r += growing ? 2 : -2;
-      if (r > 42) growing = false;
-      if (r < 20) growing = true;
-      homeMap.setPaintProperty('dev-pulse', 'circle-radius', r);
-      homeMap.setPaintProperty('dev-pulse', 'circle-opacity', 0.08 + (r - 20) / 120);
-    }, 60);
-
-    homeMap.flyTo({ center: [-120.6650, 35.2803], zoom: 11, pitch: 20, bearing: 0, duration: 800 });
-  } catch(e) { console.warn('[devPulse]', e); }
-}
-window.devTogglePulse = devTogglePulse;
-
-function devToggleTour() {
-  var btn = document.getElementById('dev-tour-btn');
-  if (_devTourActive) {
-    _devTourActive = false;
-    if (btn) { btn.style.background = ''; btn.style.borderColor = ''; btn.style.color = ''; }
-    homeMap && homeMap.stop();
-    return;
-  }
-
-  _devTourActive = true;
-  if (btn) { btn.style.background = 'rgba(99,102,241,0.15)'; btn.style.borderColor = '#6366f1'; btn.style.color = '#a5b4fc'; }
-
-  var stops = [
-    { center: [-120.6650,35.2803], zoom: 17,   pitch: 70, bearing: 0,   duration: 1400 },
-    { center: [-120.6750,35.2680], zoom: 14.5, pitch: 55, bearing: 90,  duration: 1600 },
-    { center: [-120.8200,35.3600], zoom: 11.5, pitch: 40, bearing: -45, duration: 2000 },
-    { center: [-120.6540,35.2980], zoom: 15,   pitch: 60, bearing: 180, duration: 1600 },
-    { center: [-120.6595,35.2750], zoom: 14,   pitch: 50, bearing: 45,  duration: 1400 },
-    { center: [-120.6650,35.2803], zoom: 13,   pitch: 45, bearing: -20, duration: 1400 },
-  ];
-
-  var i = 0;
-  function next() {
-    if (!_devTourActive || i >= stops.length) {
-      _devTourActive = false;
-      if (btn) { btn.style.background = ''; btn.style.borderColor = ''; btn.style.color = ''; }
-      return;
-    }
-    homeMap.flyTo(stops[i++]);
-    homeMap.once('moveend', function() { setTimeout(next, 400); });
-  }
-  next();
-}
-window.devToggleTour = devToggleTour;
-
-function devResetMap() {
-  if (!homeMap) return;
-  homeMap.flyTo({ center: [-120.6650, 35.2803], zoom: 14, pitch: 45, bearing: -20, duration: 800 });
-}
-window.devResetMap = devResetMap;
