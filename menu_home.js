@@ -21,10 +21,11 @@
 window.menuHomeInit        = init;
 window.menuHomeEnterDTSLO  = enterDTSLO;
 window.menuHomeRequireAuth = function() {
+  // requireAuthForDTSLO is in auth.js — checks session then calls goToDTSLO or shows login
   if (typeof requireAuthForDTSLO === 'function') {
     requireAuthForDTSLO();
-  } else {
-    enterDTSLO(); // fallback
+  } else if (typeof goToDTSLO === 'function') {
+    goToDTSLO();
   }
 };
 window.menuHomeSkipToggle  = skipToggle;
@@ -76,87 +77,35 @@ function init() {
 }
 
 function enterDTSLO() {
+  // Clean up hub
   try { closeDrawer(); } catch(e) {}
-  try { closeToolSheet(); } catch(e) {}
+  try { if (homeMap) { homeMap.remove(); homeMap = null; } } catch(e) {}
 
-  var entered = false;
-  var el = document.getElementById('menu-home');
-
-  function doEnter() {
-    if (entered) return;
-    entered = true;
-    try { cancelHubAnimation(); } catch(e) {}
-    // Hide hub screen
-    if (el) {
-      el.style.transition = 'opacity 0.3s ease';
-      el.style.opacity = '0';
-      setTimeout(function() {
-        if (homeMap) { try { homeMap.remove(); } catch(e) {} homeMap = null; }
-        revealApp();
-      }, 320);
-    } else {
-      revealApp();
-    }
-  }
-
-  // Safety timeout — 2 seconds max, not 4
-  var safety = setTimeout(doEnter, 2000);
-
-  // Try animation, fall back immediately on any error
-  try {
-    if (typeof runHubEntryAnimation === 'function') {
-      // Brief camera move then animation
-      if (homeMap) {
-        try {
-          homeMap.flyTo({ center: [-120.6650, 35.2803], zoom: 15, pitch: 60, bearing: -15, duration: 600 });
-        } catch(e) {}
-      }
-      setTimeout(function() {
-        try {
-          runHubEntryAnimation('dtslo', function() {
-            clearTimeout(safety);
-            doEnter();
-          });
-        } catch(e) {
-          clearTimeout(safety);
-          doEnter();
-        }
-      }, 300);
-    } else {
-      // No animation available — enter immediately
-      clearTimeout(safety);
-      doEnter();
-    }
-  } catch(e) {
-    clearTimeout(safety);
-    doEnter();
+  // Go straight to app — goToDTSLO is the single entry point
+  if (typeof goToDTSLO === 'function') {
+    goToDTSLO();
+  } else {
+    revealApp();
   }
 }
 
 function revealApp() {
-  // Hide hub screen
-  var el = document.getElementById('menu-home');
-  if (el) {
-    el.style.display = 'none';
-    el.style.pointerEvents = 'none';
-    el.style.zIndex = '-1';
+  // Fallback — prefer goToDTSLO() from auth.js
+  if (typeof goToDTSLO === 'function') {
+    goToDTSLO();
+    return;
   }
-  // Ensure app is visible and interactive
+  // Direct fallback if goToDTSLO not available yet
+  var hubEl = document.getElementById('menu-home');
+  if (hubEl) { hubEl.style.display = 'none'; hubEl.style.pointerEvents = 'none'; }
+  var authEl = document.getElementById('auth-screen');
+  if (authEl) authEl.style.display = 'none';
   var app = document.getElementById('app');
-  if (app) {
-    app.style.display = 'block';
-    app.style.pointerEvents = 'auto';
-    app.style.zIndex = '1';
-    app.style.opacity = '1';
-  }
-  // Force show the active page
+  if (app) { app.style.display = 'block'; app.style.opacity = '1'; app.style.pointerEvents = 'auto'; }
   var activePage = document.querySelector('.page.active');
   if (!activePage) {
     var linePage = document.getElementById('line');
-    if (linePage) {
-      linePage.classList.add('active');
-      if (typeof loadReports === 'function') loadReports();
-    }
+    if (linePage) linePage.classList.add('active');
   }
 }
 

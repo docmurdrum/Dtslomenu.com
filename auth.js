@@ -186,16 +186,9 @@ async function onLogin(user, isNewUser = false) {
 
   // Enter DTSLO if that's where they were going
   if (window._pendingDTSLOEntry) {
-    window._pendingDTSLOEntry = false;
-    setTimeout(function() {
-      try { menuHomeEnterDTSLO(); } catch(e) { 
-        // Last resort — just show app
-        var appEl = document.getElementById('app');
-        if (appEl) { appEl.style.display = 'block'; appEl.style.opacity = '1'; }
-      }
-    }, 300);
+    goToDTSLO();
   } else {
-    // No pending entry — show hub screen
+    // No pending entry — re-init hub screen
     try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
   }
 }
@@ -306,37 +299,76 @@ window.onload = function () {
   }, 800); // Wait for map to render first
 };
 
-// Called when user taps DTSLO hub — checks session, shows login if needed
+// Called when user taps DTSLO hub
 async function requireAuthForDTSLO() {
+  // If already logged in — go straight in
+  if (currentUser) {
+    goToDTSLO();
+    return;
+  }
+  // Check for a stored session
   try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session?.user) {
-      // Already logged in — restore session silently then enter
-      currentUser = session.user;
-      try { await loadUserStats(); } catch(e) {}
-      try { renderAvatar(); } catch(e) {}
-      // Hide auth screen just in case
-      const authEl = document.getElementById('auth-screen');
-      if (authEl) authEl.style.display = 'none';
-      menuHomeEnterDTSLO();
-    } else {
-      // Not logged in — show auth with back button
-      const authEl = document.getElementById('auth-screen');
-      const appEl  = document.getElementById('app');
-      if (authEl) authEl.style.display = 'flex';
-      if (appEl)  appEl.style.display  = 'none';
-      maybeShowAuthBackBtn();
-      window._pendingDTSLOEntry = true;
+    const { data } = await supabaseClient.auth.getSession();
+    if (data && data.session && data.session.user) {
+      currentUser = data.session.user;
+      goToDTSLO();
+      return;
     }
-  } catch(e) {
-    // On any error — still try to enter if we have a current user
-    if (currentUser) {
-      menuHomeEnterDTSLO();
-    } else {
-      const authEl = document.getElementById('auth-screen');
-      if (authEl) authEl.style.display = 'flex';
-      maybeShowAuthBackBtn();
-      window._pendingDTSLOEntry = true;
+  } catch(e) {}
+
+  // Not logged in — show login screen ABOVE hub screen
+  window._pendingDTSLOEntry = true;
+  const authEl = document.getElementById('auth-screen');
+  const appEl  = document.getElementById('app');
+  if (authEl) {
+    authEl.style.display  = 'flex';
+    authEl.style.zIndex   = '9999'; // above menu-home (9998)
+    authEl.style.position = 'fixed';
+    authEl.style.inset    = '0';
+  }
+  if (appEl) appEl.style.display = 'none';
+  maybeShowAuthBackBtn();
+}
+
+// The ONE function that shows the DTSLO app — called from everywhere
+function goToDTSLO() {
+  window._pendingDTSLOEntry = false;
+
+  // Hide hub screen
+  var hubEl = document.getElementById('menu-home');
+  if (hubEl) {
+    hubEl.style.display = 'none';
+    hubEl.style.pointerEvents = 'none';
+  }
+
+  // Hide auth screen
+  var authEl = document.getElementById('auth-screen');
+  if (authEl) authEl.style.display = 'none';
+
+  // Show app
+  var appEl = document.getElementById('app');
+  if (appEl) {
+    appEl.style.display  = 'block';
+    appEl.style.opacity  = '1';
+    appEl.style.zIndex   = '1';
+    appEl.style.pointerEvents = 'auto';
+  }
+
+  // Make sure a page is active
+  var activePage = document.querySelector('.page.active');
+  if (!activePage) {
+    var linePage = document.getElementById('line');
+    if (linePage) {
+      linePage.classList.add('active');
     }
   }
+
+  // Load data if we have a user
+  if (currentUser) {
+    try { renderAvatar(); }      catch(e) {}
+    try { updateUsernameBar(); } catch(e) {}
+    try { loadReports(); }       catch(e) {}
+    try { loadUserStats(); }     catch(e) {}
+  }
 }
+window.goToDTSLO = goToDTSLO;

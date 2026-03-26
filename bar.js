@@ -212,3 +212,17 @@ async function renderBarLostFound(barName) {
       </div>`).join('');
   } catch(e) { el.innerHTML = '<div style="font-size:12px;color:var(--text2)">Could not load</div>'; }
 }
+
+// ── MERCH SHELF ──
+function openBarMerch(barIndex) {
+  var b = bars[barIndex];
+  if (!b) return;
+  if (typeof openBarMerchShelf === 'function') {
+    openBarMerchShelf(
+      b.name.toLowerCase().replace(/[^a-z0-9]/g,'-'),
+      b.name,
+      b.color
+    );
+  }
+}
+window.openBarMerch = openBarMerch;

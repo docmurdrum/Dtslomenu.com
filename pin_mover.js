@@ -25,7 +25,7 @@ async function loadSavedPinCoords() {
   HUB_PIN_DEFS.forEach(function(h) { coords[h.id] = h.defaultCoords; });
 
   try {
-    var sb = window.supabaseClient;
+    var sb = supabaseClient;
     if (!sb) return coords;
     var res = await sb.from('app_settings').select('key,value').like('key','hub_pin_%');
     if (res.data) {
@@ -195,7 +195,7 @@ async function savePinPositions() {
   var saveBtn = document.getElementById('mh-pm-save-btn');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
 
-  var sb = window.supabaseClient;
+  var sb = supabaseClient;
   if (!sb) {
     if (typeof showToast === 'function') showToast('❌ Not connected');
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save All Pins'; }
@@ -211,14 +211,15 @@ async function savePinPositions() {
       };
     });
 
-    await sb.from('app_settings').upsert(upserts);
+    var result = await sb.from('app_settings')
+      .upsert(upserts, { onConflict: 'key' });
 
-    // NOW update the live markers on the actual hub map
-    // Remove old static markers and re-add with new coords
+    if (result.error) throw result.error;
+
+    // Rebuild live markers with new coords immediately
     rebuildHubMarkersFromCoords(pinMoverCoords);
 
     if (typeof showToast === 'function') showToast('✅ Pin positions saved!');
-
     var status = document.getElementById('mh-pm-status');
     if (status) status.textContent = 'All pins saved ✅';
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save All Pins'; }

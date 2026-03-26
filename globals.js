@@ -31,3 +31,7 @@ var activeDrawer     = null;
 if (typeof window !== 'undefined') {
   window.__GLOBALS_LOADED = true;
 }
+
+// ── MERCH / PRINTFUL ──
+var PRINTFUL_KEY = 'r1xwbRdtOpANsjTjcsP7IFiA6XssWqSu28UWAsG8';
+var PRINTFUL_API = 'https://api.printful.com';
