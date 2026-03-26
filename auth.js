@@ -339,7 +339,9 @@ async function requireAuthForDTSLO() {
     authEl.style.inset    = '0';
   }
   if (appEl) appEl.style.display = 'none';
-  maybeShowAuthBackBtn();
+  // Always show back button when coming from hub map
+  const backBtn = document.getElementById('auth-back-btn');
+  if (backBtn) { backBtn.style.display = 'flex'; backBtn.style.alignItems = 'center'; backBtn.style.justifyContent = 'center'; }
 }
 
 // The ONE function that shows the DTSLO app — called from everywhere

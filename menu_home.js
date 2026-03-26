@@ -195,12 +195,15 @@ function loadHomeMap() {
           id: 'mh-3d-buildings', source: buildingSource, 'source-layer': 'building',
           type: 'fill-extrusion', minzoom: 13,
           paint: {
-            'fill-extrusion-color': ['interpolate',['linear'],['get','render_height'],0,'#111827',15,'#1a2a45',40,'#1e3060',80,'#243570'],
+            'fill-extrusion-color': '#1e3a6e',
             'fill-extrusion-height': ['interpolate',['linear'],['zoom'],13,0,14.5,['get','render_height']],
             'fill-extrusion-base': ['get','render_min_height'],
-            'fill-extrusion-opacity': 0.85
+            'fill-extrusion-opacity': 0.9
           }
         }, labelLayer || undefined);
+
+        // Start building glow animation
+        startBuildingGlow();
       } catch(e) { console.warn('[3D buildings]', e); }
     }
 
@@ -230,6 +233,168 @@ function loadHomeMap() {
 
   homeMap.on('error', function(e) { console.warn('[Map error]', e); });
 }
+
+// ── BUILDING GLOW SYSTEM ──
+var _glowInterval = null;
+var _glowSettings = {
+  on: true,
+  color: '#1e3a6e',     // base color
+  glowColor: '#2d6abf', // peak glow color
+  speed: 3000,          // ms per full cycle
+  intensity: 0.9,
+};
+
+function startBuildingGlow() {
+  if (_glowInterval) clearInterval(_glowInterval);
+  if (!_glowSettings.on) return;
+
+  var t = 0;
+  _glowInterval = setInterval(function() {
+    if (!homeMap || !homeMap.getLayer('mh-3d-buildings')) {
+      clearInterval(_glowInterval);
+      return;
+    }
+    t += 50;
+    // Sine wave between base and glow color
+    var phase = (Math.sin((t / _glowSettings.speed) * Math.PI * 2) + 1) / 2; // 0..1
+    var color = lerpColor(_glowSettings.color, _glowSettings.glowColor, phase * 0.6);
+    var opacity = 0.75 + phase * 0.2;
+    try {
+      homeMap.setPaintProperty('mh-3d-buildings', 'fill-extrusion-color', color);
+      homeMap.setPaintProperty('mh-3d-buildings', 'fill-extrusion-opacity', opacity * _glowSettings.intensity);
+    } catch(e) {}
+  }, 50);
+}
+window.startBuildingGlow = startBuildingGlow;
+
+function stopBuildingGlow() {
+  if (_glowInterval) { clearInterval(_glowInterval); _glowInterval = null; }
+  if (homeMap && homeMap.getLayer('mh-3d-buildings')) {
+    try {
+      homeMap.setPaintProperty('mh-3d-buildings', 'fill-extrusion-color', _glowSettings.color);
+      homeMap.setPaintProperty('mh-3d-buildings', 'fill-extrusion-opacity', 0.85);
+    } catch(e) {}
+  }
+}
+window.stopBuildingGlow = stopBuildingGlow;
+
+function updateGlowSettings(key, val) {
+  _glowSettings[key] = val;
+  if (key === 'on') {
+    if (val) startBuildingGlow();
+    else stopBuildingGlow();
+  } else if (_glowSettings.on) {
+    startBuildingGlow(); // restart with new settings
+  }
+  // Persist
+  try { localStorage.setItem('dtslo_glow_settings', JSON.stringify(_glowSettings)); } catch(e) {}
+}
+window.updateGlowSettings = updateGlowSettings;
+
+// Load saved glow settings
+(function() {
+  try {
+    var saved = JSON.parse(localStorage.getItem('dtslo_glow_settings') || 'null');
+    if (saved) Object.assign(_glowSettings, saved);
+  } catch(e) {}
+})();
+
+// Linear interpolate between two hex colors
+function lerpColor(a, b, t) {
+  var ah = a.replace('#',''), bh = b.replace('#','');
+  var ar = parseInt(ah.slice(0,2),16), ag = parseInt(ah.slice(2,4),16), ab2 = parseInt(ah.slice(4,6),16);
+  var br = parseInt(bh.slice(0,2),16), bg = parseInt(bh.slice(2,4),16), bb2 = parseInt(bh.slice(4,6),16);
+  var r = Math.round(ar + (br-ar)*t);
+  var g = Math.round(ag + (bg-ag)*t);
+  var b2 = Math.round(ab2 + (bb2-ab2)*t);
+  return '#' + r.toString(16).padStart(2,'0') + g.toString(16).padStart(2,'0') + b2.toString(16).padStart(2,'0');
+}
+
+function openMapSettings() {
+  var existing = document.getElementById('mh-map-settings');
+  if (existing) { existing.remove(); return; }
+
+  var sheet = document.createElement('div');
+  sheet.id = 'mh-map-settings';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);display:flex;align-items:flex-end';
+
+  sheet.innerHTML =
+    '<div style="width:100%;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(255,215,0,0.2);padding:16px 20px 48px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">' +
+        '<div style="font-size:16px;font-weight:800;font-family:Georgia,serif">🏙 Map Settings</div>' +
+        '<button onclick="closeMapSettings()" style="width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);font-size:15px;cursor:pointer">✕</button>' +
+      '</div>' +
+
+      // Building Glow toggle
+      '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">🏢 BUILDING GLOW</div>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px">' +
+        '<span style="font-size:13px;font-weight:700">Building Glow</span>' +
+        '<label style="display:flex;align-items:center"><input type="checkbox" id="glow-toggle" ' + (_glowSettings.on ? 'checked' : '') + ' onchange="updateGlowSettings(\'on\',this.checked)" style="width:18px;height:18px;accent-color:#ffd700"></label>' +
+      '</div>' +
+
+      // Base color
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px">' +
+        '<span style="font-size:13px;font-weight:700">Base Color</span>' +
+        '<input type="color" value="' + _glowSettings.color + '" onchange="updateGlowSettings(\'color\',this.value)" style="width:40px;height:30px;border:none;border-radius:6px;cursor:pointer;background:none">' +
+      '</div>' +
+
+      // Glow color
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px">' +
+        '<span style="font-size:13px;font-weight:700">Glow Color</span>' +
+        '<input type="color" value="' + _glowSettings.glowColor + '" onchange="updateGlowSettings(\'glowColor\',this.value)" style="width:40px;height:30px;border:none;border-radius:6px;cursor:pointer;background:none">' +
+      '</div>' +
+
+      '<div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px">' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;font-weight:700">Intensity</span><span id="glow-intensity-val" style="font-size:12px;color:#ffd700">' + Math.round(_glowSettings.intensity*100) + '%</span></div>' +
+        '<input type="range" min="10" max="100" value="' + Math.round(_glowSettings.intensity*100) + '" style="width:100%;accent-color:#ffd700" oninput="document.getElementById(\'glow-intensity-val\').textContent=this.value+\'%\';updateGlowSettings(\'intensity\',this.value/100)">' +
+      '</div>' +
+
+      '<div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:16px">' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;font-weight:700">Speed</span><span id="glow-speed-val" style="font-size:12px;color:#ffd700">' + (_glowSettings.speed/1000).toFixed(1) + 's</span></div>' +
+        '<input type="range" min="500" max="8000" step="500" value="' + _glowSettings.speed + '" style="width:100%;accent-color:#ffd700" oninput="document.getElementById(\'glow-speed-val\').textContent=(this.value/1000).toFixed(1)+\'s\';updateGlowSettings(\'speed\',parseInt(this.value))">' +
+      '</div>' +
+
+      '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">⚡ PRESETS</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">' +
+        '<button onclick="applyGlowPreset(\'blue\')" style="padding:10px;border-radius:10px;border:1px solid rgba(45,106,191,0.4);background:rgba(45,106,191,0.1);color:#6ba3f5;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">🔵 Blue</button>' +
+        '<button onclick="applyGlowPreset(\'pink\')" style="padding:10px;border-radius:10px;border:1px solid rgba(255,45,120,0.4);background:rgba(255,45,120,0.1);color:#ff2d78;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">🩷 Pink</button>' +
+        '<button onclick="applyGlowPreset(\'gold\')" style="padding:10px;border-radius:10px;border:1px solid rgba(255,215,0,0.4);background:rgba(255,215,0,0.1);color:#ffd700;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">⭐ Gold</button>' +
+        '<button onclick="applyGlowPreset(\'green\')" style="padding:10px;border-radius:10px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">🟢 Green</button>' +
+        '<button onclick="applyGlowPreset(\'purple\')" style="padding:10px;border-radius:10px;border:1px solid rgba(139,92,246,0.4);background:rgba(139,92,246,0.1);color:#a78bfa;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">🟣 Purple</button>' +
+        '<button onclick="applyGlowPreset(\'red\')" style="padding:10px;border-radius:10px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">🔴 Red</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(sheet);
+  sheet.addEventListener('click', function(e) { if (e.target === sheet) sheet.remove(); });
+}
+window.openMapSettings = openMapSettings;
+
+function closeMapSettings() { var s = document.getElementById('mh-map-settings'); if (s) s.remove(); }
+window.closeMapSettings = closeMapSettings;
+
+var GLOW_PRESETS = {
+  blue:   { color: '#0d1f3c', glowColor: '#2d6abf' },
+  pink:   { color: '#2d0a1e', glowColor: '#ff2d78' },
+  gold:   { color: '#2d2000', glowColor: '#ffd700' },
+  green:  { color: '#0a2d14', glowColor: '#22c55e' },
+  purple: { color: '#1a0a2d', glowColor: '#8b5cf6' },
+  red:    { color: '#2d0a0a', glowColor: '#ef4444' },
+};
+
+function applyGlowPreset(name) {
+  var p = GLOW_PRESETS[name];
+  if (!p) return;
+  _glowSettings.color = p.color;
+  _glowSettings.glowColor = p.glowColor;
+  _glowSettings.on = true;
+  try { localStorage.setItem('dtslo_glow_settings', JSON.stringify(_glowSettings)); } catch(e) {}
+  startBuildingGlow();
+  // Close sheet and reopen to refresh inputs
+  var s = document.getElementById('mh-map-settings');
+  if (s) { s.remove(); setTimeout(openMapSettings, 100); }
+}
+window.applyGlowPreset = applyGlowPreset;
 
 function addHubMarkersWithCoords(c) { addHubMarkers(c); }
 
@@ -327,8 +492,11 @@ function injectHTML() {
 
     // HUBS DRAWER
     '<div id="mh-drawer-hubs" class="mh-drawer">',
-      '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
-      '<div class="mh-drawer-title">Hubs</div>',
+      '<div class="mh-drawer-header">',
+        '<div class="mh-sheet-handle" style="margin:0"></div>',
+        '<div class="mh-drawer-title">Hubs</div>',
+        '<button class="mh-drawer-close" onclick="menuHomeCloseDrawer()">✕</button>',
+      '</div>',
       '<div class="mh-hub-cards">',
         mkCard('menuHomeRequireAuth()',       '#ff2d78,#b44fff', '🌃', 'DTSLO',        'Nightlife · Active Now'),
         mkCard('menuHomeOpenRestaurantHub()', '#ff6b35,#ef4444', '🍽',  'Restaurants',  'Browse & dine'),
@@ -346,8 +514,11 @@ function injectHTML() {
 
     // TRAVEL DRAWER
     '<div id="mh-drawer-travel" class="mh-drawer">',
-      '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
-      '<div class="mh-drawer-title">✨ Travel Guide</div>',
+      '<div class="mh-drawer-header">',
+        '<div class="mh-sheet-handle" style="margin:0"></div>',
+        '<div class="mh-drawer-title">✨ Travel Guide</div>',
+        '<button class="mh-drawer-close" onclick="menuHomeCloseDrawer()">✕</button>',
+      '</div>',
       '<button class="mh-plan-btn" onclick="menuHomeOpenTravelPlanIt()"><span style="font-size:18px">✨</span><div style="text-align:left;flex:1"><div style="font-size:14px;font-weight:800">Plan It</div><div style="font-size:11px;color:rgba(255,255,255,0.5)">Build your perfect outing with AI</div></div><span style="color:rgba(255,255,255,0.3)">›</span></button>',
       '<div class="mh-travel-tabs">',
         '<button class="mh-travel-tab active" onclick="menuHomeTravelTab(this,\'all\')">All</button>',
@@ -390,8 +561,11 @@ function injectHTML() {
 
     // TOOLS DRAWER
     '<div id="mh-drawer-tools" class="mh-drawer">',
-      '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
-      '<div class="mh-drawer-title">Tools</div>',
+      '<div class="mh-drawer-header">',
+        '<div class="mh-sheet-handle" style="margin:0"></div>',
+        '<div class="mh-drawer-title">Tools</div>',
+        '<button class="mh-drawer-close" onclick="menuHomeCloseDrawer()">✕</button>',
+      '</div>',
       '<div class="mh-section-label">🚗 TRANSPORT</div>',
       '<div class="mh-tools-grid">',
         mkTool('rides','🚗','Rides'), mkTool('transit','🚌','Transit'),
@@ -503,7 +677,9 @@ function injectCSS() {
     '.mh-drawer{position:absolute;bottom:72px;left:0;right:0;z-index:15;background:rgba(6,6,15,0.92);backdrop-filter:blur(24px);border-radius:24px 24px 0 0;border-top:1px solid rgba(255,255,255,0.08);padding:12px 20px 20px;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);max-height:60vh;overflow-y:auto}',
     '.mh-drawer-open{transform:translateY(0)}',
     '.mh-drawer-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.15);margin:0 auto 14px;cursor:pointer}',
-    '.mh-drawer-title{font-size:16px;font-weight:800;color:#fff;margin-bottom:14px;font-family:Georgia,serif}',
+    '.mh-drawer-title{font-size:16px;font-weight:800;color:#fff;font-family:Georgia,serif;flex:1}',
+    '.mh-drawer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}',
+    '.mh-drawer-close{width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}',
     '.mh-hub-cards{display:flex;flex-direction:column;gap:8px}',
     '.mh-hub-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);cursor:pointer;transition:all 0.15s}',
     '.mh-hub-card-active{border-color:rgba(255,45,120,0.3);background:rgba(255,45,120,0.06)}.mh-hub-card-active:active{transform:scale(0.98)}',
@@ -547,3 +723,9 @@ function injectCSS() {
   ].join('');
   document.head.appendChild(s);
 }
+
+function devResetMap() {
+  if (!homeMap) return;
+  homeMap.flyTo({ center: [-120.6650, 35.2803], zoom: 14, pitch: 45, bearing: -20, duration: 800 });
+}
+window.devResetMap = devResetMap;

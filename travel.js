@@ -391,9 +391,42 @@ window.closeTourDetail = closeTourDetail;
 function tourAddToItinerary(tourId) {
   var tour = TOUR_DATA[tourId];
   if (!tour) return;
+
+  // Build a single itinerary from the full tour
+  var totalMins = tour.stops ? tour.stops.reduce(function(a,s){return a+(s.mins||60);},0) : 180;
+
   if (typeof itinAddBusinessStop === 'function') {
-    itinAddBusinessStop(tour.name, 'activity', tour.stops ? tour.stops.reduce(function(a,s){return a+s.mins;},0) : 180, tour.cost, tour.tips[0] || '');
+    itinAddBusinessStop(tour.name, 'activity', totalMins, tour.cost, tour.tips[0] || '');
     closeTourDetail();
+    if (typeof showToast === 'function') showToast('🗓 ' + tour.name + ' added!');
+  } else {
+    // Fallback: build itinerary object directly and open it
+    var itin = {
+      id: Math.random().toString(36).slice(2,10),
+      share_id: Math.random().toString(36).slice(2,10),
+      name: tour.name,
+      mode: 'planned',
+      start_time: '9:00 AM',
+      using_rideshare: false,
+      group_size: 2,
+      total_cost: tour.cost || '',
+      created: Date.now(),
+      stops: (tour.stops || []).map(function(s) {
+        return { name: s.name, type: s.type || 'activity', description: s.tip || '', tip: s.tip || '', cost: s.cost || '', estimated_mins: s.mins || 60, actual_mins: null, status: 'pending', coords: null, address: '' };
+      })
+    };
+    // Save to localStorage
+    try {
+      var saved = JSON.parse(localStorage.getItem('dtslo_itineraries') || '[]');
+      saved.unshift(itin);
+      localStorage.setItem('dtslo_itineraries', JSON.stringify(saved));
+    } catch(e) {}
+    closeTourDetail();
+    if (typeof showToast === 'function') showToast('🗓 ' + tour.name + ' saved to itinerary!');
+    // Open itinerary builder if available
+    setTimeout(function() {
+      if (typeof openItineraryBuilder === 'function') openItineraryBuilder(itin, false);
+    }, 400);
   }
 }
 window.tourAddToItinerary = tourAddToItinerary;
@@ -402,12 +435,40 @@ window.tourAddToItinerary = tourAddToItinerary;
 function tourAddAllStops(tourId) {
   var tour = TOUR_DATA[tourId];
   if (!tour || !tour.stops) return;
-  if (typeof itinAddBusinessStop !== 'function') return;
-  tour.stops.forEach(function(stop) {
-    itinAddBusinessStop(stop.name, stop.type, stop.mins, stop.cost, stop.tip);
-  });
-  closeTourDetail();
-  if (typeof showToast === 'function') showToast('✅ ' + tour.stops.length + ' stops added to itinerary!');
+
+  if (typeof itinAddBusinessStop === 'function') {
+    tour.stops.forEach(function(stop) {
+      itinAddBusinessStop(stop.name, stop.type || 'activity', stop.mins || 60, stop.cost || '', stop.tip || '');
+    });
+    closeTourDetail();
+    if (typeof showToast === 'function') showToast('✅ ' + tour.stops.length + ' stops added!');
+  } else {
+    // Fallback: build itinerary directly
+    var itin = {
+      id: Math.random().toString(36).slice(2,10),
+      share_id: Math.random().toString(36).slice(2,10),
+      name: tour.name,
+      mode: 'planned',
+      start_time: '9:00 AM',
+      using_rideshare: false,
+      group_size: 2,
+      total_cost: tour.cost || '',
+      created: Date.now(),
+      stops: tour.stops.map(function(s) {
+        return { name: s.name, type: s.type || 'activity', description: s.tip || '', tip: s.tip || '', cost: s.cost || '', estimated_mins: s.mins || 60, actual_mins: null, status: 'pending', coords: null, address: '' };
+      })
+    };
+    try {
+      var saved = JSON.parse(localStorage.getItem('dtslo_itineraries') || '[]');
+      saved.unshift(itin);
+      localStorage.setItem('dtslo_itineraries', JSON.stringify(saved));
+    } catch(e) {}
+    closeTourDetail();
+    if (typeof showToast === 'function') showToast('✅ ' + tour.stops.length + ' stops saved!');
+    setTimeout(function() {
+      if (typeof openItineraryBuilder === 'function') openItineraryBuilder(itin, false);
+    }, 400);
+  }
 }
 window.tourAddAllStops = tourAddAllStops;
 

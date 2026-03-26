@@ -91,12 +91,12 @@ function buildPinMoverUI() {
     var s = document.createElement('style');
     s.id = 'pm-css';
     s.textContent = [
-      '.pm-hub-tile{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;',
+      '.pm-hub-tile{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:12px;',
         'background:rgba(255,255,255,0.03);border:1.5px solid rgba(255,255,255,0.08);',
         'cursor:pointer;transition:all 0.15s;margin-bottom:6px}',
       '.pm-hub-tile.active{background:rgba(255,215,0,0.08);border-color:rgba(255,215,0,0.4);}',
       '.pm-hub-tile:active{transform:scale(0.97)}',
-      '.pm-hub-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;',
+      '.pm-hub-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;',
         'justify-content:center;font-size:18px;flex-shrink:0}',
       '.pm-hub-coords{font-size:9px;color:rgba(255,255,255,0.3);font-family:monospace;margin-top:2px}',
       '.pm-hub-moved{font-size:9px;font-weight:700;color:#ffd700;margin-top:2px}',
@@ -109,7 +109,7 @@ function buildPinMoverUI() {
   sheet.style.cssText = 'position:absolute;bottom:0;left:0;right:0;z-index:23;' +
     'background:rgba(8,8,20,0.97);border-radius:24px 24px 0 0;' +
     'border-top:2px solid rgba(255,215,0,0.3);padding:12px 16px 36px;' +
-    'max-height:60vh;overflow-y:auto;backdrop-filter:blur(12px)';
+    'max-height:44vh;overflow-y:auto;backdrop-filter:blur(12px)';
 
   // Header
   var header = document.createElement('div');
@@ -143,7 +143,7 @@ function buildPinMoverUI() {
         h.icon +
       '</div>' +
       '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:12px;font-weight:800;margin-bottom:1px">' + h.label + '</div>' +
+        '<div style="font-size:11px;font-weight:800;margin-bottom:1px">' + h.label + '</div>' +
         '<div id="pm-coords-' + h.id + '" class="pm-hub-coords">' +
           coords[1].toFixed(4) + ', ' + coords[0].toFixed(4) +
         '</div>' +

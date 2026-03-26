@@ -13,6 +13,8 @@ var piState = {
   imPaying: false,
   familyFriendly: false,
   soberFriendly: false,
+  rideshare: false,
+  startTime: 'tonight',
   result: null,
 };
 
@@ -90,6 +92,10 @@ function piRender() {
 
         // Toggles
         '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)">' +
+            '<span style="font-size:13px">🚗 Using rideshare</span>' +
+            '<label class="toggle-switch"><input type="checkbox" id="pi-rideshare-toggle" onchange="piState.rideshare=this.checked"><span class="toggle-slider"></span></label>' +
+          '</div>' +
           '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)">' +
             '<span style="font-size:13px">💳 I am paying for the group</span>' +
             '<label class="toggle-switch"><input type="checkbox" id="pi-im-paying-toggle" onchange="piState.imPaying=this.checked"><span class="toggle-slider"></span></label>' +
@@ -198,6 +204,7 @@ async function piGenerate() {
   var imPaying = piState.imPaying;
   var family = piState.familyFriendly;
   var sober = piState.soberFriendly;
+  var rideshare = piState.rideshare;
 
   // Build prompt for Claude
   var budgetDesc = budget === 'cheap' ? 'low budget, free or under $20 per person' :
@@ -318,7 +325,7 @@ function itinOpenFromPlanIt() {
   var plan = window.piState.result;
   var options = {
     startTime: '9:00 PM',
-    usingRideshare: window.piState.groupSize >= 5,
+    usingRideshare: window.piState.rideshare || window.piState.groupSize >= 5,
     groupSize: window.piState.groupSize || 2,
   };
   // Try to get a real start time based on current time

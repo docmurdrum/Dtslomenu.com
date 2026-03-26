@@ -24,6 +24,8 @@ const bars = [
 
 // ── LOAD BARS FROM SUPABASE ──
 var _barsDBLoaded = false;
+var _emblemCache = {}; // keeps Image objects in memory — prevents eviction
+
 async function loadBarsFromDB() {
   if (_barsDBLoaded) return; // Only load once — emblem_url etc cached in bars array
   try {
@@ -92,11 +94,12 @@ async function loadBarsFromDB() {
       }
     });
     _barsDBLoaded = true; // Mark as loaded — won't re-fetch on report refreshes
-    // Preload all emblem images into browser cache immediately
+    // Preload all emblem images — store in _emblemCache to prevent GC eviction
     bars.forEach(function(b) {
-      if (b.emblem_url && !b._emblemPreloaded) {
+      if (b.emblem_url && !_emblemCache[b.emblem_url]) {
         var img = new Image();
         img.src = b.emblem_url;
+        _emblemCache[b.emblem_url] = img; // hold strong reference
         b._emblemPreloaded = true;
       }
     });
@@ -626,7 +629,7 @@ function renderBars() {
       <div class="bar-body-v2">
         <div class="bar-top-v2">
           <div>
-            <button onclick="openBarPage(${i})" style="background:none;border:none;padding:0;font-family:inherit;font-size:17px;font-weight:900;letter-spacing:-0.3px;color:var(--text);text-align:left;cursor:pointer;margin-bottom:2px;-webkit-tap-highlight-color:transparent">${bar.name} <span style="color:${bar.color}">›</span></button>
+            <button onclick="openBarPage(${i})" style="background:none;border:none;padding:0;font-family:inherit;font-size:17px;font-weight:900;letter-spacing:-0.3px;color:var(--text);text-align:left;cursor:pointer;margin-bottom:2px;-webkit-tap-highlight-color:transparent">${bar.name} <span style="color:${bar.color};font-size:20px;font-weight:900;opacity:0.9"> ›</span></button>
             <div class="bar-address-v2">📍 ${bar.address}</div>
           </div>
           <div class="bar-report-meta-v2">
@@ -1116,6 +1119,11 @@ async function confirmCheckin(type, status, headcount) {
 
   // Award bar stamp collectible on first visit
   try { awardBarStamp(ciBarName, bars[ciBarIndex]); } catch(e) {}
+
+  // ── ITINERARY LIVE MODE HOOK ──
+  // Only fires if there's an active itinerary in live mode
+  try { itinHandleCheckin(ciBarName); } catch(e) {}
+
   renderBars();
 
   if (type === 'line') startNudgeTimer();

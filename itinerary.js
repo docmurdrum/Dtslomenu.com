@@ -246,6 +246,8 @@ function itinRenderModal() {
     var inner = modal.querySelector('#itin-inner');
     if (inner) inner.style.transform = 'translateY(0)';
     if (itin.mode === 'live') itinStartLiveTimer();
+    // Check for group notifications
+    try { itinCheckGroupNotifs(); } catch(e) {}
   }, 30);
 }
 
@@ -876,3 +878,222 @@ function itinPlanItFor(name, type) {
   sheet.addEventListener('click', function(e) { if (e.target === sheet) sheet.remove(); });
 }
 window.itinPlanItFor = itinPlanItFor;
+
+// ══════════════════════════════════════════════
+// ITINERARY CHECK-IN INTEGRATION
+// Called from lines.js when user checks in at a bar
+// Only active when itinerary is in live mode
+// ══════════════════════════════════════════════
+
+function itinHandleCheckin(barName) {
+  // Only fire in live mode with an active itinerary
+  if (!itin.current || itin.mode !== 'live') return;
+
+  var stops = itin.current.stops;
+  var activeIdx = stops.findIndex(function(s) { return s.status === 'active'; });
+  if (activeIdx < 0) activeIdx = itin.activeStopIdx;
+
+  // Normalize bar name for comparison
+  var normalize = function(s) { return (s||'').toLowerCase().replace(/[^a-z0-9]/g,''); };
+  var checkedIn = normalize(barName);
+
+  // Find matching stop
+  var matchIdx = stops.findIndex(function(s) { return normalize(s.name) === checkedIn; });
+
+  if (matchIdx === activeIdx) {
+    // Checking in at current stop — already active, nothing to do
+    return;
+  }
+
+  if (matchIdx > activeIdx) {
+    // Checking in at a LATER stop — skipping some stops
+    itinSkipToStop(matchIdx, activeIdx);
+  } else if (matchIdx < 0) {
+    // Bar is NOT on the plan — ask how long, then insert it
+    itinPromptUnplannedStop(barName, activeIdx);
+  }
+  // matchIdx < activeIdx = already been there, ignore
+}
+window.itinHandleCheckin = itinHandleCheckin;
+
+// Skip stops between current and target, activate target
+function itinSkipToStop(targetIdx, fromIdx) {
+  var stops = itin.current.stops;
+
+  // Mark everything in between as skipped
+  for (var i = fromIdx; i < targetIdx; i++) {
+    if (stops[i].status !== 'done') {
+      stops[i].status = 'skipped';
+    }
+  }
+
+  // Activate the target stop
+  stops[targetIdx].status = 'active';
+  itin.activeStopIdx = targetIdx;
+
+  // Recalculate times from now
+  itinRecalcFromNow(targetIdx);
+
+  // Save + re-render
+  itinSave(itin.current);
+  itinRenderModal();
+
+  var skipped = targetIdx - fromIdx;
+  showToast('📍 Advanced to ' + stops[targetIdx].name + (skipped > 0 ? ' · ' + skipped + ' stop' + (skipped>1?'s':'') + ' skipped' : ''));
+
+  // Notify group
+  itinNotifyGroup('skipped_ahead', stops[targetIdx].name);
+}
+
+// Prompt user for how long they plan to stay at an unplanned stop
+function itinPromptUnplannedStop(barName, currentIdx) {
+  var existing = document.getElementById('itin-unplanned-prompt');
+  if (existing) existing.remove();
+
+  var prompt = document.createElement('div');
+  prompt.id = 'itin-unplanned-prompt';
+  prompt.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center';
+
+  prompt.innerHTML =
+    '<div style="width:100%;max-width:480px;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(255,215,0,0.25);padding:20px 20px 48px">' +
+      '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 16px"></div>' +
+      '<div style="font-size:16px;font-weight:800;margin-bottom:4px">📍 ' + barName + ' isn\'t on your plan</div>' +
+      '<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:20px">How long are you planning to stay? We\'ll push your schedule back.</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px" id="itin-unplanned-grid"></div>' +
+      '<button onclick="document.getElementById(\'itin-unplanned-prompt\').remove()" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Skip — don\'t add</button>' +
+    '</div>';
+
+  document.body.appendChild(prompt);
+
+  var grid = document.getElementById('itin-unplanned-grid');
+  [30, 45, 60, 90].forEach(function(mins) {
+    var btn = document.createElement('button');
+    btn.style.cssText = 'padding:12px 8px;border-radius:12px;border:1px solid rgba(255,215,0,0.2);background:rgba(255,215,0,0.06);color:#ffd700;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer';
+    btn.textContent = mins < 60 ? mins + 'min' : (mins/60) + 'hr';
+    btn.onclick = function() {
+      prompt.remove();
+      itinInsertUnplannedStop(barName, currentIdx, mins);
+    };
+    grid.appendChild(btn);
+  });
+
+  prompt.addEventListener('click', function(e) { if (e.target === prompt) prompt.remove(); });
+}
+
+// Insert unplanned stop at current position and recalculate
+function itinInsertUnplannedStop(barName, afterIdx, estimatedMins) {
+  var stops = itin.current.stops;
+
+  // Mark current stop done if it was active
+  if (stops[afterIdx] && stops[afterIdx].status === 'active') {
+    stops[afterIdx].status = 'done';
+    stops[afterIdx].actual_mins = itin.liveElapsed ? Math.round(itin.liveElapsed / 60) : estimatedMins;
+  }
+
+  // Build new stop
+  var newStop = {
+    name: barName,
+    type: 'bar',
+    description: 'Added from check-in',
+    tip: '',
+    cost: '',
+    estimated_mins: estimatedMins,
+    actual_mins: null,
+    status: 'active',
+    coords: null,
+    address: '',
+    unplanned: true,
+  };
+
+  // Insert after current position
+  stops.splice(afterIdx + 1, 0, newStop);
+  itin.activeStopIdx = afterIdx + 1;
+
+  // Recalculate all future times from now
+  itinRecalcFromNow(afterIdx + 1);
+
+  // Reset live timer
+  itin.liveElapsed = 0;
+  if (itin.liveTimer) { clearInterval(itin.liveTimer); itin.liveTimer = null; }
+
+  itinSave(itin.current);
+  itinRenderModal();
+  if (itin.mode === 'live') itinStartLiveTimer();
+
+  showToast('✅ ' + barName + ' added · schedule updated');
+
+  // Notify group
+  itinNotifyGroup('stop_added', barName);
+}
+
+// Recalculate all stop times from a given index using current time
+function itinRecalcFromNow(fromIdx) {
+  if (!itin.current) return;
+  var stops = itin.current.stops;
+  var now = new Date();
+  var h = now.getHours(), m = now.getMinutes();
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  var h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+  itin.current.start_time = h12 + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
+
+  // Cascade times forward from fromIdx
+  var runningMins = 0;
+  for (var i = fromIdx + 1; i < stops.length; i++) {
+    if (stops[i].status === 'skipped') continue;
+    runningMins += stops[i-1] ? (stops[i-1].estimated_mins || 60) : 60;
+    // Store offset for display (itinCalcTimes uses start_time + offsets)
+  }
+}
+
+// Notify group members of itinerary changes
+function itinNotifyGroup(eventType, detail) {
+  if (!itin.current || !currentUser) return;
+
+  var msg = '';
+  if (eventType === 'skipped_ahead') msg = currentUser.user_metadata && currentUser.user_metadata.username ? currentUser.user_metadata.username + ' skipped ahead to ' + detail : 'Someone skipped ahead to ' + detail;
+  if (eventType === 'stop_added')    msg = (currentUser.user_metadata && currentUser.user_metadata.username ? currentUser.user_metadata.username : 'Someone') + ' added ' + detail + ' to the plan';
+
+  // Store notification in localStorage for group members to pick up
+  try {
+    var key = 'dtslo_itin_notif_' + itin.current.id;
+    var notifs = JSON.parse(localStorage.getItem(key) || '[]');
+    notifs.unshift({ msg: msg, type: eventType, ts: Date.now() });
+    if (notifs.length > 10) notifs = notifs.slice(0, 10);
+    localStorage.setItem(key, JSON.stringify(notifs));
+  } catch(e) {}
+
+  // Push to Supabase for other group members
+  try {
+    if (supabaseClient && itin.current.share_id) {
+      supabaseClient.from('itineraries').update({
+        updated_at: new Date().toISOString(),
+        last_event: JSON.stringify({ type: eventType, detail: detail, user: currentUser.id, ts: Date.now() })
+      }).eq('share_id', itin.current.share_id).then(function(){}).catch(function(){});
+    }
+  } catch(e) {}
+
+  // Send push notification
+  if (typeof sendPushNotification === 'function') {
+    sendPushNotification(msg);
+  }
+}
+window.itinNotifyGroup = itinNotifyGroup;
+
+// Check for pending group notifications when opening itinerary
+function itinCheckGroupNotifs() {
+  if (!itin.current) return;
+  try {
+    var key = 'dtslo_itin_notif_' + itin.current.id;
+    var notifs = JSON.parse(localStorage.getItem(key) || '[]');
+    // Show unseen ones
+    var unseen = notifs.filter(function(n) { return !n.seen && n.ts > Date.now() - 2*60*60*1000; });
+    unseen.forEach(function(n, i) {
+      setTimeout(function() {
+        if (typeof showToast === 'function') showToast('🔔 ' + n.msg);
+      }, i * 1500);
+      n.seen = true;
+    });
+    if (unseen.length) localStorage.setItem(key, JSON.stringify(notifs));
+  } catch(e) {}
+}
+window.itinCheckGroupNotifs = itinCheckGroupNotifs;
