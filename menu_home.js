@@ -220,6 +220,11 @@ function loadHomeMap() {
       }
     } catch(e) { try { addHubMarkers({}); } catch(e2) {} }
 
+    // Smart Start — time-based, social proof, mood-first
+    setTimeout(function() {
+      if (typeof smartStartInit === 'function') smartStartInit();
+    }, 1200); // wait for markers + glow layers to settle
+
     var bearing = -25, rotating = true;
     homeMap.on('mousedown', function() { rotating = false; });
     homeMap.on('touchstart', function() { rotating = false; });
@@ -242,21 +247,22 @@ function addHubMarkersWithCoords(c) { addHubMarkers(c); }
 function addHubMarkers(coordsOverride) {
   var s = coordsOverride || {};
   var hubs = [
-    { coords: s['dtslo']       || [-120.6650,35.2803], icon:'🌃', label:'DTSLO',        sub:'Nightlife',           color:'linear-gradient(135deg,#ff2d78,#b44fff)', active:true,  onclick:'menuHomeRequireAuth()' },
-    { coords: s['restaurants'] || [-120.6655,35.2808], icon:'🍽',  label:'Restaurants',  sub:'Browse & dine',       color:'linear-gradient(135deg,#ff6b35,#ef4444)', active:true,  onclick:'menuHomeOpenRestaurantHub()' },
-    { coords: s['beach']       || [-120.6750,35.2680], icon:'🏖',  label:'Beach Hub',    sub:'8 beaches',           color:'linear-gradient(135deg,#06b6d4,#0ea5e9)', active:true,  onclick:'menuHomeOpenBeachHub()' },
-    { coords: s['wine']        || [-120.8200,35.3600], icon:'🍷',  label:'Wine Country', sub:'Paso & SLO wine',     color:'linear-gradient(135deg,#7c2d8e,#b44fff)', active:true,  onclick:'menuHomeOpenWineHub()' },
-    { coords: s['brewery']     || [-120.6595,35.2808], icon:'🍺',  label:'Craft Beer',   sub:'9 breweries',         color:'linear-gradient(135deg,#f59e0b,#d97706)', active:true,  onclick:'menuHomeOpenBreweryHub()' },
-    { coords: s['nature']      || [-120.6785,35.2920], icon:'🌿',  label:'Nature',       sub:'Hikes & parks',       color:'linear-gradient(135deg,#22c55e,#16a34a)', active:true,  onclick:'menuHomeOpenNatureHub()' },
-    { coords: s['thrill']      || [-120.6595,35.2750], icon:'⚡',  label:'Thrill',       sub:'Adventure',           color:'linear-gradient(135deg,#ef4444,#dc2626)', active:true,  onclick:'menuHomeOpenThrillHub()' },
-    { coords: s['events']      || [-120.6590,35.2820], icon:'🎭',  label:'Events',       sub:'Concerts & markets',  color:'linear-gradient(135deg,#ffd700,#ff9500)', active:true,  onclick:'menuHomeOpenEventsHub()' },
-    { coords: s['calpoly']     || [-120.6540,35.2980], icon:'🎓',  label:'Cal Poly',     sub:'Student life',        color:'linear-gradient(135deg,#6366f1,#8b5cf6)', active:true,  onclick:'menuHomeOpenCalPolyHub()' },
-    { coords: s['city']        || [-120.6620,35.2790], icon:'🏛',  label:'City Hub',     sub:'Landmarks & culture', color:'linear-gradient(135deg,#00f5ff,#00ff88)', active:true,  onclick:'menuHomeOpenCityHub()' },
-    { coords: s['shopping']    || [-120.6580,35.2760], icon:'🛒',  label:'Shopping',     sub:'Coming Soon',         color:'linear-gradient(135deg,#22c55e,#16a34a)', active:false },
+    { id:'dtslo',      coords: s['dtslo']       || [-120.6650,35.2803], icon:'🌃', label:'DTSLO',        sub:'Nightlife',           color:'linear-gradient(135deg,#ff2d78,#b44fff)', active:true,  onclick:'menuHomeRequireAuth()' },
+    { id:'restaurant', coords: s['restaurants'] || [-120.6655,35.2808], icon:'🍽',  label:'Restaurants',  sub:'Browse & dine',       color:'linear-gradient(135deg,#ff6b35,#ef4444)', active:true,  onclick:'menuHomeOpenRestaurantHub()' },
+    { id:'beach',      coords: s['beach']       || [-120.6750,35.2680], icon:'🏖',  label:'Beach Hub',    sub:'8 beaches',           color:'linear-gradient(135deg,#06b6d4,#0ea5e9)', active:true,  onclick:'menuHomeOpenBeachHub()' },
+    { id:'wine',       coords: s['wine']        || [-120.8200,35.3600], icon:'🍷',  label:'Wine Country', sub:'Paso & SLO wine',     color:'linear-gradient(135deg,#7c2d8e,#b44fff)', active:true,  onclick:'menuHomeOpenWineHub()' },
+    { id:'brewery',    coords: s['brewery']     || [-120.6595,35.2808], icon:'🍺',  label:'Craft Beer',   sub:'9 breweries',         color:'linear-gradient(135deg,#f59e0b,#d97706)', active:true,  onclick:'menuHomeOpenBreweryHub()' },
+    { id:'nature',     coords: s['nature']      || [-120.6785,35.2920], icon:'🌿',  label:'Nature',       sub:'Hikes & parks',       color:'linear-gradient(135deg,#22c55e,#16a34a)', active:true,  onclick:'menuHomeOpenNatureHub()' },
+    { id:'thrill',     coords: s['thrill']      || [-120.6595,35.2750], icon:'⚡',  label:'Thrill',       sub:'Adventure',           color:'linear-gradient(135deg,#ef4444,#dc2626)', active:true,  onclick:'menuHomeOpenThrillHub()' },
+    { id:'events',     coords: s['events']      || [-120.6590,35.2820], icon:'🎭',  label:'Events',       sub:'Concerts & markets',  color:'linear-gradient(135deg,#ffd700,#ff9500)', active:true,  onclick:'menuHomeOpenEventsHub()' },
+    { id:'calpoly',    coords: s['calpoly']     || [-120.6540,35.2980], icon:'🎓',  label:'Cal Poly',     sub:'Student life',        color:'linear-gradient(135deg,#6366f1,#8b5cf6)', active:true,  onclick:'menuHomeOpenCalPolyHub()' },
+    { id:'city',       coords: s['city']        || [-120.6620,35.2790], icon:'🏛',  label:'City Hub',     sub:'Landmarks & culture', color:'linear-gradient(135deg,#00f5ff,#00ff88)', active:true,  onclick:'menuHomeOpenCityHub()' },
+    { id:'shopping',   coords: s['shopping']    || [-120.6580,35.2760], icon:'🛒',  label:'Shopping',     sub:'Coming Soon',         color:'linear-gradient(135deg,#22c55e,#16a34a)', active:false },
   ];
   hubs.forEach(function(hub) {
     var el = document.createElement('div');
     el.className = 'mh-hub-marker';
+    el.dataset.hubId = hub.id || '';
     el.innerHTML = [
       '<div class="mh-hub-pin' + (hub.active ? ' mh-hub-active' : ' mh-hub-dim') + '"' +
         (hub.active && hub.onclick ? ' onclick="' + hub.onclick + '"' : '') + '>',

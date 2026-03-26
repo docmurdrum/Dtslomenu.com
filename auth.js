@@ -184,6 +184,7 @@ async function onLogin(user, isNewUser = false) {
 
   // These can run after — don't block entry
   setTimeout(async function() {
+    try { await syncPullAll(user.id); } catch(e) {}
     try { await loadAchievements(); } catch(e) {}
     try { await checkAchievements(); } catch(e) {}
     if (isNewUser) {

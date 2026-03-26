@@ -1277,6 +1277,11 @@ async function awardBarStamp(barName, bar) {
     earned[slug] = true;
     localStorage.setItem('dtslo_stamps', JSON.stringify(earned));
 
+    // Sync to bar_stamps table
+    if (typeof syncPushStamp === 'function') {
+      syncPushStamp(barName, bar && bar.color, bar && bar.emoji);
+    }
+
     // Celebrate — show stamp earned toast after the check-in toast
     setTimeout(function() {
       if (typeof showToast === 'function') {

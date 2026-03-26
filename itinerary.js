@@ -112,18 +112,8 @@ function itinSave(itinObj) {
   if (existing >= 0) saved[existing] = itinObj;
   else saved.unshift(itinObj);
   localStorage.setItem('dtslo_itineraries', JSON.stringify(saved));
-  // Sync to Supabase if logged in
-  if (typeof currentUser !== 'undefined' && currentUser && typeof supabaseClient !== 'undefined') {
-    supabaseClient.from('itineraries').upsert({
-      id: itinObj.id, share_id: itinObj.share_id,
-      user_id: currentUser.id, name: itinObj.name,
-      mode: itinObj.mode, start_time: itinObj.start_time,
-      using_rideshare: itinObj.using_rideshare,
-      stops: JSON.stringify(itinObj.stops),
-      total_cost: itinObj.total_cost, is_public: true,
-      updated_at: new Date().toISOString()
-    }).then(function() {}).catch(function() {});
-  }
+  // Sync to Supabase via sync layer (debounced)
+  if (typeof syncPushItinerary === 'function') syncPushItinerary(itinObj);
 }
 
 function itinCheckLimit() {

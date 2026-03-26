@@ -42,7 +42,7 @@ async function addMaterial(materialKey, qty, source) {
   wallet[materialKey] = (wallet[materialKey] || 0) + qty;
   localStorage.setItem('dtslo_materials', JSON.stringify(wallet));
 
-  // Sync to Supabase
+  // Sync to Supabase (both old table and new crafting_inventory)
   if (typeof currentUser !== 'undefined' && currentUser && typeof supabaseClient !== 'undefined') {
     try {
       await supabaseClient.from('player_materials').upsert({
@@ -52,6 +52,11 @@ async function addMaterial(materialKey, qty, source) {
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id,material' });
     } catch(e) {}
+  }
+  // Sync to new crafting_inventory table via sync layer
+  if (typeof syncPushCraftingItem === 'function') {
+    var def = MATERIAL_DEFS && (MATERIAL_DEFS[materialKey.replace(/_[a-z_]+$/, '')] || MATERIAL_DEFS[materialKey]);
+    syncPushCraftingItem(materialKey, def ? def.label : materialKey, 'material', wallet[materialKey]);
   }
 
   var def = MATERIAL_DEFS[materialKey.replace(/_[a-z_]+$/, '')] || MATERIAL_DEFS[materialKey] || { emoji:'🔮', label:materialKey };
