@@ -594,7 +594,9 @@ function renderBars() {
     const friendsHere = (window.friendsCheckins || []).filter(f => f.barName === bar.name);
 
     const emblSz = bar.emblem_size || 80;
-    const vertOffset = bar.emblem_offset ?? -20;
+    const vertOffset = bar.emblem_offset != null && bar.emblem_offset >= 0
+      ? bar.emblem_offset
+      : 20; // always positive — keeps emblem inside overflow:hidden card
     const emblHTML = bar.emblem_url
       ? '<img src="' + bar.emblem_url + '" style="width:' + emblSz + 'px;height:' + emblSz + 'px;object-fit:contain;border-radius:' + (bar.emblem_radius||0) + '%">'
       : '<span style="font-size:' + (emblSz*0.55) + 'px;line-height:1">' + bar.emoji + '</span>';

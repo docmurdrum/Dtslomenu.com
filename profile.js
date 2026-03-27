@@ -1208,8 +1208,7 @@ async function checkLevelUp(oldXP, newXP) {
   } catch(e) { /* fall through */ }
 
   if (imageUrl) {
-    showLevelUpPopup(newLevel, character, imageUrl, false);
-    fireConfetti();
+    if (!window._devSuppressLevelUp) { showLevelUpPopup(newLevel, character, imageUrl, false); fireConfetti(); }
     const profileWrap = document.querySelector('.char-img-wrap');
     if (profileWrap) {
       profileWrap.innerHTML = `<img id="char-img" src="${imageUrl}" alt="Your character" style="width:100%;height:100%;object-fit:cover;border-radius:20px">`;
@@ -1220,8 +1219,7 @@ async function checkLevelUp(oldXP, newXP) {
   }
 
   // No storage image — show popup with spinner and try live gen
-  showLevelUpPopup(newLevel, character, null, true);
-  fireConfetti();
+  if (!window._devSuppressLevelUp) { showLevelUpPopup(newLevel, character, null, true); fireConfetti(); }
 
   try {
     const { sceneIndex: lvlSceneIdx } = getCharacterForLevel(newLevel);

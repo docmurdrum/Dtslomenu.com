@@ -82,10 +82,10 @@ function hidePrompt() {
 
 function openDrawer(id) {
   if (id === 'travel') setTimeout(function() { try { menuHomeTravelLoadVenues(); } catch(e) {} }, 100);
-  ['mh-drawer-hubs','mh-drawer-travel','mh-drawer-tools','mh-drawer-dev'].forEach(function(d) {
+  ['mh-drawer-hubs','mh-drawer-travel','mh-drawer-tools'].forEach(function(d) {
     var el = document.getElementById(d); if (el) el.classList.remove('mh-drawer-open');
   });
-  ['mh-tab-hubs','mh-tab-travel','mh-tab-tools','mh-tab-dev'].forEach(function(t) {
+  ['mh-tab-hubs','mh-tab-travel','mh-tab-tools'].forEach(function(t) {
     var el = document.getElementById(t); if (el) el.classList.remove('mh-tab-active');
   });
   if (activeDrawer === id) { activeDrawer = null; return; }
@@ -97,10 +97,10 @@ function openDrawer(id) {
 }
 
 function closeDrawer() {
-  ['mh-drawer-hubs','mh-drawer-travel','mh-drawer-tools','mh-drawer-dev'].forEach(function(d) {
+  ['mh-drawer-hubs','mh-drawer-travel','mh-drawer-tools'].forEach(function(d) {
     var el = document.getElementById(d); if (el) el.classList.remove('mh-drawer-open');
   });
-  ['mh-tab-hubs','mh-tab-travel','mh-tab-tools','mh-tab-dev'].forEach(function(t) {
+  ['mh-tab-hubs','mh-tab-travel','mh-tab-tools'].forEach(function(t) {
     var el = document.getElementById(t); if (el) el.classList.remove('mh-tab-active');
   });
   activeDrawer = null;
@@ -389,14 +389,6 @@ function lerpColor(a, b, t) {
 
 // ── DEV MAP DISPLAY FUNCTIONS ──
 
-// Helper to build toggle rows consistently
-function devToggleRow(label, id, defaultOn, onchange) {
-  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08)">' +
-    '<span style="font-size:13px;font-weight:700">' + label + '</span>' +
-    '<label style="display:flex;align-items:center"><input type="checkbox" id="' + id + '" ' + (defaultOn ? 'checked' : '') + ' onchange="' + onchange + '" style="width:18px;height:18px;accent-color:#b44fff"></label>' +
-    '</div>';
-}
-
 var MAP_STYLES = {
   dark:      'https://api.maptiler.com/maps/streets-v2-dark/style.json?key=' + MAPTILER_KEY,
   satellite: 'https://api.maptiler.com/maps/satellite/style.json?key=' + MAPTILER_KEY,
@@ -676,8 +668,25 @@ function devSetBuildingColor(color) {
 }
 window.devSetBuildingColor = devSetBuildingColor;
 
-// ══════════════════════════════════════════════
-// INJECT FUNCTIONS — restored from v6.0
+function devToggleXPToast(on) {
+  window._devSuppressXPToast = !on;
+  try { localStorage.setItem('dtslo_dev_suppress_xp', on ? '0' : '1'); } catch(e) {}
+}
+window.devToggleXPToast = devToggleXPToast;
+
+function devToggleLevelUp(on) {
+  window._devSuppressLevelUp = !on;
+  try { localStorage.setItem('dtslo_dev_suppress_levelup', on ? '0' : '1'); } catch(e) {}
+}
+window.devToggleLevelUp = devToggleLevelUp;
+
+// Restore suppression state on load
+(function() {
+  try {
+    if (localStorage.getItem('dtslo_dev_suppress_xp') === '1') window._devSuppressXPToast = true;
+    if (localStorage.getItem('dtslo_dev_suppress_levelup') === '1') window._devSuppressLevelUp = true;
+  } catch(e) {}
+})();
 // These were missing in v6.1.1 causing black screen
 // ══════════════════════════════════════════════
 
@@ -705,7 +714,6 @@ function injectHTML() {
   if (document.getElementById('menu-home')) return;
   var div = document.createElement('div');
   div.id = 'menu-home';
-  var dev = localStorage.getItem('dtslo_dev_mode') === '1';
   div.innerHTML = [
     '<div id="mh-map"></div>',
     '<div id="mh-map-overlay"></div>',
@@ -801,94 +809,12 @@ function injectHTML() {
       '</div>',
     '</div>',
 
-    dev ? [
-      '<div id="mh-drawer-dev" class="mh-drawer">',
-        '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
-        '<div class="mh-drawer-title">🛠 Dev · Map Settings</div>',
-        '<div id="mh-dev-coords" style="font-size:10px;color:#b44fff;font-family:monospace;margin-bottom:12px"></div>',
-
-        // MAP STYLE
-        '<div class="mh-section-label">🗺 MAP STYLE</div>',
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">',
-          '<button class="mh-tool-btn" onclick="devSetMapStyle(\'dark\')" id="mh-style-dark"><div class="mh-tool-icon">🌑</div><div>Dark</div></button>',
-          '<button class="mh-tool-btn" onclick="devSetMapStyle(\'satellite\')" id="mh-style-satellite"><div class="mh-tool-icon">🛰</div><div>Satellite</div></button>',
-          '<button class="mh-tool-btn" onclick="devSetMapStyle(\'streets\')" id="mh-style-streets"><div class="mh-tool-icon">🗺</div><div>Streets</div></button>',
-          '<button class="mh-tool-btn" onclick="devSetMapStyle(\'topo\')" id="mh-style-topo"><div class="mh-tool-icon">⛰</div><div>Topo</div></button>',
-        '</div>',
-
-        // DISPLAY TOGGLES
-        '<div class="mh-section-label">🏙 DISPLAY</div>',
-        '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">',
-          devToggleRow('3D Buildings',    'dev-3d-toggle',      true,  'devToggle3D(this.checked)'),
-          devToggleRow('Auto Rotate',     'dev-rotate-toggle',  true,  'devToggleRotation(this.checked)'),
-          devToggleRow('Hub Glow Dots',   'dev-glow-toggle',    false, 'devToggleGlowDots(this.checked)'),
-          devToggleRow('Map Labels',      'dev-labels-toggle',  true,  'devToggleLabels(this.checked)'),
-          devToggleRow('Night Dim',       'dev-night-toggle',   false, 'devToggleNightDim(this.checked)'),
-          devToggleRow('Nav Controls',    'dev-nav-toggle',     true,  'devToggleNavControls(this.checked)'),
-          devToggleRow('Hub Radius Ring', 'dev-radius-toggle',  false, 'devToggleRadiusRing(this.checked)'),
-          devToggleRow('Bar Pins on Map', 'dev-barpins-toggle', false, 'devToggleBarPins(this.checked)'),
-        '</div>',
-
-        // PERFORMANCE
-        '<div class="mh-section-label">⚡ PERFORMANCE</div>',
-        '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">',
-          devToggleRow('High Tile Quality', 'dev-hq-toggle',   true,  'devToggleTileQuality(this.checked)'),
-          devToggleRow('Kill Animations',   'dev-anim-toggle', false, 'devKillAnimations(this.checked)'),
-        '</div>',
-
-        // CAMERA
-        '<div class="mh-section-label">🎛 CAMERA</div>',
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">',
-          '<button class="mh-tool-btn" onclick="devResetNorth()"><div class="mh-tool-icon">🧭</div><div>Reset North</div></button>',
-          '<button class="mh-tool-btn" onclick="devFollowMe()"><div class="mh-tool-icon">📍</div><div>Follow Me</div></button>',
-          '<button class="mh-tool-btn" onclick="devLockToSLO()"><div class="mh-tool-icon">🔒</div><div>Lock to SLO</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeReturnToSLO()"><div class="mh-tool-icon">🎯</div><div>Reset Camera</div></button>',
-        '</div>',
-        '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">',
-          '<div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08)">',
-            '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:700">Pitch</span><span id="dev-pitch-val" style="font-size:12px;color:#b44fff">62°</span></div>',
-            '<input type="range" min="0" max="85" value="62" style="width:100%;accent-color:#b44fff" oninput="devSetPitch(parseInt(this.value))">',
-          '</div>',
-          '<div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08)">',
-            '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:700">Zoom</span><span id="dev-zoom-val" style="font-size:12px;color:#b44fff">15</span></div>',
-            '<input type="range" min="10" max="18" step="0.5" value="15" style="width:100%;accent-color:#b44fff" oninput="devSetZoom(parseFloat(this.value))">',
-          '</div>',
-        '</div>',
-
-        // LOCATION PRESETS
-        '<div class="mh-section-label">📍 JUMP TO</div>',
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">',
-          '<button class="mh-tool-btn" onclick="devJumpTo(\'downtown\')"><div class="mh-tool-icon">🌃</div><div>Downtown</div></button>',
-          '<button class="mh-tool-btn" onclick="devJumpTo(\'calpoly\')"><div class="mh-tool-icon">🎓</div><div>Cal Poly</div></button>',
-          '<button class="mh-tool-btn" onclick="devJumpTo(\'paso\')"><div class="mh-tool-icon">🍷</div><div>Paso Robles</div></button>',
-          '<button class="mh-tool-btn" onclick="devJumpTo(\'morro\')"><div class="mh-tool-icon">🦦</div><div>Morro Bay</div></button>',
-        '</div>',
-
-        // BUILDING COLOR
-        '<div class="mh-section-label">🎨 BUILDING COLOR</div>',
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">',
-          '<button onclick="devSetBuildingColor(\'#1e3a6e\')" style="padding:10px;border-radius:10px;border:1px solid rgba(45,106,191,0.4);background:rgba(45,106,191,0.15);color:#6ba3f5;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">🔵 Blue</button>',
-          '<button onclick="devSetBuildingColor(\'#2d0a1e\')" style="padding:10px;border-radius:10px;border:1px solid rgba(255,45,120,0.4);background:rgba(255,45,120,0.15);color:#ff2d78;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">🩷 Pink</button>',
-          '<button onclick="devSetBuildingColor(\'#1a1a00\')" style="padding:10px;border-radius:10px;border:1px solid rgba(255,215,0,0.4);background:rgba(255,215,0,0.15);color:#ffd700;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">⭐ Gold</button>',
-          '<button onclick="devSetBuildingColor(\'#0a2d14\')" style="padding:10px;border-radius:10px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.15);color:#22c55e;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">🟢 Green</button>',
-          '<button onclick="devSetBuildingColor(\'#1a0a2d\')" style="padding:10px;border-radius:10px;border:1px solid rgba(139,92,246,0.4);background:rgba(139,92,246,0.15);color:#a78bfa;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">🟣 Purple</button>',
-          '<button onclick="devSetBuildingColor(\'#111111\')" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.6);font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">⬛ Dark</button>',
-        '</div>',
-
-        // APP
-        '<div class="mh-section-label">🧪 APP</div>',
-        '<div class="mh-tools-grid">',
-          '<button class="mh-tool-btn" onclick="menuHomeEnterDTSLO()"><div class="mh-tool-icon">→</div><div>Skip to DTSLO</div></button>',
-        '</div>',
-      '</div>'
-    ].join('') : '',
 
     // TOOLBAR
     '<div id="mh-toolbar">',
       '<button class="mh-tab" id="mh-tab-hubs"   onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="hubs"><span class="mh-tab-icon">🌐</span><span class="mh-tab-label">Hubs</span></button>',
       '<button class="mh-tab" id="mh-tab-tools"  onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="tools"><span class="mh-tab-icon">⚡</span><span class="mh-tab-label">Tools</span></button>',
       '<button class="mh-tab" id="mh-tab-travel" onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="travel"><span class="mh-tab-icon">🗺</span><span class="mh-tab-label">Travel</span></button>',
-      dev ? '<button class="mh-tab" id="mh-tab-dev" onclick="menuHomeOpenDrawer(this.dataset.id)" data-id="dev"><span class="mh-tab-icon">🐛</span><span class="mh-tab-label">Dev</span></button>' : '',
     '</div>',
 
     // SKIP PROMPT
@@ -901,10 +827,7 @@ function injectHTML() {
 
   ].join('');
   document.body.insertBefore(div, document.body.firstChild);
-  if (dev) setInterval(function() {
-    var el = document.getElementById('mh-dev-coords');
-    if (el && homeMap) { var c = homeMap.getCenter(); el.textContent = 'Center: ' + c.lat.toFixed(4) + ', ' + c.lng.toFixed(4); }
-  }, 500);
+
 }
 
 function injectCSS() {
@@ -980,3 +903,25 @@ function injectCSS() {
   ].join('');
   document.head.appendChild(s);
 }
+
+// ── ADMIN COMMAND BRIDGE ──
+// Polls localStorage for commands sent from the admin panel.
+// Admin calls liveApp(fn, arg) which writes to dtslo_admin_cmd.
+(function() {
+  var _lastCmd = null;
+  setInterval(function() {
+    try {
+      var raw = localStorage.getItem('dtslo_admin_cmd');
+      if (!raw || raw === _lastCmd) return;
+      _lastCmd = raw;
+      var cmd = JSON.parse(raw);
+      if (!cmd || !cmd.fn) return;
+      // Only process commands from the last 3 seconds
+      if (Date.now() - cmd.ts > 3000) return;
+      var fn = window[cmd.fn];
+      if (typeof fn === 'function') {
+        cmd.arg !== null ? fn(cmd.arg) : fn();
+      }
+    } catch(e) {}
+  }, 500);
+})();

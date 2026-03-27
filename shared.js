@@ -317,7 +317,7 @@ async function addXP(amount) {
       // Award XP shard materials
       if (typeof awardXPShard === 'function') awardXPShard(amount);
       
-      if (typeof showToast === 'function') showToast('⚡ +' + amount + ' XP');
+      if (typeof showToast === 'function' && !window._devSuppressXPToast) showToast('⚡ +' + amount + ' XP');
     }
   } catch(e) {
     console.warn('[addXP]', e);
