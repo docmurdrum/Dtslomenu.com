@@ -113,8 +113,7 @@ function timeAgo(t) {
 
 // ── THURSDAY CHECK ──
 function isThursdayNight() {
-  const now = new Date();
-  return now.getDay() === 4 && now.getHours() >= 20;
+  return false; // Thursday mode disabled
 }
 
 function checkThursdayMode() {
