@@ -599,19 +599,19 @@ function renderBars() {
       : '<span style="font-size:' + (emblSz*0.55) + 'px;line-height:1">' + bar.emoji + '</span>';
 
     el.innerHTML = `
+      <!-- Floating emblem — direct child of card, outside photo, never clipped -->
+      <div class="bar-emblem-float" style="top:${vertOffset}px">
+        <div class="bar-emblem-glow" style="background:${glow.color};width:${emblSz+40}px;height:${emblSz+40}px;opacity:${glow.intensity/100}"></div>
+        <div class="bar-emblem-disc" style="width:${emblSz+24}px;height:${emblSz+24}px">
+          ${emblHTML}
+        </div>
+      </div>
+
       <!-- Photo area -->
-      <div class="bar-photo-v2 ${isCollapsed ? 'photo-collapsed' : ''}" style="overflow:visible">
+      <div class="bar-photo-v2 ${isCollapsed ? 'photo-collapsed' : ''}">
 
         <div class="bar-photo-gradient-v2" style="background:linear-gradient(135deg,${bar.color}22,${bar.color}44,#030308)"></div>
         <div class="bar-photo-overlay-v2"></div>
-
-        <!-- Floating emblem — after gradient/overlay so DOM order keeps it on top -->
-        <div class="bar-emblem-float" style="top:${vertOffset}px">
-          <div class="bar-emblem-glow" style="background:${glow.color};width:${emblSz+40}px;height:${emblSz+40}px;opacity:${glow.intensity/100}"></div>
-          <div class="bar-emblem-disc" style="width:${emblSz+24}px;height:${emblSz+24}px">
-            ${emblHTML}
-          </div>
-        </div>
 
         <!-- Upper left: line count -->
         ${lineCount > 0 ? `<div class="bar-corner-badge bar-corner-left">🚶 ${lineCount} in line</div>` : ''}

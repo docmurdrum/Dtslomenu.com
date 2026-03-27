@@ -389,6 +389,14 @@ function lerpColor(a, b, t) {
 
 // ── DEV MAP DISPLAY FUNCTIONS ──
 
+// Helper to build toggle rows consistently
+function devToggleRow(label, id, defaultOn, onchange) {
+  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08)">' +
+    '<span style="font-size:13px;font-weight:700">' + label + '</span>' +
+    '<label style="display:flex;align-items:center"><input type="checkbox" id="' + id + '" ' + (defaultOn ? 'checked' : '') + ' onchange="' + onchange + '" style="width:18px;height:18px;accent-color:#b44fff"></label>' +
+    '</div>';
+}
+
 var MAP_STYLES = {
   dark:      'https://api.maptiler.com/maps/streets-v2-dark/style.json?key=' + MAPTILER_KEY,
   satellite: 'https://api.maptiler.com/maps/satellite/style.json?key=' + MAPTILER_KEY,
@@ -396,19 +404,21 @@ var MAP_STYLES = {
   topo:      'https://api.maptiler.com/maps/topo-v2/style.json?key=' + MAPTILER_KEY,
 };
 var _currentMapStyle = 'dark';
-var _devRotating = true;
 var _dev3D = true;
+var _devRotationActive = true;
+var _devLockSLO = false;
+var _devFollowWatcher = null;
+var _devNightDimLayer = false;
+var _devNavControl = null;
 
 function devSetMapStyle(name) {
   if (!homeMap || !MAP_STYLES[name]) return;
   _currentMapStyle = name;
-  // Highlight active button
   ['dark','satellite','streets','topo'].forEach(function(s) {
     var btn = document.getElementById('mh-style-' + s);
     if (btn) btn.style.borderColor = s === name ? '#b44fff' : 'rgba(255,255,255,0.08)';
   });
   homeMap.setStyle(MAP_STYLES[name]);
-  // Re-add 3D buildings after style loads
   homeMap.once('styledata', function() {
     if (_dev3D) devAdd3DBuildings();
   });
@@ -419,11 +429,8 @@ window.devSetMapStyle = devSetMapStyle;
 function devToggle3D(on) {
   _dev3D = on;
   if (!homeMap) return;
-  if (on) {
-    devAdd3DBuildings();
-  } else {
-    try { if (homeMap.getLayer('mh-3d-buildings')) homeMap.removeLayer('mh-3d-buildings'); } catch(e) {}
-  }
+  if (on) { devAdd3DBuildings(); }
+  else { try { if (homeMap.getLayer('mh-3d-buildings')) homeMap.removeLayer('mh-3d-buildings'); } catch(e) {} }
 }
 window.devToggle3D = devToggle3D;
 
@@ -451,7 +458,6 @@ function devAdd3DBuildings() {
   } catch(e) { console.warn('[3D buildings]', e); }
 }
 
-var _devRotationActive = true;
 function devToggleRotation(on) {
   _devRotationActive = on;
   if (on && homeMap) {
@@ -466,6 +472,186 @@ function devToggleRotation(on) {
   }
 }
 window.devToggleRotation = devToggleRotation;
+
+function devToggleGlowDots(on) {
+  if (typeof HUB_SPOT_DEFS === 'undefined') return;
+  HUB_SPOT_DEFS.forEach(function(hub) {
+    if (typeof setHubGlowVisible === 'function') setHubGlowVisible(hub.id, on);
+  });
+}
+window.devToggleGlowDots = devToggleGlowDots;
+
+function devToggleLabels(on) {
+  if (!homeMap) return;
+  var style = homeMap.getStyle();
+  if (!style || !style.layers) return;
+  style.layers.forEach(function(layer) {
+    if (layer.type === 'symbol') {
+      try { homeMap.setLayoutProperty(layer.id, 'visibility', on ? 'visible' : 'none'); } catch(e) {}
+    }
+  });
+}
+window.devToggleLabels = devToggleLabels;
+
+function devToggleNightDim(on) {
+  _devNightDimLayer = on;
+  var existing = document.getElementById('mh-night-dim');
+  if (on) {
+    if (existing) return;
+    var dim = document.createElement('div');
+    dim.id = 'mh-night-dim';
+    dim.style.cssText = 'position:absolute;inset:0;z-index:3;background:rgba(0,0,20,0.45);pointer-events:none;transition:opacity 0.8s';
+    var mapEl = document.getElementById('menu-home');
+    if (mapEl) mapEl.appendChild(dim);
+  } else {
+    if (existing) existing.remove();
+  }
+}
+window.devToggleNightDim = devToggleNightDim;
+
+function devToggleNavControls(on) {
+  if (!homeMap) return;
+  if (!on) {
+    if (_devNavControl) { try { homeMap.removeControl(_devNavControl); } catch(e) {} _devNavControl = null; }
+    // Remove existing nav controls
+    document.querySelectorAll('.maplibregl-ctrl-top-right').forEach(function(el) { el.style.display = 'none'; });
+  } else {
+    document.querySelectorAll('.maplibregl-ctrl-top-right').forEach(function(el) { el.style.display = ''; });
+    if (!_devNavControl) {
+      _devNavControl = new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true });
+      try { homeMap.addControl(_devNavControl, 'top-right'); } catch(e) {}
+    }
+  }
+}
+window.devToggleNavControls = devToggleNavControls;
+
+function devToggleRadiusRing(on) {
+  if (!homeMap) return;
+  if (!on) {
+    try { if (homeMap.getLayer('dev-radius-ring')) homeMap.removeLayer('dev-radius-ring'); } catch(e) {}
+    try { if (homeMap.getSource('dev-radius-src')) homeMap.removeSource('dev-radius-src'); } catch(e) {}
+    return;
+  }
+  // Draw ~0.5 mile walkable radius around downtown SLO
+  var center = [-120.6650, 35.2803];
+  var radiusDeg = 0.007; // ~0.5 miles
+  var points = [];
+  for (var i = 0; i <= 64; i++) {
+    var angle = (i / 64) * Math.PI * 2;
+    points.push([center[0] + Math.cos(angle) * radiusDeg * 1.3, center[1] + Math.sin(angle) * radiusDeg]);
+  }
+  try {
+    homeMap.addSource('dev-radius-src', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [points] }, properties: {} } });
+    homeMap.addLayer({ id: 'dev-radius-ring', type: 'line', source: 'dev-radius-src', paint: { 'line-color': '#ffd700', 'line-width': 2, 'line-opacity': 0.6, 'line-dasharray': [4, 3] } });
+  } catch(e) { console.warn('[radius ring]', e); }
+}
+window.devToggleRadiusRing = devToggleRadiusRing;
+
+var _devBarPinMarkers = [];
+function devToggleBarPins(on) {
+  if (!homeMap) return;
+  if (!on) {
+    _devBarPinMarkers.forEach(function(m) { try { m.remove(); } catch(e) {} });
+    _devBarPinMarkers = [];
+    return;
+  }
+  if (typeof bars === 'undefined') return;
+  // Bar lat/lng coords — hardcoded from pin_mover
+  var BAR_COORDS = {
+    "Black Sheep Bar & Grill": [35.2814, -120.6658],
+    "Bull's Tavern":           [35.2816, -120.6662],
+    "Frog & Peach Pub":        [35.2815, -120.6661],
+    "High Bar":                [35.2800, -120.6644],
+    "Nightcap":                [35.2791, -120.6640],
+    "Feral Kitchen & Lounge":  [35.2806, -120.6655],
+    "The Library":             [35.2801, -120.6648],
+    "The Mark":                [35.2809, -120.6652],
+    "McCarthy's Irish Pub":    [35.2812, -120.6660],
+    "Sidecar SLO":             [35.2808, -120.6656],
+    "BA Start Arcade Bar":     [35.2803, -120.6650],
+    "SLO Brew Rock":           [35.2768, -120.6638],
+  };
+  bars.forEach(function(bar) {
+    var coords = (bar.lat && bar.lng) ? [bar.lat, bar.lng] : BAR_COORDS[bar.name];
+    if (!coords) return;
+    var el = document.createElement('div');
+    el.style.cssText = 'width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid rgba(255,255,255,0.3);box-shadow:0 2px 8px rgba(0,0,0,0.5);cursor:pointer';
+    el.style.background = bar.color || '#ff2d78';
+    el.textContent = bar.emoji || '🍺';
+    el.title = bar.name;
+    var marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+      .setLngLat([coords[1], coords[0]])
+      .addTo(homeMap);
+    _devBarPinMarkers.push(marker);
+  });
+}
+window.devToggleBarPins = devToggleBarPins;
+
+function devToggleTileQuality(high) {
+  if (!homeMap) return;
+  try { homeMap.setMaxTileCacheSize(high ? 200 : 50); } catch(e) {}
+  // Also toggle overzooming
+  try { homeMap.setMaxZoom(high ? 22 : 18); } catch(e) {}
+}
+window.devToggleTileQuality = devToggleTileQuality;
+
+function devKillAnimations(on) {
+  var style = document.getElementById('dev-kill-anim-style');
+  if (on) {
+    if (style) return;
+    var s = document.createElement('style');
+    s.id = 'dev-kill-anim-style';
+    s.textContent = '#menu-home * { animation: none !important; transition: none !important; }';
+    document.head.appendChild(s);
+  } else {
+    if (style) style.remove();
+  }
+}
+window.devKillAnimations = devKillAnimations;
+
+function devResetNorth() {
+  if (!homeMap) return;
+  homeMap.easeTo({ bearing: 0, duration: 600 });
+}
+window.devResetNorth = devResetNorth;
+
+function devFollowMe() {
+  if (!homeMap) return;
+  if (_devFollowWatcher) { navigator.geolocation.clearWatch(_devFollowWatcher); _devFollowWatcher = null; }
+  if (!navigator.geolocation) { try { if (typeof showToast === 'function') showToast('GPS not available'); } catch(e) {} return; }
+  _devFollowWatcher = navigator.geolocation.watchPosition(function(pos) {
+    homeMap.easeTo({ center: [pos.coords.longitude, pos.coords.latitude], duration: 500 });
+  }, function() {}, { enableHighAccuracy: true });
+  try { if (typeof showToast === 'function') showToast('Following your location'); } catch(e) {}
+}
+window.devFollowMe = devFollowMe;
+
+function devLockToSLO() {
+  if (!homeMap) return;
+  _devLockSLO = !_devLockSLO;
+  var SLO_BOUNDS = [[-121.2, 35.0], [-120.3, 35.6]];
+  if (_devLockSLO) {
+    homeMap.setMaxBounds(SLO_BOUNDS);
+    try { if (typeof showToast === 'function') showToast('Map locked to SLO area'); } catch(e) {}
+  } else {
+    homeMap.setMaxBounds(null);
+    try { if (typeof showToast === 'function') showToast('Map bounds unlocked'); } catch(e) {}
+  }
+}
+window.devLockToSLO = devLockToSLO;
+
+var DEV_LOCATIONS = {
+  downtown: { center: [-120.6650, 35.2803], zoom: 15, pitch: 62 },
+  calpoly:  { center: [-120.6596, 35.3050], zoom: 15, pitch: 45 },
+  paso:     { center: [-120.6910, 35.6244], zoom: 13, pitch: 30 },
+  morro:    { center: [-120.8650, 35.3658], zoom: 13, pitch: 30 },
+};
+function devJumpTo(name) {
+  var loc = DEV_LOCATIONS[name];
+  if (!homeMap || !loc) return;
+  homeMap.flyTo({ center: loc.center, zoom: loc.zoom, pitch: loc.pitch, duration: 1200 });
+}
+window.devJumpTo = devJumpTo;
 
 function devSetPitch(val) {
   var lbl = document.getElementById('dev-pitch-val');
@@ -489,14 +675,6 @@ function devSetBuildingColor(color) {
   try { localStorage.setItem('dtslo_glow_settings', JSON.stringify(_glowSettings)); } catch(e) {}
 }
 window.devSetBuildingColor = devSetBuildingColor;
-
-function devToggleGlowDots(on) {
-  if (typeof HUB_SPOT_DEFS === 'undefined') return;
-  HUB_SPOT_DEFS.forEach(function(hub) {
-    if (typeof setHubGlowVisible === 'function') setHubGlowVisible(hub.id, on);
-  });
-}
-window.devToggleGlowDots = devToggleGlowDots;
 
 // ══════════════════════════════════════════════
 // INJECT FUNCTIONS — restored from v6.0
@@ -626,7 +804,7 @@ function injectHTML() {
     dev ? [
       '<div id="mh-drawer-dev" class="mh-drawer">',
         '<div class="mh-drawer-handle" onclick="menuHomeCloseDrawer()"></div>',
-        '<div class="mh-drawer-title">🛠 Dev · Map Display</div>',
+        '<div class="mh-drawer-title">🛠 Dev · Map Settings</div>',
         '<div id="mh-dev-coords" style="font-size:10px;color:#b44fff;font-family:monospace;margin-bottom:12px"></div>',
 
         // MAP STYLE
@@ -638,32 +816,52 @@ function injectHTML() {
           '<button class="mh-tool-btn" onclick="devSetMapStyle(\'topo\')" id="mh-style-topo"><div class="mh-tool-icon">⛰</div><div>Topo</div></button>',
         '</div>',
 
-        // 3D + ROTATION
+        // DISPLAY TOGGLES
         '<div class="mh-section-label">🏙 DISPLAY</div>',
+        '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">',
+          devToggleRow('3D Buildings',    'dev-3d-toggle',      true,  'devToggle3D(this.checked)'),
+          devToggleRow('Auto Rotate',     'dev-rotate-toggle',  true,  'devToggleRotation(this.checked)'),
+          devToggleRow('Hub Glow Dots',   'dev-glow-toggle',    false, 'devToggleGlowDots(this.checked)'),
+          devToggleRow('Map Labels',      'dev-labels-toggle',  true,  'devToggleLabels(this.checked)'),
+          devToggleRow('Night Dim',       'dev-night-toggle',   false, 'devToggleNightDim(this.checked)'),
+          devToggleRow('Nav Controls',    'dev-nav-toggle',     true,  'devToggleNavControls(this.checked)'),
+          devToggleRow('Hub Radius Ring', 'dev-radius-toggle',  false, 'devToggleRadiusRing(this.checked)'),
+          devToggleRow('Bar Pins on Map', 'dev-barpins-toggle', false, 'devToggleBarPins(this.checked)'),
+        '</div>',
+
+        // PERFORMANCE
+        '<div class="mh-section-label">⚡ PERFORMANCE</div>',
+        '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">',
+          devToggleRow('High Tile Quality', 'dev-hq-toggle',   true,  'devToggleTileQuality(this.checked)'),
+          devToggleRow('Kill Animations',   'dev-anim-toggle', false, 'devKillAnimations(this.checked)'),
+        '</div>',
+
+        // CAMERA
+        '<div class="mh-section-label">🎛 CAMERA</div>',
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">',
+          '<button class="mh-tool-btn" onclick="devResetNorth()"><div class="mh-tool-icon">🧭</div><div>Reset North</div></button>',
+          '<button class="mh-tool-btn" onclick="devFollowMe()"><div class="mh-tool-icon">📍</div><div>Follow Me</div></button>',
+          '<button class="mh-tool-btn" onclick="devLockToSLO()"><div class="mh-tool-icon">🔒</div><div>Lock to SLO</div></button>',
+          '<button class="mh-tool-btn" onclick="menuHomeReturnToSLO()"><div class="mh-tool-icon">🎯</div><div>Reset Camera</div></button>',
+        '</div>',
         '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">',
-          '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08)">',
-            '<span style="font-size:13px;font-weight:700">3D Buildings</span>',
-            '<label style="display:flex;align-items:center"><input type="checkbox" id="dev-3d-toggle" checked onchange="devToggle3D(this.checked)" style="width:18px;height:18px;accent-color:#b44fff"></label>',
+          '<div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08)">',
+            '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:700">Pitch</span><span id="dev-pitch-val" style="font-size:12px;color:#b44fff">62°</span></div>',
+            '<input type="range" min="0" max="85" value="62" style="width:100%;accent-color:#b44fff" oninput="devSetPitch(parseInt(this.value))">',
           '</div>',
-          '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08)">',
-            '<span style="font-size:13px;font-weight:700">Auto Rotate</span>',
-            '<label style="display:flex;align-items:center"><input type="checkbox" id="dev-rotate-toggle" checked onchange="devToggleRotation(this.checked)" style="width:18px;height:18px;accent-color:#b44fff"></label>',
-          '</div>',
-          '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08)">',
-            '<span style="font-size:13px;font-weight:700">Hub Glow Dots</span>',
-            '<label style="display:flex;align-items:center"><input type="checkbox" id="dev-glow-toggle" checked onchange="devToggleGlowDots(this.checked)" style="width:18px;height:18px;accent-color:#b44fff"></label>',
+          '<div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08)">',
+            '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:700">Zoom</span><span id="dev-zoom-val" style="font-size:12px;color:#b44fff">15</span></div>',
+            '<input type="range" min="10" max="18" step="0.5" value="15" style="width:100%;accent-color:#b44fff" oninput="devSetZoom(parseFloat(this.value))">',
           '</div>',
         '</div>',
 
-        // PITCH + ZOOM
-        '<div class="mh-section-label">🎛 CAMERA</div>',
-        '<div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px">',
-          '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:700">Pitch</span><span id="dev-pitch-val" style="font-size:12px;color:#b44fff">62°</span></div>',
-          '<input type="range" min="0" max="85" value="62" style="width:100%;accent-color:#b44fff" oninput="devSetPitch(parseInt(this.value))">',
-        '</div>',
-        '<div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-bottom:14px">',
-          '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:700">Zoom</span><span id="dev-zoom-val" style="font-size:12px;color:#b44fff">15</span></div>',
-          '<input type="range" min="10" max="18" step="0.5" value="15" style="width:100%;accent-color:#b44fff" oninput="devSetZoom(parseFloat(this.value))">',
+        // LOCATION PRESETS
+        '<div class="mh-section-label">📍 JUMP TO</div>',
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">',
+          '<button class="mh-tool-btn" onclick="devJumpTo(\'downtown\')"><div class="mh-tool-icon">🌃</div><div>Downtown</div></button>',
+          '<button class="mh-tool-btn" onclick="devJumpTo(\'calpoly\')"><div class="mh-tool-icon">🎓</div><div>Cal Poly</div></button>',
+          '<button class="mh-tool-btn" onclick="devJumpTo(\'paso\')"><div class="mh-tool-icon">🍷</div><div>Paso Robles</div></button>',
+          '<button class="mh-tool-btn" onclick="devJumpTo(\'morro\')"><div class="mh-tool-icon">🦦</div><div>Morro Bay</div></button>',
         '</div>',
 
         // BUILDING COLOR
@@ -681,7 +879,6 @@ function injectHTML() {
         '<div class="mh-section-label">🧪 APP</div>',
         '<div class="mh-tools-grid">',
           '<button class="mh-tool-btn" onclick="menuHomeEnterDTSLO()"><div class="mh-tool-icon">→</div><div>Skip to DTSLO</div></button>',
-          '<button class="mh-tool-btn" onclick="menuHomeReturnToSLO()"><div class="mh-tool-icon">🎯</div><div>Reset Camera</div></button>',
         '</div>',
       '</div>'
     ].join('') : '',

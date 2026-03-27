@@ -4,7 +4,7 @@
 // Never redeclare these in other files
 // ══════════════════════════════════════════════
 
-var BUILD_VERSION = '6.1.6';
+var BUILD_VERSION = '6.1.8';
 var BUILD_DATE    = '2026-03-26';
 
 // ── MAP ──
@@ -118,7 +118,7 @@ var _hubGlowIntervals = {}; // hub_id -> interval
 function initHubGlowLayers() {
   if (!homeMap) return;
   HUB_SPOT_DEFS.forEach(function(hub) {
-    var isOn = _hubGlowState[hub.id] !== false; // default on
+    var isOn = _hubGlowState[hub.id] === true; // default OFF — user turns on via dev drawer
     addHubGlowLayer(hub, isOn);
   });
 }
