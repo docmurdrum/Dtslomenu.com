@@ -104,7 +104,10 @@ async function loadBarsFromDB() {
       }
     });
   } catch(e) {
-    console.warn('[lines] loadBarsFromDB:', e.message);
+    // Suppress schema cache warning — businesses table may not exist yet
+    if (!e.message || !e.message.includes('schema cache')) {
+      console.warn('[lines] loadBarsFromDB:', e.message);
+    }
   }
 }
 
@@ -596,7 +599,7 @@ function renderBars() {
     const emblSz = bar.emblem_size || 80;
     const vertOffset = bar.emblem_offset != null && bar.emblem_offset >= 0
       ? bar.emblem_offset
-      : 20; // always positive — keeps emblem inside overflow:hidden card
+      : 8; // centers a 104px disc in a 120px photo area
     const emblHTML = bar.emblem_url
       ? '<img src="' + bar.emblem_url + '" style="width:' + emblSz + 'px;height:' + emblSz + 'px;object-fit:contain;border-radius:' + (bar.emblem_radius||0) + '%">'
       : '<span style="font-size:' + (emblSz*0.55) + 'px;line-height:1">' + bar.emoji + '</span>';
@@ -644,12 +647,11 @@ function renderBars() {
 
 
 
-        ${!isCollapsed ? `<div class="bar-meta-pills">
+        ${userStatus ? `<div class="user-report-label">You reported: ${userStatus} ✓</div>` :
+          !isCollapsed ? `<div class="bar-meta-pills">
           ${waitText ? `<span class="wait-pill-v2 ${waitText.cls}">⏱ ${waitText.t}</span>` : ''}
           ${checkinCount > 0 ? `<span class="checkin-count-v2">👤 ${checkinCount} checked in</span>` : ''}
         </div>` : `<div class="bar-no-data-label">${status === 'No Data' ? 'Be the first to report' : 'Quiet right now'}</div>`}
-
-        ${userStatus ? `<div class="user-report-label">You reported: ${userStatus} ✓</div>` : ''}
       </div>
 
       <div class="vote-row">
@@ -994,7 +996,7 @@ async function loadReports() {
       const bar = bars.find(b => b.name === r.bar);
       if (bar) bar.reports.push({ status: r.status, time: new Date(r.created_at).getTime(), user_id: r.user_id });
     });
-  } catch (e) { console.error(e); showToast('❌ Could not load reports'); }
+  } catch (e) { console.error('[loadReports]', e.message || e); showToast('❌ Could not load reports'); }
   renderBars();
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(loadReports, 60000);
