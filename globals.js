@@ -4,7 +4,7 @@
 // Never redeclare these in other files
 // ══════════════════════════════════════════════
 
-var BUILD_VERSION = '6.2.6';
+var BUILD_VERSION = '6.2.7';
 var BUILD_DATE    = '2026-03-26';
 
 // ── MAP ──
@@ -236,6 +236,7 @@ window.setHubGlowVisible = setHubGlowVisible;
     header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(239,68,68,0.3);';
     header.innerHTML = '<span style="font-size:12px;font-weight:900;color:#ef4444;letter-spacing:1px">DEV ERROR LOG</span>' +
       '<div style="display:flex;gap:8px">' +
+        '<button onclick="dtsloDebugEmblem()" style="background:rgba(180,79,255,0.15);border:1px solid rgba(180,79,255,0.3);color:#b44fff;padding:3px 10px;border-radius:6px;font-size:10px;font-family:monospace;cursor:pointer">🔍 Emblem</button>' +
         '<button onclick="dtsloErrClear()" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:3px 10px;border-radius:6px;font-size:10px;font-family:monospace;cursor:pointer">Clear</button>' +
         '<button onclick="dtsloErrClose()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);padding:3px 10px;border-radius:6px;font-size:10px;font-family:monospace;cursor:pointer">Hide</button>' +
       '</div>';
@@ -388,3 +389,41 @@ window.setHubGlowVisible = setHubGlowVisible;
   // Init check
   checkDevMode();
 })();
+
+// ── EMBLEM DEBUG ──
+// Tap "🔍 Emblem" in the dev error log to dump computed styles of all emblems
+window.dtsloDebugEmblem = function() {
+  var emblems = document.querySelectorAll('.bar-emblem-float');
+  if (!emblems.length) { console.warn('[emblem] No .bar-emblem-float elements found in DOM'); return; }
+
+  emblems.forEach(function(el, i) {
+    var cs  = window.getComputedStyle(el);
+    var disc = el.querySelector('.bar-emblem-disc');
+    var dcs  = disc ? window.getComputedStyle(disc) : null;
+    var parent = el.parentElement;
+    var pcs  = parent ? window.getComputedStyle(parent) : null;
+
+    var msg = 'EMBLEM[' + i + '] float: ' +
+      'display=' + cs.display +
+      ' vis=' + cs.visibility +
+      ' op=' + cs.opacity +
+      ' z=' + cs.zIndex +
+      ' top=' + cs.top +
+      ' left=' + cs.left +
+      ' transform=' + cs.transform +
+      ' overflow=' + cs.overflow;
+
+    if (dcs) msg += ' | DISC: display=' + dcs.display + ' op=' + dcs.opacity + ' overflow=' + dcs.overflow;
+    if (pcs) msg += ' | PARENT(' + (parent.className || parent.id) + '): overflow=' + pcs.overflow + ' transform=' + pcs.transform + ' z=' + pcs.zIndex;
+
+    // Check grandparent (bar-card-v2)
+    var gp = parent && parent.parentElement;
+    if (gp) {
+      var gcs = window.getComputedStyle(gp);
+      msg += ' | CARD: overflow=' + gcs.overflow + ' transform=' + gcs.transform + ' anim=' + gcs.animationName;
+    }
+
+    console.warn(msg);
+  });
+  console.warn('[emblem] Dumped ' + emblems.length + ' emblem(s) — check above');
+};
