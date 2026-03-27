@@ -4,7 +4,7 @@
 // Bump CACHE_NAME on every deploy to bust old caches.
 // ══════════════════════════════════════════════
 
-const CACHE_NAME = 'dtslo-v6.1.9';
+const CACHE_NAME = 'dtslo-v6.2.0';
 
 const CORE_ASSETS = [
   '/','/index.html',
