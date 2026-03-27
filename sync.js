@@ -285,15 +285,17 @@ var _prefsCache = null;
 
 async function syncPullPreferences(userId) {
   try {
+    // Use limit(1) instead of .single() — guards against duplicate profile rows throwing
     var res = await supabaseClient
       .from('profiles')
       .select('preferences')
       .eq('id', userId)
-      .single();
+      .limit(1);
     if (res.error) throw res.error;
-    if (!res.data || !res.data.preferences) return;
+    var row = Array.isArray(res.data) ? res.data[0] : res.data;
+    if (!row || !row.preferences) return;
 
-    _prefsCache = res.data.preferences;
+    _prefsCache = row.preferences;
 
     // Apply known preferences
     if (_prefsCache.skip_hub_screen !== undefined) {

@@ -299,15 +299,16 @@ async function addXP(amount) {
     return;
   }
   try {
-    // Load current XP
+    // Load current XP — limit(1) guards against duplicate profile rows
     var res = await supabaseClient
       .from('profiles')
       .select('xp, level')
       .eq('id', currentUser.id)
-      .single();
+      .limit(1);
     
-    if (res.data) {
-      var newXP = (res.data.xp || 0) + amount;
+    var profileRow = Array.isArray(res.data) ? res.data[0] : res.data;
+    if (profileRow) {
+      var newXP = (profileRow.xp || 0) + amount;
       var newLevel = Math.floor(newXP / 100) + 1;
       await supabaseClient
         .from('profiles')

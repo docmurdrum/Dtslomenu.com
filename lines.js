@@ -602,16 +602,16 @@ function renderBars() {
       <!-- Photo area -->
       <div class="bar-photo-v2 ${isCollapsed ? 'photo-collapsed' : ''}" style="overflow:visible">
 
-        <!-- Floating emblem -->
+        <div class="bar-photo-gradient-v2" style="background:linear-gradient(135deg,${bar.color}22,${bar.color}44,#030308)"></div>
+        <div class="bar-photo-overlay-v2"></div>
+
+        <!-- Floating emblem — after gradient/overlay so DOM order keeps it on top -->
         <div class="bar-emblem-float" style="top:${vertOffset}px">
           <div class="bar-emblem-glow" style="background:${glow.color};width:${emblSz+40}px;height:${emblSz+40}px;opacity:${glow.intensity/100}"></div>
           <div class="bar-emblem-disc" style="width:${emblSz+24}px;height:${emblSz+24}px">
             ${emblHTML}
           </div>
         </div>
-
-        <div class="bar-photo-gradient-v2" style="background:linear-gradient(135deg,${bar.color}22,${bar.color}44,#030308)"></div>
-        <div class="bar-photo-overlay-v2"></div>
 
         <!-- Upper left: line count -->
         ${lineCount > 0 ? `<div class="bar-corner-badge bar-corner-left">🚶 ${lineCount} in line</div>` : ''}

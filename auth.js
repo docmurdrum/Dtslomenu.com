@@ -212,14 +212,14 @@ async function onLogin(user, isNewUser = false) {
 async function unlockFreshmanStarter(user) {
   if (!user) return;
   try {
-    // Check if already unlocked
+    // Check if already unlocked — limit(1) avoids throw on duplicate rows
     const { data } = await supabaseClient
       .from('character_progress')
       .select('id')
       .eq('user_id', user.id)
       .eq('character_id', 1)
-      .single();
-    if (data) return; // already has it
+      .limit(1);
+    if (data && data.length > 0) return; // already has it
     // Unlock The Freshman
     await supabaseClient.from('character_progress').insert({
       user_id:            user.id,

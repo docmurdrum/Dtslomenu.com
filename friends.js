@@ -87,8 +87,9 @@ async function sendFriendRequest() {
   if (username === getUsername()) { showToast('⚠️ That\'s you!'); return; }
 
   try {
-    const { data: target } = await supabaseClient
-      .from('profiles').select('id,username').eq('username', username).single();
+    const { data: results } = await supabaseClient
+      .from('profiles').select('id,username').eq('username', username).limit(1);
+    const target = results && results[0];
     if (!target) { showToast('❌ User not found'); return; }
 
     // Check not already friends
@@ -304,11 +305,13 @@ async function createGroupChat() {
   const name  = input?.value.trim();
   if (!name) { showToast('⚠️ Enter a group name'); return; }
   try {
-    const { data: group, error } = await supabaseClient
+    const { data: groupData, error } = await supabaseClient
       .from('groups')
       .insert({ name, created_by: currentUser.id, created_at: new Date().toISOString() })
-      .select().single();
+      .select();
     if (error) throw error;
+    const group = groupData && groupData[0];
+    if (!group) throw new Error('Group insert returned no data');
     await supabaseClient.from('group_members').insert({ group_id: group.id, user_id: currentUser.id });
     if (input) input.value = '';
     await loadGroupChats();
@@ -522,9 +525,10 @@ function handleIncomingQR() {
   if (addUserId === currentUser.id) return;
 
   // Auto-send friend request
-  supabaseClient.from('profiles').select('username').eq('id', addUserId).single()
+  supabaseClient.from('profiles').select('username').eq('id', addUserId).limit(1)
     .then(({ data }) => {
-      if (data) {
+      const row = data && data[0];
+      if (row) {
         supabaseClient.from('friendships').insert({
           requester_id: currentUser.id,
           addressee_id: addUserId,
