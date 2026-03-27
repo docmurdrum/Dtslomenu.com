@@ -596,13 +596,14 @@ function renderBars() {
     // Friends at this bar
     const friendsHere = (window.friendsCheckins || []).filter(f => f.barName === bar.name);
 
-    const emblSz = bar.emblem_size || 80;
-    const vertOffset = bar.emblem_offset != null && bar.emblem_offset >= 0
-      ? bar.emblem_offset
-      : 8; // centers a 104px disc in a 120px photo area
+    const emblSz = isCollapsed ? 28 : (bar.emblem_size || 80);
+    const vertOffset = isCollapsed ? 6
+      : bar.emblem_offset != null && bar.emblem_offset >= 0
+        ? bar.emblem_offset
+        : 8; // centers a 104px disc in a 120px photo area
     const emblHTML = bar.emblem_url
       ? '<img src="' + bar.emblem_url + '" style="width:' + emblSz + 'px;height:' + emblSz + 'px;object-fit:contain;border-radius:' + (bar.emblem_radius||0) + '%">'
-      : '<span style="font-size:' + (emblSz*0.55) + 'px;line-height:1">' + bar.emoji + '</span>';
+      : '<span style="font-size:' + (emblSz*0.75) + 'px;line-height:1">' + bar.emoji + '</span>';
 
     el.innerHTML = `
       <!-- Photo area -->

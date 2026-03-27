@@ -4,7 +4,7 @@
 // Never redeclare these in other files
 // ══════════════════════════════════════════════
 
-var BUILD_VERSION = '6.2.7';
+var BUILD_VERSION = '6.2.9';
 var BUILD_DATE    = '2026-03-26';
 
 // ── MAP ──

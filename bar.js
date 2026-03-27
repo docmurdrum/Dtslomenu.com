@@ -226,3 +226,230 @@ function openBarMerch(barIndex) {
   }
 }
 window.openBarMerch = openBarMerch;
+
+// ══════════════════════════════════════════════
+// BAR PAGE TABS — Menu / Merch / Info
+// ══════════════════════════════════════════════
+
+// ── SAMPLE MENU DATA (hardcoded until business_menu_items table exists) ──
+var SAMPLE_MENU_ITEMS = {
+  "Black Sheep Bar & Grill": [
+    { id:'bs1', cat:'🍺 Drinks', emoji:'🍺', name:'House Draft', desc:'Rotating local tap on draft', price:'$5' },
+    { id:'bs2', cat:'🍺 Drinks', emoji:'🥃', name:'Whiskey Sour', desc:'Bourbon, lemon, simple syrup, egg white', price:'$9' },
+    { id:'bs3', cat:'🍺 Drinks', emoji:'🍸', name:'Margarita', desc:'Silver tequila, triple sec, fresh lime', price:'$10' },
+    { id:'bs4', cat:'🍔 Food',   emoji:'🍔', name:'Bar Burger', desc:'Half-pound, cheddar, house sauce', price:'$14' },
+    { id:'bs5', cat:'🍔 Food',   emoji:'🍟', name:'Loaded Fries', desc:'Bacon, cheese, green onion', price:'$9' },
+    { id:'bs6', cat:'🎉 Happy Hour · 4–7 PM', emoji:'⭐', name:'$2 Off All Drafts', desc:'Every weekday 4–7pm', price:'$3' },
+  ],
+  "Bull's Tavern": [
+    { id:'bt1', cat:'🍺 Drinks', emoji:'🍺', name:'House Draft', desc:'Rotating local tap', price:'$5' },
+    { id:'bt2', cat:'🍺 Drinks', emoji:'🥃', name:'Whiskey Sour', desc:'Bourbon, lemon, egg white', price:'$9' },
+    { id:'bt3', cat:'🍺 Drinks', emoji:'🍸', name:'Margarita', desc:'Silver tequila, lime, triple sec', price:'$10' },
+    { id:'bt4', cat:'🍺 Drinks', emoji:'🍻', name:'Pitcher of Beer', desc:'64oz house draft, great for groups', price:'$18' },
+    { id:'bt5', cat:'🎉 Happy Hour · 4–7 PM', emoji:'⭐', name:'$2 Off All Drafts', desc:'Mon–Fri 4–7pm', price:'$3' },
+  ],
+  "Frog & Peach Pub": [
+    { id:'fp1', cat:'🍺 Drinks', emoji:'🍻', name:'Creek Side Pint', desc:'Frog and Peach exclusive brew', price:'$7' },
+    { id:'fp2', cat:'🍺 Drinks', emoji:'🍹', name:'Peach Smash', desc:'Vodka, peach puree, fresh mint', price:'$11' },
+    { id:'fp3', cat:'🍺 Drinks', emoji:'🍺', name:'House Cider', desc:'Local SLO cider on tap', price:'$6' },
+    { id:'fp4', cat:'🎉 Happy Hour · 4–6 PM', emoji:'⭐', name:'Pint and a Shot', desc:'Any draft plus well shot', price:'$8' },
+  ],
+  "High Bar": [
+    { id:'hb1', cat:'🍸 Cocktails', emoji:'🍸', name:'High Ball', desc:'Signature rooftop cocktail', price:'$13' },
+    { id:'hb2', cat:'🍸 Cocktails', emoji:'🥂', name:'Champagne Toast', desc:'House champagne, seasonal fruit', price:'$11' },
+    { id:'hb3', cat:'🍸 Cocktails', emoji:'🍹', name:'SLO Sunset', desc:'Tequila, blood orange, agave', price:'$12' },
+  ],
+  "McCarthy's Irish Pub": [
+    { id:'mc1', cat:'🍺 Drinks', emoji:'🍺', name:'Guinness Pint', desc:'Perfectly poured, every time', price:'$7' },
+    { id:'mc2', cat:'🍺 Drinks', emoji:'🥃', name:'Irish Whiskey', desc:'Jameson, Tullamore, or Bushmills', price:'$8' },
+    { id:'mc3', cat:'🍺 Drinks', emoji:'🍀', name:'Irish Car Bomb', desc:'Guinness, Baileys, Jameson', price:'$10' },
+    { id:'mc4', cat:'🍔 Food',   emoji:'🥩', name:'Shepherd\'s Pie', desc:'Classic Irish recipe, house made', price:'$13' },
+  ],
+};
+
+var BAR_WEBSITES = {
+  "Black Sheep Bar & Grill":   'blacksheepslo.com',
+  "Bull's Tavern":              'bullstavernslo.com',
+  "Frog & Peach Pub":          'frogandpeach.com',
+  "High Bar":                   'hotelslo.com/highbar',
+  "Nightcap":                   null,
+  "Feral Kitchen & Lounge":    'feralslo.com',
+  "The Library":                'thelibraryslo.com',
+  "The Mark":                   'themarkslo.com',
+  "McCarthy's Irish Pub":      'mccarthysslo.com',
+  "Sidecar SLO":                'sidecarslo.com',
+  "Eureka!":                    'eurekarestaurantgroup.com',
+  "Finney's Crafthouse":       'finneyspub.com',
+  "Novo Restaurant & Lounge":  'novorestaurant.com',
+  "BA Start Arcade Bar":       'baslo.com',
+  "The Carrisa":                'thecarrisa.com',
+};
+
+// ── TAB SWITCHING ──
+function barSwitchTab(tab) {
+  var tabs = ['menu','merch','info'];
+  tabs.forEach(function(t) {
+    var btn = document.getElementById('bar-tab-' + t);
+    var panel = document.getElementById('bar-panel-' + t);
+    var classic = document.getElementById('bar-classic-sections');
+    if (btn) btn.classList.toggle('active', t === tab);
+    if (panel) panel.style.display = t === tab ? 'block' : 'none';
+    if (classic) classic.style.display = tab === 'info' ? 'block' : 'none';
+  });
+}
+window.barSwitchTab = barSwitchTab;
+
+// ── RENDER MENU ──
+function renderBarMenu(barIndex) {
+  var bar = bars[barIndex];
+  if (!bar) return;
+  var el = document.getElementById('bar-page-menu');
+  if (!el) return;
+
+  var items = SAMPLE_MENU_ITEMS[bar.name];
+  if (!items || !items.length) {
+    var website = BAR_WEBSITES[bar.name];
+    el.innerHTML =
+      '<div class="bar-no-menu">' +
+        '<div class="bar-no-menu-icon">🍽</div>' +
+        '<div class="bar-no-menu-title">Menu coming soon</div>' +
+        '<div class="bar-no-menu-sub">We are getting this set up. Browse their website in the meantime.</div>' +
+        (website
+          ? '<a href="https://' + website + '" target="_blank" class="bar-website-link">🌐 Visit ' + website + ' →</a>'
+          : '') +
+      '</div>';
+    return;
+  }
+
+  // Group by category
+  var cats = {};
+  items.forEach(function(item) {
+    if (!cats[item.cat]) cats[item.cat] = [];
+    cats[item.cat].push(item);
+  });
+
+  var saved = getBarSavedItems(bar.name);
+  var html = '';
+  Object.keys(cats).forEach(function(cat) {
+    html += '<div class="bar-menu-cat">' + cat + '</div>';
+    cats[cat].forEach(function(item) {
+      var isSaved = saved.indexOf(item.id) !== -1;
+      html +=
+        '<div class="bar-menu-item' + (isSaved ? ' bmi-saved' : '') + '" id="bmi-' + item.id + '">' +
+          '<span class="bmi-emoji">' + item.emoji + '</span>' +
+          '<div class="bmi-info">' +
+            '<div class="bmi-name">' + item.name + '</div>' +
+            '<div class="bmi-desc">' + item.desc + '</div>' +
+          '</div>' +
+          '<div class="bmi-right">' +
+            '<span class="bmi-price">' + item.price + '</span>' +
+            '<button class="bmi-save-btn' + (isSaved ? ' saved' : '') + '" onclick="event.stopPropagation();toggleSaveMenuItem(\'' + item.id + '\',\'' + bar.name.replace(/'/g,"\\'") + '\')">' +
+              (isSaved ? '✓ Saved' : '+ Save') +
+            '</button>' +
+          '</div>' +
+        '</div>';
+    });
+  });
+  el.innerHTML = html;
+
+  // Update tab badge
+  updateMenuTabBadge(bar.name);
+}
+window.renderBarMenu = renderBarMenu;
+
+// ── RENDER INFO PANEL ──
+function renderBarInfo(barIndex) {
+  var bar = bars[barIndex];
+  if (!bar) return;
+  var el = document.getElementById('bar-page-info-content');
+  if (!el) return;
+  var meta = BAR_META[bar.name] || {};
+  var website = BAR_WEBSITES[bar.name];
+
+  el.innerHTML =
+    (meta.hours ? '<div class="bar-info-row"><span class="bar-info-icon">🕐</span><div><div class="bar-info-label">Hours</div><div class="bar-info-value">' + meta.hours + '</div></div></div>' : '') +
+    (meta.address ? '<div class="bar-info-row"><span class="bar-info-icon">📍</span><div><div class="bar-info-label">Address</div><div class="bar-info-value">' + meta.address + ', San Luis Obispo</div></div></div>' : '') +
+    (meta.phone ? '<div class="bar-info-row"><span class="bar-info-icon">📞</span><div><div class="bar-info-label">Phone</div><div class="bar-info-value">' + meta.phone + '</div></div></div>' : '') +
+    (meta.tags && meta.tags.length ? '<div class="bar-info-row"><span class="bar-info-icon">🎭</span><div><div class="bar-info-label">Vibe</div><div class="bar-info-value">' + meta.tags.join(' · ') + '</div></div></div>' : '') +
+    (website ? '<a href="https://' + website + '" target="_blank" class="bar-website-link" style="margin-top:8px">🌐 ' + website + ' →</a>' : '');
+}
+window.renderBarInfo = renderBarInfo;
+
+// ── RENDER MERCH PANEL ──
+function renderBarMerchPanel(barIndex) {
+  var bar = bars[barIndex];
+  if (!bar) return;
+  var el = document.getElementById('bar-page-merch-content');
+  if (!el) return;
+  // Stub — will connect to Printful when merch store is set up per bar
+  el.innerHTML =
+    '<div class="bar-no-menu">' +
+      '<div class="bar-no-menu-icon">👕</div>' +
+      '<div class="bar-no-menu-title">Merch coming soon</div>' +
+      '<div class="bar-no-menu-sub">Official ' + bar.name + ' merch will be available here.</div>' +
+    '</div>';
+}
+window.renderBarMerchPanel = renderBarMerchPanel;
+
+// ── SAVED ITEMS (localStorage until Supabase table exists) ──
+function getBarSavedItems(barName) {
+  try {
+    var all = JSON.parse(localStorage.getItem('dtslo_saved_items') || '{}');
+    return all[barName] || [];
+  } catch(e) { return []; }
+}
+
+function toggleSaveMenuItem(itemId, barName) {
+  try {
+    var all = JSON.parse(localStorage.getItem('dtslo_saved_items') || '{}');
+    if (!all[barName]) all[barName] = [];
+    var idx = all[barName].indexOf(itemId);
+    if (idx === -1) {
+      all[barName].push(itemId);
+    } else {
+      all[barName].splice(idx, 1);
+    }
+    localStorage.setItem('dtslo_saved_items', JSON.stringify(all));
+
+    // Update UI in place
+    var el = document.getElementById('bmi-' + itemId);
+    var btn = el && el.querySelector('.bmi-save-btn');
+    var saved = idx === -1;
+    if (el) el.classList.toggle('bmi-saved', saved);
+    if (btn) { btn.textContent = saved ? '✓ Saved' : '+ Save'; btn.classList.toggle('saved', saved); }
+
+    updateMenuTabBadge(barName);
+    if (typeof showToast === 'function') showToast(saved ? '🛍 Saved to your visit list' : 'Removed from list');
+  } catch(e) { console.warn('[menu save]', e.message); }
+}
+window.toggleSaveMenuItem = toggleSaveMenuItem;
+
+function updateMenuTabBadge(barName) {
+  var saved = getBarSavedItems(barName);
+  var btn = document.getElementById('bar-tab-menu');
+  if (!btn) return;
+  var existing = btn.querySelector('.bar-tab-badge');
+  if (saved.length > 0) {
+    if (!existing) {
+      var badge = document.createElement('span');
+      badge.className = 'bar-tab-badge';
+      btn.appendChild(badge);
+      existing = badge;
+    }
+    existing.textContent = saved.length;
+  } else {
+    if (existing) existing.remove();
+  }
+}
+window.updateMenuTabBadge = updateMenuTabBadge;
+
+// ── HOOK INTO openBarPage ── patch to also render menu/info/merch and reset tabs
+var _origOpenBarPage = openBarPage;
+openBarPage = function(barIndex) {
+  _origOpenBarPage(barIndex);
+  // Reset to menu tab
+  barSwitchTab('menu');
+  renderBarMenu(barIndex);
+  renderBarInfo(barIndex);
+  renderBarMerchPanel(barIndex);
+};

@@ -133,3 +133,77 @@
   box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
 .bar-uber-btn:active { transform: scale(0.98); }
+
+/* ── BAR PAGE TABS ── */
+.bar-tab-bar {
+  display: flex; gap: 0; border-bottom: 1px solid var(--border);
+  margin-bottom: 14px; overflow-x: auto; scrollbar-width: none;
+}
+.bar-tab {
+  padding: 11px 18px; border: none; background: none;
+  color: var(--text2); font-size: 13px; font-weight: 700;
+  font-family: inherit; cursor: pointer;
+  border-bottom: 2px solid transparent; white-space: nowrap;
+  transition: all 0.2s;
+}
+.bar-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.bar-tab-badge {
+  background: rgba(255,215,0,0.2); color: var(--gold);
+  border-radius: 10px; padding: 1px 6px;
+  font-size: 10px; font-weight: 800; margin-left: 4px;
+}
+.bar-tab-panel { display: block; }
+
+/* ── MENU ITEMS ── */
+.bar-menu-item {
+  display: flex; gap: 10px; padding: 10px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 12px; margin-bottom: 6px; cursor: pointer;
+  transition: border-color 0.15s;
+}
+.bar-menu-item:active { border-color: rgba(255,215,0,0.3); }
+.bar-menu-item.bmi-saved { border-color: rgba(255,215,0,0.35); background: rgba(255,215,0,0.04); }
+.bmi-emoji { font-size: 22px; flex-shrink: 0; }
+.bmi-info  { flex: 1; min-width: 0; }
+.bmi-name  { font-size: 13px; font-weight: 800; margin-bottom: 2px; }
+.bmi-desc  { font-size: 11px; color: var(--text2); line-height: 1.4; }
+.bmi-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.bmi-price { font-size: 13px; font-weight: 800; color: var(--green); }
+.bmi-save-btn {
+  background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.25);
+  color: var(--gold); border-radius: 8px; padding: 4px 8px;
+  font-size: 10px; font-weight: 800; font-family: inherit;
+  cursor: pointer; white-space: nowrap; transition: all 0.15s;
+}
+.bmi-save-btn.saved { background: rgba(255,215,0,0.2); border-color: rgba(255,215,0,0.5); }
+.bar-menu-cat {
+  font-size: 10px; font-weight: 800; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 1.5px;
+  margin: 12px 0 8px; padding: 0;
+}
+
+/* ── NO MENU PLACEHOLDER ── */
+.bar-no-menu {
+  text-align: center; padding: 28px 16px;
+}
+.bar-no-menu-icon { font-size: 36px; margin-bottom: 10px; }
+.bar-no-menu-title { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+.bar-no-menu-sub { font-size: 12px; color: var(--text2); margin-bottom: 16px; line-height: 1.5; }
+.bar-website-link {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 16px; border-radius: 12px;
+  border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+  color: var(--text2); font-size: 13px; font-weight: 700;
+  text-decoration: none; transition: all 0.15s;
+}
+.bar-website-link:active { background: rgba(255,255,255,0.06); color: white; }
+
+/* ── INFO PANEL ── */
+.bar-info-row {
+  display: flex; gap: 12px; padding: 12px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 12px; margin-bottom: 8px; font-size: 13px;
+}
+.bar-info-icon { font-size: 18px; flex-shrink: 0; }
+.bar-info-label { font-size: 11px; color: var(--text2); font-weight: 700; margin-bottom: 2px; }
+.bar-info-value { font-size: 13px; font-weight: 700; }

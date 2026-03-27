@@ -305,7 +305,10 @@ function itinRenderPlanned() {
     '<div style="display:flex;gap:8px">' +
       '<button onclick="itinSaveAndClose()" style="flex:1;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer">Save Plan</button>' +
       '<button onclick="itinShare(itin.current.id)" style="padding:13px 16px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Share ↗</button>' +
-    '</div>';
+    '</div>' +
+
+    // Order preview card
+    itinRenderOrderPreview(it);
 
   return html;
 }
@@ -333,11 +336,37 @@ function itinRenderStops(it, times) {
       '</div>';
     }
 
+    // Wishlist chip
+    var savedItems = itinGetStopSavedItems(s.name);
+    var hasSaves = savedItems.length > 0;
+    var borderStyle = hasSaves
+      ? 'border:1px solid rgba(255,215,0,0.3)'
+      : 'border:1px solid rgba(255,255,255,0.08)';
+
+    var wishlistChip = hasSaves
+      ? '<div style="display:flex;align-items:center;gap:8px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:10px;padding:7px 10px;margin-top:8px">' +
+          '<span style="font-size:14px">🛍</span>' +
+          '<span style="font-size:12px;font-weight:700;color:#ffd700;flex:1">' + savedItems.length + ' item' + (savedItems.length !== 1 ? 's' : '') + ' saved</span>' +
+          '<span style="font-size:10px;color:rgba(255,255,255,0.3)">Tap bar name to view</span>' +
+        '</div>'
+      : '';
+
+    // Find bar index for tap-through
+    var barIdx = -1;
+    if (typeof bars !== 'undefined') {
+      for (var b = 0; b < bars.length; b++) {
+        if (bars[b].name === s.name) { barIdx = b; break; }
+      }
+    }
+    var nameClickable = barIdx >= 0
+      ? 'style="font-size:13px;font-weight:800;flex:1;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(255,255,255,0.2)" onclick="openBarPage(' + barIdx + ')"'
+      : 'style="font-size:13px;font-weight:800;flex:1"';
+
     return '<div style="margin-bottom:4px">' +
-      '<div style="padding:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px">' +
+      '<div style="padding:12px;background:rgba(255,255,255,0.04);' + borderStyle + ';border-radius:12px">' +
         '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
           '<div style="font-size:10px;font-weight:800;color:#ffd700;background:rgba(255,215,0,0.1);padding:3px 8px;border-radius:20px;white-space:nowrap">' + arrivalTime + '</div>' +
-          '<div style="font-size:13px;font-weight:800;flex:1">' + s.name + '</div>' +
+          '<div ' + nameClickable + '>' + s.name + (barIdx >= 0 ? ' <span style="opacity:0.4;font-size:11px">›</span>' : '') + '</div>' +
           '<button onclick="itinEditStop(' + i + ')" style="background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:13px;padding:2px">✏️</button>' +
           '<button onclick="itinRemoveStop(' + i + ')" style="background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;font-size:13px;padding:2px">✕</button>' +
         '</div>' +
@@ -352,6 +381,7 @@ function itinRenderStops(it, times) {
           '</span>' +
         '</div>' +
         (s.tip ? '<div style="font-size:10px;color:#ffd700;margin-top:4px">💡 ' + s.tip + '</div>' : '') +
+        wishlistChip +
       '</div>' +
       rideSegment +
     '</div>';
@@ -1087,3 +1117,79 @@ function itinCheckGroupNotifs() {
   } catch(e) {}
 }
 window.itinCheckGroupNotifs = itinCheckGroupNotifs;
+
+// ══════════════════════════════════════════════
+// WISHLIST / ORDER PREVIEW
+// ══════════════════════════════════════════════
+
+function itinGetStopSavedItems(barName) {
+  try {
+    var all = JSON.parse(localStorage.getItem('dtslo_saved_items') || '{}');
+    var ids = all[barName] || [];
+    if (!ids.length) return [];
+    // Look up item details from SAMPLE_MENU_ITEMS
+    if (typeof SAMPLE_MENU_ITEMS === 'undefined') return ids.map(function(id){ return {id:id,name:id,price:''}; });
+    var items = SAMPLE_MENU_ITEMS[barName] || [];
+    return ids.map(function(id) {
+      return items.find(function(it){ return it.id === id; }) || {id:id, name:id, price:''};
+    }).filter(Boolean);
+  } catch(e) { return []; }
+}
+window.itinGetStopSavedItems = itinGetStopSavedItems;
+
+function itinRenderOrderPreview(it) {
+  if (!it || !it.stops || !it.stops.length) return '';
+
+  // Collect all saved items across stops
+  var groups = [];
+  it.stops.forEach(function(s) {
+    var items = itinGetStopSavedItems(s.name);
+    if (items.length) groups.push({ bar: s.name, items: items });
+  });
+
+  if (!groups.length) return '';
+
+  var rows = groups.map(function(g) {
+    var itemRows = g.items.map(function(item) {
+      return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+        '<span>' + item.name + '</span>' +
+        '<span style="color:#22c55e;font-weight:700">' + (item.price || '') + '</span>' +
+      '</div>';
+    }).join('');
+    return '<div style="margin-bottom:10px">' +
+      '<div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">' + g.bar + '</div>' +
+      itemRows +
+    '</div>';
+  }).join('');
+
+  return '<div style="margin-top:14px;background:var(--surface);border:1px solid rgba(255,215,0,0.2);border-radius:16px;padding:14px;position:relative;overflow:hidden">' +
+    '<div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,215,0,0.04),transparent);pointer-events:none"></div>' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+      '<div style="font-size:14px;font-weight:900">🛍 Order Preview</div>' +
+      '<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.4);cursor:pointer" onclick="itinToggleShareOrder(this)">' +
+        '<span id="itin-share-label">Private</span>' +
+        '<div style="width:32px;height:18px;background:rgba(255,255,255,0.1);border-radius:9px;position:relative;transition:background .2s" id="itin-share-toggle">' +
+          '<div style="position:absolute;top:2px;left:2px;width:14px;height:14px;background:white;border-radius:50%;transition:transform .2s" id="itin-share-knob"></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    rows +
+    '<div style="display:flex;justify-content:space-between;padding-top:8px;margin-top:4px;border-top:1px solid rgba(255,255,255,0.08);font-size:13px;font-weight:800">' +
+      '<span>Est. Total (you)</span>' +
+      '<span style="color:#ffd700">See items above</span>' +
+    '</div>' +
+  '</div>';
+}
+window.itinRenderOrderPreview = itinRenderOrderPreview;
+
+function itinToggleShareOrder(el) {
+  var toggle = document.getElementById('itin-share-toggle');
+  var knob   = document.getElementById('itin-share-knob');
+  var label  = document.getElementById('itin-share-label');
+  if (!toggle) return;
+  var on = toggle.style.background !== 'rgb(34, 197, 94)';
+  toggle.style.background = on ? '#22c55e' : 'rgba(255,255,255,0.1)';
+  if (knob) knob.style.transform = on ? 'translateX(14px)' : 'translateX(0)';
+  if (label) label.textContent = on ? 'Shared' : 'Private';
+}
+window.itinToggleShareOrder = itinToggleShareOrder;
