@@ -284,8 +284,9 @@ const RESOURCES = [
     icon: '🛒',
     name: 'Quick Delivery',
     desc: 'Water, Red Bull, chargers delivered to you',
-    cls: 'delivery',
-    action: () => showPage('delivery'),
+    cls: 'coming',
+    action: null,
+    coming: true,
   },
   {
     id: 'lost',

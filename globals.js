@@ -4,7 +4,7 @@
 // Never redeclare these in other files
 // ══════════════════════════════════════════════
 
-var BUILD_VERSION = '6.2.9';
+var BUILD_VERSION = '6.3.1';
 var BUILD_DATE    = '2026-03-26';
 
 // ── MAP ──
@@ -377,7 +377,7 @@ window.setHubGlowVisible = setHubGlowVisible;
   console.warn = function() {
     var msg = Array.prototype.slice.call(arguments).map(String).join(' ');
     // Filter noisy expected warns
-    var noisy = ['[Map error]','[hubGlow]','[SW]','MapLibre','maplibre'];
+    var noisy = ['[Map error]','[hubGlow]','[SW]','MapLibre','maplibre','schema cache','Failed to fetch','[SmartStart]','[stamps]'];
     if (noisy.some(function(n){ return msg.indexOf(n) !== -1; })) {
       _origWarn.apply(console, arguments);
       return;

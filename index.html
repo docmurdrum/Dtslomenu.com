@@ -15,17 +15,17 @@
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
 
 <!-- ── STYLES ── -->
-<link rel="stylesheet" href="base.css?v=6.2.9">
-<link rel="stylesheet" href="auth.css?v=6.2.9">
-<link rel="stylesheet" href="lines.css?v=6.2.9">
-<link rel="stylesheet" href="delivery.css?v=6.2.9">
-<link rel="stylesheet" href="lost.css?v=6.2.9">
-<link rel="stylesheet" href="profile.css?v=6.2.9">
-<link rel="stylesheet" href="games.css?v=6.2.9">
-<link rel="stylesheet" href="achievements.css?v=6.2.9">
-<link rel="stylesheet" href="missions.css?v=6.2.9">
-<link rel="stylesheet" href="bar.css?v=6.2.9">
-<link rel="stylesheet" href="friends.css?v=6.2.9">
+<link rel="stylesheet" href="base.css?v=6.3.1">
+<link rel="stylesheet" href="auth.css?v=6.3.1">
+<link rel="stylesheet" href="lines.css?v=6.3.1">
+<link rel="stylesheet" href="delivery.css?v=6.3.1">
+<link rel="stylesheet" href="lost.css?v=6.3.1">
+<link rel="stylesheet" href="profile.css?v=6.3.1">
+<link rel="stylesheet" href="games.css?v=6.3.1">
+<link rel="stylesheet" href="achievements.css?v=6.3.1">
+<link rel="stylesheet" href="missions.css?v=6.3.1">
+<link rel="stylesheet" href="bar.css?v=6.3.1">
+<link rel="stylesheet" href="friends.css?v=6.3.1">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -310,7 +310,13 @@ window.closeTopModal = closeTopModal;
   <!-- ── MISSIONS PAGE ── -->
   <div id="missions" class="page">
     <div class="section-title">🎯 Missions</div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Complete missions. Earn real rewards.</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Complete missions. Earn real rewards.</div>
+
+    <!-- Beta notice -->
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:rgba(180,79,255,0.08);border:1px solid rgba(180,79,255,0.2);border-radius:12px;margin-bottom:14px;font-size:11px;color:rgba(180,79,255,0.9);font-weight:700">
+      <span>✨</span>
+      <span>Beta preview — missions are curated by the DTSLO team. More coming weekly.</span>
+    </div>
 
     <!-- Category filter -->
     <div class="missions-filter-row">
@@ -562,44 +568,36 @@ window.closeTopModal = closeTopModal;
   </div><!-- end bar-classic-sections -->
 
 
-  <!-- ── LEADERBOARD PAGE ── -->
-  <div id="leaderboard" class="page">
-    <button class="game-back-btn" onclick="showPage('profile')">← Back to Profile</button>
-    <div class="section-title" style="margin-bottom:4px">🏆 Leaderboards</div>
-
-    <!-- Controls -->
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-      <div style="display:flex;background:var(--surface2);border-radius:12px;padding:3px;border:1px solid var(--border)">
-        <button class="lb-range-btn active" id="lb-top3"  onclick="setLbRange(3)"  >Top 3</button>
-        <button class="lb-range-btn"        id="lb-top10" onclick="setLbRange(10)" >Top 10</button>
-        <button class="lb-range-btn"        id="lb-top50" onclick="setLbRange(50)" >Top 50</button>
+  <!-- ── LEADERBOARD POPUP ── -->
+  <div id="lb-popup-overlay" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeLbPopup()">
+    <div id="lb-popup-sheet" style="width:100%;max-width:480px;background:#0e0e1a;border-radius:24px 24px 0 0;border-top:1px solid rgba(255,255,255,0.08);max-height:88vh;overflow-y:auto;transform:translateY(30px);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1)">
+      <div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.15);margin:12px auto 0"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 0">
+        <div style="font-size:20px;font-weight:900;letter-spacing:-0.5px">🏆 Leaderboards</div>
+        <div style="display:flex;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:3px;gap:0">
+          <button id="lb-scope-global"  onclick="setLbScope('global')"  style="padding:5px 12px;border-radius:16px;border:none;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer;background:white;color:#000;transition:all 0.2s">Global</button>
+          <button id="lb-scope-friends" onclick="setLbScope('friends')" style="padding:5px 12px;border-radius:16px;border:none;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer;background:transparent;color:rgba(255,255,255,0.4);transition:all 0.2s">Friends</button>
+        </div>
       </div>
-      <div style="display:flex;background:var(--surface2);border-radius:12px;padding:3px;border:1px solid var(--border)">
-        <button class="lb-range-btn active" id="lb-alltime" onclick="setLbPeriod('alltime')">All Time</button>
-        <button class="lb-range-btn"        id="lb-week"    onclick="setLbPeriod('week')">This Week</button>
+      <div style="display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,0.07);margin:12px 0 0;overflow-x:auto;scrollbar-width:none;padding:0 16px">
+        <button class="lb-tab active" id="lbt-xp"       onclick="setLbTab('xp')">🏆 XP</button>
+        <button class="lb-tab"        id="lbt-checkins" onclick="setLbTab('checkins')">📍 Check-ins</button>
+        <button class="lb-tab"        id="lbt-reports"  onclick="setLbTab('reports')">📡 Reports</button>
       </div>
+      <div style="display:flex;gap:6px;padding:12px 16px 0">
+        <button class="lb-time-btn active" id="lbt-alltime" onclick="setLbPeriod('alltime')">All Time</button>
+        <button class="lb-time-btn"        id="lbt-week"    onclick="setLbPeriod('week')">This Week</button>
+        <button class="lb-time-btn"        id="lbt-tonight" onclick="setLbPeriod('tonight')">Tonight</button>
+      </div>
+      <div id="leaderboard-list" style="padding:12px 16px 0"></div>
+      <div id="my-rank-card" style="display:none;margin:8px 16px;padding:12px 14px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:14px">
+        <div style="font-size:9px;color:rgba(255,255,255,0.4);font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Your Rank</div>
+        <div id="my-rank-row"></div>
+      </div>
+      <div id="lb-loading" style="text-align:center;padding:32px;color:rgba(255,255,255,0.4);font-size:13px">Loading...</div>
+      <div id="lb-empty"   style="display:none;text-align:center;padding:32px;color:rgba(255,255,255,0.4);font-size:13px">No data yet — be the first!</div>
+      <div style="height:32px"></div>
     </div>
-
-    <!-- Category tabs -->
-    <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:16px;padding-bottom:4px">
-      <button class="lb-tab active" id="lbt-xp"       onclick="setLbTab('xp')">🏆 XP</button>
-      <button class="lb-tab"        id="lbt-reports"  onclick="setLbTab('reports')">📡 Reports</button>
-      <button class="lb-tab"        id="lbt-checkins" onclick="setLbTab('checkins')">📍 Check-ins</button>
-      <button class="lb-tab"        id="lbt-streak"   onclick="setLbTab('streak')">🔥 Streak</button>
-      <button class="lb-tab"        id="lbt-nights"   onclick="setLbTab('nights')">🌃 Nights Out</button>
-    </div>
-
-    <!-- Board -->
-    <div id="leaderboard-list"></div>
-
-    <!-- My rank -->
-    <div id="my-rank-card" style="display:none;margin-top:12px;padding:14px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:16px">
-      <div style="font-size:10px;color:var(--text2);font-weight:700;letter-spacing:1px;margin-bottom:8px">YOUR RANK</div>
-      <div id="my-rank-row"></div>
-    </div>
-
-    <div id="lb-loading" style="text-align:center;padding:32px;color:var(--text2);font-size:13px">Loading...</div>
-    <div id="lb-empty"   style="display:none;text-align:center;padding:32px;color:var(--text2);font-size:13px">No data yet — be the first to report!</div>
   </div>
 
 
@@ -761,9 +759,9 @@ window.closeTopModal = closeTopModal;
       <span>🛍</span> DTSLO Merch Store
     </button>
 
-    <!-- Crafting Bench button -->
-    <button onclick="openCraftingBench()" style="width:100%;padding:13px;border-radius:14px;border:1px solid rgba(180,79,255,0.2);background:rgba(180,79,255,0.06);color:#b44fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">
-      <span>⚗️</span> Crafting Bench
+    <!-- Crafting Bench button — Coming Soon -->
+    <button style="width:100%;padding:13px;border-radius:14px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:rgba(255,255,255,0.25);font-size:13px;font-weight:700;font-family:inherit;cursor:default;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px" disabled>
+      <span>⚗️</span> Crafting Bench <span style="font-size:10px;background:rgba(255,255,255,0.08);border-radius:8px;padding:2px 7px;margin-left:4px">Soon</span>
     </button>
 
     <!-- Budget Calculator button -->
@@ -777,17 +775,26 @@ window.closeTopModal = closeTopModal;
     </button>
 
     <!-- Version -->
-    <div style="text-align:center;padding:8px;font-size:10px;color:rgba(255,255,255,0.15);font-weight:700;letter-spacing:1px">DTSLO · App v4.0 · Admin v4.3</div>
+    <div style="text-align:center;padding:8px;font-size:10px;color:rgba(255,255,255,0.15);font-weight:700;letter-spacing:1px">DTSLO · v6.3.0 Beta</div>
 
-    <!-- Leaderboard Button -->
-    <button class="profile-leaderboard-btn" onclick="showPage('leaderboard')">
-      <span style="font-size:20px">🏆</span>
-      <div style="flex:1;text-align:left">
-        <div style="font-size:14px;font-weight:800">Leaderboards</div>
-        <div style="font-size:11px;opacity:0.6">See where you rank in SLO</div>
+    <!-- Rank badge on profile card -->
+    <div id="profile-rank-badge" onclick="openLbPopup()" style="display:none;margin-bottom:12px;padding:12px 14px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:14px;cursor:pointer;align-items:center;gap:10px">
+      <span style="font-size:22px">🏆</span>
+      <div style="flex:1">
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">Your Rank</div>
+        <div id="profile-rank-text" style="font-size:16px;font-weight:900;color:#ffd700">#— All Time</div>
       </div>
-      <span style="opacity:0.5;font-size:18px">›</span>
-    </button>
+      <span style="color:rgba(255,255,255,0.3);font-size:16px">›</span>
+    </div>
+
+    <!-- Mini leaderboard preview -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:800">🏆 Leaderboard</div>
+        <button onclick="openLbPopup()" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">See All ›</button>
+      </div>
+      <div id="profile-mini-lb"></div>
+    </div>
 
     <!-- Extra stats row -->
     <div class="profile-stat-row">
@@ -1591,48 +1598,48 @@ window.closeTopModal = closeTopModal;
 
 <!-- ══════════════════ SCRIPTS ══════════════════ -->
 <!-- Load order matters: shared first, then pages -->
-<script src="globals.js?v=6.2.9"></script>
-  <script src="shared.js?v=6.2.9"></script>
-<script src="profile.js?v=6.2.9"></script>
-<script src="lines.js?v=6.2.9"></script>
-<script src="delivery.js?v=6.2.9"></script>
-<script src="lost.js?v=6.2.9"></script>
-<script src="missions.js?v=6.2.9"></script>
-  <script src="leaderboard.js?v=6.2.9"></script>
-<script src="missed_connections.js?v=6.2.9"></script>
-<script src="games.js?v=6.2.9"></script>
-<script src="dice.js?v=6.2.9"></script>
-<script src="bar.js?v=6.2.9"></script>
-<script src="friends.js?v=6.2.9"></script>
-<script src="party_games.js?v=6.2.9"></script>
-<script src="achievements.js?v=6.2.9"></script>
-<script src="onboarding.js?v=6.2.9"></script>
-<script src="intro.js?v=6.2.9"></script>
-  <script src="line_skip.js?v=6.2.9"></script>
-  <script src="budget.js?v=6.2.9"></script>
-  <script src="crafting.js?v=6.2.9"></script>
-  <script src="sync.js?v=6.2.9"></script>
-  <script src="smart_start.js?v=6.2.9"></script>
+<script src="globals.js?v=6.3.1"></script>
+  <script src="shared.js?v=6.3.1"></script>
+<script src="profile.js?v=6.3.1"></script>
+<script src="lines.js?v=6.3.1"></script>
+<script src="delivery.js?v=6.3.1"></script>
+<script src="lost.js?v=6.3.1"></script>
+<script src="missions.js?v=6.3.1"></script>
+  <script src="leaderboard.js?v=6.3.1"></script>
+<script src="missed_connections.js?v=6.3.1"></script>
+<script src="games.js?v=6.3.1"></script>
+<script src="dice.js?v=6.3.1"></script>
+<script src="bar.js?v=6.3.1"></script>
+<script src="friends.js?v=6.3.1"></script>
+<script src="party_games.js?v=6.3.1"></script>
+<script src="achievements.js?v=6.3.1"></script>
+<script src="onboarding.js?v=6.3.1"></script>
+<script src="intro.js?v=6.3.1"></script>
+  <script src="line_skip.js?v=6.3.1"></script>
+  <script src="budget.js?v=6.3.1"></script>
+  <script src="crafting.js?v=6.3.1"></script>
+  <script src="sync.js?v=6.3.1"></script>
+  <script src="smart_start.js?v=6.3.1"></script>
 
-  <script src="hub_animation.js?v=6.2.9"></script>
-  <script src="menu_home.js?v=6.2.9"></script>
-  <script src="beach_hub.js?v=6.2.9"></script>
-  <script src="wine_hub.js?v=6.2.9"></script>
-  <script src="brewery_hub.js?v=6.2.9"></script>
-  <script src="nature_hub.js?v=6.2.9"></script>
-  <script src="events_hub.js?v=6.2.9"></script>
-  <script src="calpoly_hub.js?v=6.2.9"></script>
-  <script src="city_hub.js?v=6.2.9"></script>
-  <script src="thrill_hub.js?v=6.2.9"></script>
-  <script src="bar_golf.js?v=6.2.9"></script>
-  <script src="itinerary.js?v=6.2.9"></script>
-  <script src="merch.js?v=6.2.9"></script>
-  <script src="restaurant_hub.js?v=6.2.9"></script>
-  <script src="travel.js?v=6.2.9"></script>
-  <script src="plan_it.js?v=6.2.9"></script>
-  <script src="pin_mover.js?v=6.2.9"></script>
-  <script src="tool_sheets.js?v=6.2.9"></script>
-  <script src="auth.js?v=6.2.9"></script>
+  <script src="hub_animation.js?v=6.3.1"></script>
+  <script src="menu_home.js?v=6.3.1"></script>
+  <script src="beach_hub.js?v=6.3.1"></script>
+  <script src="wine_hub.js?v=6.3.1"></script>
+  <script src="brewery_hub.js?v=6.3.1"></script>
+  <script src="nature_hub.js?v=6.3.1"></script>
+  <script src="events_hub.js?v=6.3.1"></script>
+  <script src="calpoly_hub.js?v=6.3.1"></script>
+  <script src="city_hub.js?v=6.3.1"></script>
+  <script src="thrill_hub.js?v=6.3.1"></script>
+  <script src="bar_golf.js?v=6.3.1"></script>
+  <script src="itinerary.js?v=6.3.1"></script>
+  <script src="merch.js?v=6.3.1"></script>
+  <script src="restaurant_hub.js?v=6.3.1"></script>
+  <script src="travel.js?v=6.3.1"></script>
+  <script src="plan_it.js?v=6.3.1"></script>
+  <script src="pin_mover.js?v=6.3.1"></script>
+  <script src="tool_sheets.js?v=6.3.1"></script>
+  <script src="auth.js?v=6.3.1"></script>
 
 <script>
 if ('serviceWorker' in navigator) {

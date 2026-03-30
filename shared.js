@@ -37,7 +37,7 @@ function showToast(msg) {
 
 // ── NAV ──
 function showPage(p) {
-  if (p === 'leaderboard') { try { loadLeaderboard(); } catch(e) {} }
+  if (p === 'leaderboard') { try { openLbPopup(); } catch(e) {} return; }
   if (p === 'rides')       { try { initRides(); } catch(e) {} }
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));

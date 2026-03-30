@@ -565,6 +565,9 @@ async function loadProfileExtras() {
 
   // Activity feed
   loadActivityFeed();
+
+  // Leaderboard rank badge + mini board
+  if (typeof loadProfileRank === 'function') loadProfileRank();
 }
 
 // ── RENDER CHARACTER CARD — auto-loads from storage ──

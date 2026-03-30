@@ -129,7 +129,7 @@ function renderBarMissions(barName) {
     <div class="bar-mission-row" onclick="openMissionDetail(${m.id})">
       <div class="bar-mission-info">
         <div class="bar-mission-name">${m.title}</div>
-        <div class="bar-mission-reward">🎁 ${m.reward} · +${m.xp} XP</div>
+        <div class="bar-mission-reward">🎁 ${(m.rewards||[]).filter(r=>r.type==='prize').map(r=>r.label).join(', ')||'Reward'} · ${(m.rewards||[]).find(r=>r.type==='xp')?.label||''}</div>
       </div>
       <div class="bar-mission-arrow">›</div>
     </div>`).join('');
@@ -164,12 +164,15 @@ function openMissionDetail(missionId) {
     .find(m => m.id === missionId);
   if (!mission) return;
 
+  const prizes = (mission.rewards || []).filter(r => r.type === 'prize').map(r => r.label).join(', ');
+  const xpLabel = (mission.rewards || []).find(r => r.type === 'xp')?.label || '';
+
   document.getElementById('md-title').textContent    = mission.title;
   document.getElementById('md-bar').textContent      = '📍 ' + mission.bar;
-  document.getElementById('md-desc').textContent     = mission.description || '';
-  document.getElementById('md-reward').textContent   = '🎁 ' + mission.reward;
-  document.getElementById('md-xp').textContent       = '+' + mission.xp + ' XP';
-  document.getElementById('md-type').textContent     = mission.type || 'Tonight';
+  document.getElementById('md-desc').textContent     = mission.desc || '';
+  document.getElementById('md-reward').textContent   = '🎁 ' + (prizes || 'Reward');
+  document.getElementById('md-xp').textContent       = xpLabel;
+  document.getElementById('md-type').textContent     = mission.cat || 'Tonight';
   document.getElementById('mission-detail-modal').style.display = 'flex';
 }
 

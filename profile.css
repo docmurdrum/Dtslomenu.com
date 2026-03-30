@@ -418,22 +418,27 @@ input:checked + .toggle-slider-sm::before { transform:translateX(20px); }
 }
 .profile-leaderboard-btn:active { transform: scale(0.98); }
 
-/* ── LEADERBOARD PAGE ── */
-.lb-range-btn {
-  padding: 6px 12px; border-radius: 9px; border: none;
-  background: none; color: var(--text2); font-family: inherit;
-  font-size: 11px; font-weight: 800; cursor: pointer; transition: all 0.15s;
-  white-space: nowrap;
-}
-.lb-range-btn.active { background: var(--accent); color: white; }
-
+/* ── LEADERBOARD POPUP ── */
 .lb-tab {
-  padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border);
-  background: var(--surface2); color: var(--text2); font-family: inherit;
-  font-size: 11px; font-weight: 800; cursor: pointer; white-space: nowrap;
-  transition: all 0.15s; flex-shrink: 0;
+  padding: 11px 16px; border: none; background: none;
+  color: var(--text2); font-family: inherit;
+  font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  border-bottom: 2px solid transparent; transition: all 0.2s; flex-shrink: 0;
 }
-.lb-tab.active { background: rgba(255,215,0,0.12); border-color: rgba(255,215,0,0.3); color: var(--gold); }
+.lb-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.lb-time-btn {
+  padding: 6px 14px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text2); font-family: inherit;
+  font-size: 11px; font-weight: 800; cursor: pointer; white-space: nowrap;
+  transition: all 0.15s;
+}
+.lb-time-btn.active {
+  background: rgba(255,215,0,0.12);
+  border-color: rgba(255,215,0,0.3);
+  color: var(--gold);
+}
 
 .lb-row {
   display: flex; align-items: center; gap: 12px;
