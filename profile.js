@@ -568,6 +568,9 @@ async function loadProfileExtras() {
 
   // Leaderboard rank badge + mini board
   if (typeof loadProfileRank === 'function') loadProfileRank();
+
+  // PWA install prompt — show 3s after first login
+  setTimeout(function() { if (typeof pwaShowBanner === 'function') pwaShowBanner(); }, 3000);
 }
 
 // ── RENDER CHARACTER CARD — auto-loads from storage ──

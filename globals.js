@@ -4,7 +4,7 @@
 // Never redeclare these in other files
 // ══════════════════════════════════════════════
 
-var BUILD_VERSION = '6.3.5';
+var BUILD_VERSION = '6.3.6';
 var BUILD_DATE    = '2026-03-26';
 
 // ── MAP ──
@@ -427,3 +427,62 @@ window.dtsloDebugEmblem = function() {
   });
   console.warn('[emblem] Dumped ' + emblems.length + ' emblem(s) — check above');
 };
+
+// ══════════════════════════════════════════════
+// PWA INSTALL PROMPT
+// ══════════════════════════════════════════════
+var _pwaPrompt = null;
+var _pwaIsIOS  = /iphone|ipad|ipod/i.test(navigator.userAgent);
+var _pwaIsStandalone = window.navigator.standalone === true ||
+  window.matchMedia('(display-mode: standalone)').matches;
+
+// Capture the install prompt event (Android/Chrome)
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _pwaPrompt = e;
+});
+
+function pwaShowBanner() {
+  // Don't show if already installed, already dismissed, or shown recently
+  if (_pwaIsStandalone) return;
+  try {
+    if (localStorage.getItem('pwa_dismissed')) return;
+  } catch(e) {}
+
+  var banner = document.getElementById('pwa-banner');
+  if (!banner) return;
+
+  if (_pwaIsIOS) {
+    // iOS: show manual instructions
+    var iosInstr = document.getElementById('pwa-ios-instructions');
+    var installBtn = document.getElementById('pwa-install-btn');
+    if (iosInstr) iosInstr.style.display = 'block';
+    if (installBtn) installBtn.style.display = 'none';
+  } else if (!_pwaPrompt) {
+    // No prompt available (already installed or not supported)
+    return;
+  }
+
+  banner.style.display = 'block';
+}
+window.pwaShowBanner = pwaShowBanner;
+
+function pwaInstall() {
+  if (_pwaPrompt) {
+    _pwaPrompt.prompt();
+    _pwaPrompt.userChoice.then(function(result) {
+      if (result.outcome === 'accepted') {
+        pwaDismiss();
+      }
+      _pwaPrompt = null;
+    });
+  }
+}
+window.pwaInstall = pwaInstall;
+
+function pwaDismiss() {
+  var banner = document.getElementById('pwa-banner');
+  if (banner) banner.style.display = 'none';
+  try { localStorage.setItem('pwa_dismissed', '1'); } catch(e) {}
+}
+window.pwaDismiss = pwaDismiss;
