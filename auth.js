@@ -291,7 +291,7 @@ window.onload = function () {
   function launchAuth() {
     if (launched) return;
     launched = true;
-    // Skip hub entirely — show login screen directly
+    // Beta mode — always show login, never auto-restore session
     window._pendingDTSLOEntry = true;
     if (authEl) {
       authEl.style.display  = 'flex';
@@ -299,10 +299,9 @@ window.onload = function () {
       authEl.style.position = 'fixed';
       authEl.style.inset    = '0';
     }
-    // Hide the back button since there is no hub to go back to
     var backBtn = document.getElementById('auth-back-btn');
     if (backBtn) backBtn.style.display = 'none';
-    startSessionRestore();
+    // DO NOT call startSessionRestore — user must log in every time in beta mode
   }
 
   // Try to read beta flag from Supabase — fallback to hub if fails or table missing
