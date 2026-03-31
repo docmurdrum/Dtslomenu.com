@@ -108,6 +108,14 @@ async function doLogin() {
     }
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    // Save stay signed in preference
+    if (stayIn) {
+      if (stayIn.checked) {
+        localStorage.setItem('dtslo_stay_signed_in', '1');
+      } else {
+        localStorage.removeItem('dtslo_stay_signed_in');
+      }
+    }
     await onLogin(data.user);
   } catch (e) {
     showAuthError('login', e.message || 'Login failed. Check your credentials.');
@@ -246,6 +254,7 @@ async function doSignout() {
   await supabaseClient.auth.signOut();
   currentUser = null; userXP = 0; reportCount = 0; postCount = 0;
   cart = {};
+  localStorage.removeItem('dtslo_stay_signed_in');
   document.getElementById('app').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex'; maybeShowAuthBackBtn();
   showPage('line');
@@ -297,17 +306,38 @@ window.onload = function () {
   function launchAuth() {
     if (launched) return;
     launched = true;
-    // Beta mode — always show login, never auto-restore session
-    window._pendingDTSLOEntry = true;
-    if (authEl) {
-      authEl.style.display  = 'flex';
-      authEl.style.zIndex   = '9999';
-      authEl.style.position = 'fixed';
-      authEl.style.inset    = '0';
-    }
-    var backBtn = document.getElementById('auth-back-btn');
-    if (backBtn) backBtn.style.display = 'none';
-    // DO NOT call startSessionRestore — user must log in every time in beta mode
+    // Beta mode — check for existing session first
+    // If user previously chose "Stay signed in", respect that and go straight to app
+    supabaseClient.auth.getSession().then(function(result) {
+      var session = result && result.data && result.data.session;
+      if (session && session.user && localStorage.getItem('dtslo_stay_signed_in') === '1') {
+        // Valid session + user opted in — skip login
+        currentUser = session.user;
+        goToDTSLO();
+        try { loadUserStats(); } catch(e) {}
+        try { renderAvatar(); } catch(e) {}
+      } else {
+        // No session or user didn't opt in — show login
+        window._pendingDTSLOEntry = true;
+        if (authEl) {
+          authEl.style.display  = 'flex';
+          authEl.style.zIndex   = '9999';
+          authEl.style.position = 'fixed';
+          authEl.style.inset    = '0';
+        }
+        var backBtn = document.getElementById('auth-back-btn');
+        if (backBtn) backBtn.style.display = 'none';
+      }
+    }).catch(function() {
+      // Session check failed — show login
+      window._pendingDTSLOEntry = true;
+      if (authEl) {
+        authEl.style.display  = 'flex';
+        authEl.style.zIndex   = '9999';
+        authEl.style.position = 'fixed';
+        authEl.style.inset    = '0';
+      }
+    });
   }
 
   // Try to read beta flag from Supabase — fallback to hub if fails or table missing
