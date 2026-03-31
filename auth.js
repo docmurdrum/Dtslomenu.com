@@ -353,6 +353,10 @@ window.onload = function () {
         if (appEl) { appEl.style.display = 'block'; appEl.style.opacity = '1'; }
         if (authEl) authEl.style.display = 'none';
         try { if (typeof loadReports === 'function') loadReports(); } catch(e) {}
+        // Show beta welcome popup after a short delay
+        setTimeout(function() {
+          if (typeof showBetaWelcome === 'function') showBetaWelcome();
+        }, 800);
       }
     }).catch(function() {
       // Fallback — show app as guest
