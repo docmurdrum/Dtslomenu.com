@@ -1014,7 +1014,7 @@ function handleVote(event, i, status) {
 }
 
 async function report(i, status, headcount) {
-  if (!currentUser) { showToast('⚠️ Please sign in to report'); return; }
+  if (!currentUser) { if (typeof showGuestPrompt === 'function') showGuestPrompt('report'); return; }
   const bar = bars[i];
   // Verify location before submitting
   verifyLocation(bar.name, async (allowed) => {
@@ -1047,6 +1047,7 @@ let activeCheckins = {};
 let waitTimeData = {};
 
 function openCheckinModal(barIndex) {
+  if (!currentUser) { if (typeof showGuestPrompt === 'function') showGuestPrompt('checkin'); return; }
   ciBarIndex  = barIndex;
   ciBarName   = bars[barIndex].name;
   document.getElementById('ci-bar-name').textContent = 'Check In · ' + ciBarName;

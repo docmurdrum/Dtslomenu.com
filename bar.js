@@ -119,7 +119,7 @@ function renderBarReports(bar) {
 function renderBarMissions(barName) {
   const el = document.getElementById('bar-page-missions');
   if (!el) return;
-  const missions = (typeof SAMPLE_MISSIONS !== 'undefined' ? SAMPLE_MISSIONS : [])
+  const missions = (typeof _loadedMissions !== 'undefined' ? _loadedMissions : [])
     .filter(m => m.bar === barName && m.active);
   if (!missions.length) {
     el.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:8px 0">No active missions at this bar</div>';
@@ -160,7 +160,7 @@ function getFriendsAtBar(barName) {
 
 // ── MISSION DETAIL MODAL ──
 function openMissionDetail(missionId) {
-  const mission = (typeof SAMPLE_MISSIONS !== 'undefined' ? SAMPLE_MISSIONS : [])
+  const mission = (typeof _loadedMissions !== 'undefined' ? _loadedMissions : [])
     .find(m => m.id === missionId);
   if (!mission) return;
 
@@ -185,7 +185,7 @@ function completeMissionFromDetail() {
   if (!titleEl) return;
   closeMissionDetail();
   // Trigger mission completion flow
-  const mission = (typeof SAMPLE_MISSIONS !== 'undefined' ? SAMPLE_MISSIONS : [])
+  const mission = (typeof _loadedMissions !== 'undefined' ? _loadedMissions : [])
     .find(m => m.title === titleEl.textContent);
   if (mission && typeof completeMission === 'function') completeMission(mission.id);
 }

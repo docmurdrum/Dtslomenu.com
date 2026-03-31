@@ -15,17 +15,17 @@
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
 
 <!-- ── STYLES ── -->
-<link rel="stylesheet" href="base.css?v=6.3.12">
-<link rel="stylesheet" href="auth.css?v=6.3.12">
-<link rel="stylesheet" href="lines.css?v=6.3.12">
-<link rel="stylesheet" href="delivery.css?v=6.3.12">
-<link rel="stylesheet" href="lost.css?v=6.3.12">
-<link rel="stylesheet" href="profile.css?v=6.3.12">
-<link rel="stylesheet" href="games.css?v=6.3.12">
-<link rel="stylesheet" href="achievements.css?v=6.3.12">
-<link rel="stylesheet" href="missions.css?v=6.3.12">
-<link rel="stylesheet" href="bar.css?v=6.3.12">
-<link rel="stylesheet" href="friends.css?v=6.3.12">
+<link rel="stylesheet" href="base.css?v=6.3.15">
+<link rel="stylesheet" href="auth.css?v=6.3.15">
+<link rel="stylesheet" href="lines.css?v=6.3.15">
+<link rel="stylesheet" href="delivery.css?v=6.3.15">
+<link rel="stylesheet" href="lost.css?v=6.3.15">
+<link rel="stylesheet" href="profile.css?v=6.3.15">
+<link rel="stylesheet" href="games.css?v=6.3.15">
+<link rel="stylesheet" href="achievements.css?v=6.3.15">
+<link rel="stylesheet" href="missions.css?v=6.3.15">
+<link rel="stylesheet" href="bar.css?v=6.3.15">
+<link rel="stylesheet" href="friends.css?v=6.3.15">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -212,6 +212,7 @@ window.closeTopModal = closeTopModal;
 
   <!-- ── GLOBAL ITINERARY FAB ── -->
   <button id="itin-fab" onclick="openItinFromSaved()" style="
+    display:none !important;
     position:fixed;bottom:80px;right:16px;z-index:8000;
     width:52px;height:52px;border-radius:50%;border:none;
     background:linear-gradient(135deg,#ffd700,#ffaa00);
@@ -487,15 +488,7 @@ window.closeTopModal = closeTopModal;
       <span style="font-size:11px;opacity:0.7;margin-left:auto">Ride to this bar →</span>
     </button>
 
-    <!-- Plan It + Itinerary row -->
-    <div style="display:flex;gap:8px;margin:0 16px 12px">
-      <button onclick="itinAddBusinessStop(bars[currentBarIndex]&&bars[currentBarIndex].name,'bar',90,bars[currentBarIndex]&&bars[currentBarIndex].cover_charge?'$10-20':'Free','')" style="flex:1;padding:11px;border-radius:14px;border:1px solid rgba(255,215,0,0.25);background:rgba(255,215,0,0.06);color:#ffd700;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
-        🗓 Add to Itinerary
-      </button>
-      <button onclick="itinPlanItFor(bars[currentBarIndex]&&bars[currentBarIndex].name,'bar')" style="flex:1;padding:11px;border-radius:14px;border:1px solid rgba(180,79,255,0.25);background:rgba(180,79,255,0.06);color:#b44fff;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
-        ✨ Plan It
-      </button>
-    </div>
+    <!-- Plan It hidden for beta -->
 
     <!-- Menu / Merch / Info Tab Strip -->
     <div class="bar-tab-bar" id="bar-tab-bar">
@@ -753,10 +746,7 @@ window.closeTopModal = closeTopModal;
       </div>
     </div>
 
-    <!-- Itinerary button -->
-    <button onclick="openItinFromSaved()" style="width:100%;padding:13px;border-radius:14px;border:1px solid rgba(255,215,0,0.2);background:rgba(255,215,0,0.06);color:#ffd700;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">
-      <span>🗓</span> My Itineraries
-    </button>
+    <!-- My Itineraries hidden for beta -->
 
     <!-- Merch Store button -->
     <button onclick="openMerchStore()" style="width:100%;padding:13px;border-radius:14px;border:1px solid rgba(255,45,120,0.2);background:rgba(255,45,120,0.06);color:#ff2d78;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">
@@ -1199,11 +1189,7 @@ window.closeTopModal = closeTopModal;
         <div class="game-grid-name">Bar Bingo</div>
         <div class="game-grid-desc">Check off what you see tonight</div>
       </div>
-      <div class="game-grid-card spinner" onclick="switchGameMode('spinner')">
-        <div class="game-grid-icon">🌀</div>
-        <div class="game-grid-name">Spinner</div>
-        <div class="game-grid-desc">Spin for your drinking fate</div>
-      </div>
+
       <div class="game-grid-card dice" onclick="switchGameMode('dice')">
         <div class="game-grid-icon">🎲</div>
         <div class="game-grid-name">Dice</div>
@@ -1552,48 +1538,48 @@ window.closeTopModal = closeTopModal;
 
 <!-- ══════════════════ SCRIPTS ══════════════════ -->
 <!-- Load order matters: shared first, then pages -->
-<script src="globals.js?v=6.3.12"></script>
-  <script src="shared.js?v=6.3.12"></script>
-<script src="profile.js?v=6.3.12"></script>
-<script src="lines.js?v=6.3.12"></script>
-<script src="delivery.js?v=6.3.12"></script>
-<script src="lost.js?v=6.3.12"></script>
-<script src="missions.js?v=6.3.12"></script>
-  <script src="leaderboard.js?v=6.3.12"></script>
-<script src="missed_connections.js?v=6.3.12"></script>
-<script src="games.js?v=6.3.12"></script>
-<script src="dice.js?v=6.3.12"></script>
-<script src="bar.js?v=6.3.12"></script>
-<script src="friends.js?v=6.3.12"></script>
-<script src="party_games.js?v=6.3.12"></script>
-<script src="achievements.js?v=6.3.12"></script>
-<script src="onboarding.js?v=6.3.12"></script>
-<script src="intro.js?v=6.3.12"></script>
-  <script src="line_skip.js?v=6.3.12"></script>
-  <script src="budget.js?v=6.3.12"></script>
-  <script src="crafting.js?v=6.3.12"></script>
-  <script src="sync.js?v=6.3.12"></script>
-  <script src="smart_start.js?v=6.3.12"></script>
+<script src="globals.js?v=6.3.15"></script>
+  <script src="shared.js?v=6.3.15"></script>
+<script src="profile.js?v=6.3.15"></script>
+<script src="lines.js?v=6.3.15"></script>
+<script src="delivery.js?v=6.3.15"></script>
+<script src="lost.js?v=6.3.15"></script>
+<script src="missions.js?v=6.3.15"></script>
+  <script src="leaderboard.js?v=6.3.15"></script>
+<script src="missed_connections.js?v=6.3.15"></script>
+<script src="games.js?v=6.3.15"></script>
+<script src="dice.js?v=6.3.15"></script>
+<script src="bar.js?v=6.3.15"></script>
+<script src="friends.js?v=6.3.15"></script>
+<script src="party_games.js?v=6.3.15"></script>
+<script src="achievements.js?v=6.3.15"></script>
+<script src="onboarding.js?v=6.3.15"></script>
+<script src="intro.js?v=6.3.15"></script>
+  <script src="line_skip.js?v=6.3.15"></script>
+  <script src="budget.js?v=6.3.15"></script>
+  <script src="crafting.js?v=6.3.15"></script>
+  <script src="sync.js?v=6.3.15"></script>
+  <script src="smart_start.js?v=6.3.15"></script>
 
-  <script src="hub_animation.js?v=6.3.12"></script>
-  <script src="menu_home.js?v=6.3.12"></script>
-  <script src="beach_hub.js?v=6.3.12"></script>
-  <script src="wine_hub.js?v=6.3.12"></script>
-  <script src="brewery_hub.js?v=6.3.12"></script>
-  <script src="nature_hub.js?v=6.3.12"></script>
-  <script src="events_hub.js?v=6.3.12"></script>
-  <script src="calpoly_hub.js?v=6.3.12"></script>
-  <script src="city_hub.js?v=6.3.12"></script>
-  <script src="thrill_hub.js?v=6.3.12"></script>
-  <script src="bar_golf.js?v=6.3.12"></script>
-  <script src="itinerary.js?v=6.3.12"></script>
-  <script src="merch.js?v=6.3.12"></script>
-  <script src="restaurant_hub.js?v=6.3.12"></script>
-  <script src="travel.js?v=6.3.12"></script>
-  <script src="plan_it.js?v=6.3.12"></script>
-  <script src="pin_mover.js?v=6.3.12"></script>
-  <script src="tool_sheets.js?v=6.3.12"></script>
-  <script src="auth.js?v=6.3.12"></script>
+  <script src="hub_animation.js?v=6.3.15"></script>
+  <script src="menu_home.js?v=6.3.15"></script>
+  <script src="beach_hub.js?v=6.3.15"></script>
+  <script src="wine_hub.js?v=6.3.15"></script>
+  <script src="brewery_hub.js?v=6.3.15"></script>
+  <script src="nature_hub.js?v=6.3.15"></script>
+  <script src="events_hub.js?v=6.3.15"></script>
+  <script src="calpoly_hub.js?v=6.3.15"></script>
+  <script src="city_hub.js?v=6.3.15"></script>
+  <script src="thrill_hub.js?v=6.3.15"></script>
+  <script src="bar_golf.js?v=6.3.15"></script>
+  <script src="itinerary.js?v=6.3.15"></script>
+  <script src="merch.js?v=6.3.15"></script>
+  <script src="restaurant_hub.js?v=6.3.15"></script>
+  <script src="travel.js?v=6.3.15"></script>
+  <script src="plan_it.js?v=6.3.15"></script>
+  <script src="pin_mover.js?v=6.3.15"></script>
+  <script src="tool_sheets.js?v=6.3.15"></script>
+  <script src="auth.js?v=6.3.15"></script>
 
 <script>
 if ('serviceWorker' in navigator) {

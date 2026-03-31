@@ -306,37 +306,60 @@ window.onload = function () {
   function launchAuth() {
     if (launched) return;
     launched = true;
-    // Beta mode — check for existing session first
-    // If user previously chose "Stay signed in", respect that and go straight to app
+
+    // Show auth screen immediately as a loading state while we check session
+    window._pendingDTSLOEntry = true;
+    if (authEl) {
+      authEl.style.display  = 'flex';
+      authEl.style.zIndex   = '9999';
+      authEl.style.position = 'fixed';
+      authEl.style.inset    = '0';
+    }
+    var backBtn = document.getElementById('auth-back-btn');
+    if (backBtn) backBtn.style.display = 'none';
+
+    // Now check for existing session — if found and stay signed in, skip to app
     supabaseClient.auth.getSession().then(function(result) {
       var session = result && result.data && result.data.session;
       if (session && session.user && localStorage.getItem('dtslo_stay_signed_in') === '1') {
-        // Valid session + user opted in — skip login
         currentUser = session.user;
         goToDTSLO();
         try { loadUserStats(); } catch(e) {}
         try { renderAvatar(); } catch(e) {}
+        try { updateUsernameBar(); } catch(e) {}
+      }
+      // Otherwise auth screen stays visible — user must log in
+    }).catch(function() {
+      // Session check failed — auth screen stays, user must log in
+    });
+  }
+
+  function launchGuest() {
+    if (launched) return;
+    launched = true;
+    // Land on Lines page as guest — no login required to view
+    // Check for existing session first to restore logged-in state
+    supabaseClient.auth.getSession().then(function(result) {
+      var session = result && result.data && result.data.session;
+      if (session && session.user) {
+        currentUser = session.user;
+        goToDTSLO();
+        try { loadUserStats(); } catch(e) {}
+        try { renderAvatar(); } catch(e) {}
+        try { updateUsernameBar(); } catch(e) {}
       } else {
-        // No session or user didn't opt in — show login
-        window._pendingDTSLOEntry = true;
-        if (authEl) {
-          authEl.style.display  = 'flex';
-          authEl.style.zIndex   = '9999';
-          authEl.style.position = 'fixed';
-          authEl.style.inset    = '0';
-        }
-        var backBtn = document.getElementById('auth-back-btn');
-        if (backBtn) backBtn.style.display = 'none';
+        // No session — show app as guest on Lines page
+        var appEl = document.getElementById('app');
+        if (appEl) { appEl.style.display = 'block'; appEl.style.opacity = '1'; }
+        if (authEl) authEl.style.display = 'none';
+        try { if (typeof loadReports === 'function') loadReports(); } catch(e) {}
       }
     }).catch(function() {
-      // Session check failed — show login
-      window._pendingDTSLOEntry = true;
-      if (authEl) {
-        authEl.style.display  = 'flex';
-        authEl.style.zIndex   = '9999';
-        authEl.style.position = 'fixed';
-        authEl.style.inset    = '0';
-      }
+      // Fallback — show app as guest
+      var appEl = document.getElementById('app');
+      if (appEl) { appEl.style.display = 'block'; appEl.style.opacity = '1'; }
+      if (authEl) authEl.style.display = 'none';
+      try { if (typeof loadReports === 'function') loadReports(); } catch(e) {}
     });
   }
 
@@ -357,7 +380,7 @@ window.onload = function () {
         betaCheckDone = true;
         clearTimeout(betaTimeout);
         var skipHub = res.data && res.data[0] && (res.data[0].value === 'true' || res.data[0].value === true);
-        if (skipHub) { launchAuth(); } else { launchHub(); }
+        if (skipHub) { launchGuest(); } else { launchHub(); }
       })
       .catch(function() {
         if (!betaCheckDone) { betaCheckDone = true; clearTimeout(betaTimeout); launchHub(); }

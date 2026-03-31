@@ -4,7 +4,7 @@
 // Never redeclare these in other files
 // ══════════════════════════════════════════════
 
-var BUILD_VERSION = '6.3.12';
+var BUILD_VERSION = '6.3.15';
 var BUILD_DATE    = '2026-03-26';
 
 // ── MAP ──
@@ -512,3 +512,87 @@ async function clearCacheAndReload() {
   window.location.href = window.location.href.split('?')[0] + '?cache_bust=' + Date.now();
 }
 window.clearCacheAndReload = clearCacheAndReload;
+
+// ══════════════════════════════════════════════
+// GUEST PROMPT — shown when guest tries to do
+// something that requires an account
+// ══════════════════════════════════════════════
+function showGuestPrompt(context) {
+  var existing = document.getElementById('guest-prompt-overlay');
+  if (existing) existing.remove();
+
+  var messages = {
+    report:   { icon: '📡', title: 'Report to earn XP', body: 'Sign up free to report bar status, earn 10 XP per report, and help everyone have a better night.' },
+    checkin:  { icon: '📍', title: 'Check in to leave your mark', body: 'Sign up free to check in, earn 20 XP, and let your friends see where you are.' },
+    missions: { icon: '🎯', title: 'Missions = real rewards', body: 'Sign up to unlock missions at downtown bars. Earn XP and win free drinks.' },
+    games:    { icon: '🎮', title: 'Play with your crew', body: 'Sign up to play bar trivia, duels, bingo, and more. Climb the weekly leaderboard.' },
+    friends:  { icon: '👥', title: 'Bring your crew', body: 'Sign up to add friends, see where they are tonight, and DM them directly.' },
+    profile:  { icon: '🏆', title: 'Build your profile', body: 'Sign up to earn XP, unlock badges, level up your character, and hit the leaderboard.' },
+    default:  { icon: '🌃', title: 'Join DTSLO', body: 'Sign up free to get the full experience — reports, check-ins, missions, games, and your crew all in one place.' },
+  };
+
+  var m = messages[context] || messages.default;
+
+  var overlay = document.createElement('div');
+  overlay.id = 'guest-prompt-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center';
+
+  overlay.innerHTML =
+    '<div id="guest-prompt-sheet" style="width:100%;max-width:480px;background:#0e0e1a;border-radius:24px 24px 0 0;border-top:1px solid rgba(255,255,255,0.08);padding:20px 20px 40px;transform:translateY(30px);transition:transform 0.3s cubic-bezier(0.34,1.2,0.64,1)">' +
+      '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.15);margin:0 auto 20px"></div>' +
+      '<div style="font-size:36px;text-align:center;margin-bottom:12px">' + m.icon + '</div>' +
+      '<div style="font-size:20px;font-weight:900;text-align:center;margin-bottom:8px;letter-spacing:-0.3px">' + m.title + '</div>' +
+      '<div style="font-size:13px;color:rgba(255,255,255,0.5);text-align:center;line-height:1.6;margin-bottom:24px">' + m.body + '</div>' +
+      '<button onclick="guestGoSignup()" style="width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#ff2d78,#b44fff);color:white;font-size:16px;font-weight:900;font-family:inherit;cursor:pointer;margin-bottom:10px">Create Free Account →</button>' +
+      '<button onclick="guestGoLogin()" style="width:100%;padding:13px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">Already have an account? Sign In</button>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeGuestPrompt(); });
+  setTimeout(function() {
+    var sheet = document.getElementById('guest-prompt-sheet');
+    if (sheet) sheet.style.transform = 'translateY(0)';
+  }, 10);
+}
+window.showGuestPrompt = showGuestPrompt;
+
+function closeGuestPrompt() {
+  var overlay = document.getElementById('guest-prompt-overlay');
+  if (!overlay) return;
+  var sheet = document.getElementById('guest-prompt-sheet');
+  if (sheet) sheet.style.transform = 'translateY(30px)';
+  setTimeout(function() { overlay.remove(); }, 300);
+}
+window.closeGuestPrompt = closeGuestPrompt;
+
+function guestGoSignup() {
+  closeGuestPrompt();
+  var authEl = document.getElementById('auth-screen');
+  var appEl  = document.getElementById('app');
+  if (appEl)  appEl.style.display  = 'none';
+  if (authEl) {
+    authEl.style.display  = 'flex';
+    authEl.style.zIndex   = '9999';
+    authEl.style.position = 'fixed';
+    authEl.style.inset    = '0';
+  }
+  if (typeof switchAuthTab === 'function') switchAuthTab('signup');
+  window._pendingDTSLOEntry = true;
+}
+window.guestGoSignup = guestGoSignup;
+
+function guestGoLogin() {
+  closeGuestPrompt();
+  var authEl = document.getElementById('auth-screen');
+  var appEl  = document.getElementById('app');
+  if (appEl)  appEl.style.display  = 'none';
+  if (authEl) {
+    authEl.style.display  = 'flex';
+    authEl.style.zIndex   = '9999';
+    authEl.style.position = 'fixed';
+    authEl.style.inset    = '0';
+  }
+  if (typeof switchAuthTab === 'function') switchAuthTab('login');
+  window._pendingDTSLOEntry = true;
+}
+window.guestGoLogin = guestGoLogin;

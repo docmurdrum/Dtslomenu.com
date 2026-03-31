@@ -12,72 +12,7 @@ let redemptionSeconds = 600;
 
 // ── MISSION DATA (populated from Supabase in production) ──
 // For now, seeded with sample missions — admin tool will manage these
-const SAMPLE_MISSIONS = [
-  {
-    id: 1,
-    bar: "Frog & Peach Pub", barEmoji: "🐸",
-    cat: "tonight",
-    title: "First Round at the Frog",
-    desc: "Check in at Frog & Peach tonight before 10pm and claim a free pint.",
-    rewards: [{ label: "+50 XP", type: "xp" }, { label: "🍺 Free Pint", type: "prize" }, { label: "🏅 Frog Regular", type: "badge" }],
-    expiry: "Tonight · Ends 10:00 PM",
-    active: true,
-  },
-  {
-    id: 2,
-    bar: "Bull's Tavern", barEmoji: "🐂",
-    cat: "competitive",
-    title: "Bull's Night Champion",
-    desc: "Be one of the first 5 to check in at Bull's Tavern tonight. Winners get a free round.",
-    rewards: [{ label: "+75 XP", type: "xp" }, { label: "🥃 Free Round", type: "prize" }],
-    expiry: "Tonight · Ends 2:00 AM",
-    active: true,
-    spots: { claimed: 3, total: 5 },
-    countdown: "2h 41m",
-  },
-  {
-    id: 3,
-    bar: "McCarthy's Irish Pub", barEmoji: "🍀",
-    cat: "group",
-    title: "Squad Night at McCarthy's",
-    desc: "Bring 3 friends to McCarthy's. All 4 check in together and get 10% off your tab.",
-    rewards: [{ label: "+100 XP each", type: "xp" }, { label: "💸 10% off tab", type: "prize" }],
-    expiry: "This Week",
-    active: true,
-    group: { needed: 4, joined: 2 },
-  },
-  {
-    id: 4,
-    bar: "BA Start Arcade Bar", barEmoji: "🕹️",
-    cat: "week",
-    title: "High Score Night",
-    desc: "Visit BA Start this week and challenge someone to a game. Check in to claim your reward.",
-    rewards: [{ label: "+40 XP", type: "xp" }, { label: "🎮 Arcade Warrior", type: "badge" }],
-    expiry: "This Week · 4 days left",
-    active: true,
-  },
-  {
-    id: 5,
-    bar: "High Bar", barEmoji: "🌆",
-    cat: "repeatable",
-    title: "Thursday Rooftop Regular",
-    desc: "Check in at High Bar every Thursday night. Keep your streak for escalating XP.",
-    rewards: [{ label: "+30 XP/week", type: "xp" }, { label: "🔥 Streak bonus", type: "badge" }],
-    expiry: "Every Thursday",
-    active: true,
-    streak: 2,
-  },
-  {
-    id: 6,
-    bar: "Frog & Peach Pub", barEmoji: "🐸",
-    cat: "week",
-    title: "Late Night Frog",
-    desc: "Check in at Frog & Peach after midnight this week. Night owls get rewarded.",
-    rewards: [{ label: "+60 XP", type: "xp" }, { label: "🦉 Night Owl", type: "badge" }],
-    expiry: "This Week · 4 days left",
-    active: true,
-  },
-];
+const SAMPLE_MISSIONS = [];
 
 // ── INIT ──
 function initMissionsPage() {
@@ -86,9 +21,32 @@ function initMissionsPage() {
 }
 
 async function loadMissions() {
-  // In production: fetch from Supabase missions table
-  // For now use sample data
-  renderMissions(SAMPLE_MISSIONS);
+  try {
+    const { data, error } = await supabaseClient
+      .from('missions')
+      .select('*')
+      .eq('active', true)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    if (data && data.length) {
+      renderMissions(data);
+    } else {
+      renderMissionsEmpty();
+    }
+  } catch(e) {
+    renderMissionsEmpty();
+  }
+}
+
+function renderMissionsEmpty() {
+  const list = document.getElementById('missions-list');
+  if (!list) return;
+  list.innerHTML =
+    '<div style="text-align:center;padding:48px 24px">' +
+      '<div style="font-size:48px;margin-bottom:16px">🎯</div>' +
+      '<div style="font-size:17px;font-weight:900;margin-bottom:8px">Missions dropping soon</div>' +
+      '<div style="font-size:13px;color:rgba(255,255,255,0.4);line-height:1.6">The DTSLO team is crafting missions<br>with real rewards at real bars.<br>Check back Friday night.</div>' +
+    '</div>';
 }
 
 // ── BAR CHIPS ──
@@ -111,23 +69,28 @@ function renderBarChips() {
     ).join('');
 }
 
+let _loadedMissions = [];
+
 // ── FILTER ──
 function filterMissionsCat(cat, btn) {
   missionsCatFilter = cat;
   document.querySelectorAll('.missions-filter-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  renderMissions(SAMPLE_MISSIONS);
+  if (_loadedMissions.length) renderMissions(_loadedMissions);
+  else renderMissionsEmpty();
 }
 
 function filterMissionsBar(bar, btn) {
   missionsBarFilter = bar;
   document.querySelectorAll('.bar-chip').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  renderMissions(SAMPLE_MISSIONS);
+  if (_loadedMissions.length) renderMissions(_loadedMissions);
+  else renderMissionsEmpty();
 }
 
 // ── RENDER ──
 function renderMissions(missions) {
+  _loadedMissions = missions || [];
   const list = document.getElementById('missions-list');
   if (!list) return;
 
@@ -223,7 +186,7 @@ function buildMissionCard(m) {
 
 // ── COMPLETE MISSION ──
 function completeMission(id) {
-  const mission = SAMPLE_MISSIONS.find(m => m.id === id);
+  const mission = _loadedMissions.find(m => m.id === id);
   if (!mission || completedMissions.has(id)) return;
 
   // Generate one-time code
@@ -259,7 +222,7 @@ function completeMission(id) {
 
   // Show modal
   document.getElementById('redemption-overlay').classList.add('show');
-  renderMissions(SAMPLE_MISSIONS);
+  if (_loadedMissions.length) renderMissions(_loadedMissions); else renderMissionsEmpty();
 
   // Check achievements
   checkAchievements();
@@ -326,8 +289,9 @@ const RESOURCES = [
     icon: '🎵',
     name: 'Events & Concerts',
     desc: 'SLO live music, bar events & more',
-    cls: 'events',
-    action: () => showPage('events'),
+    cls: 'coming',
+    action: null,
+    coming: true,
   },
 ];
 
