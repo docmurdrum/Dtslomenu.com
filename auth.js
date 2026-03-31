@@ -269,49 +269,97 @@ async function doChangePassword() {
 }
 
 // ── SESSION INIT ──
-// Map loads first. Auth only happens when DTSLO hub is tapped.
-// If a session exists from a previous login, it's silently restored
-// AFTER the map is visible — never as a blocking step on load.
+// Checks beta mode flag — if skip_hub_on_load is ON, go straight to auth.
+// Otherwise launch hub map as normal.
 
 window.onload = function () {
-  // Step 1: Hide auth screen, show nothing — hub screen takes over
   var authEl = document.getElementById('auth-screen');
   var appEl  = document.getElementById('app');
   if (authEl) authEl.style.display = 'none';
   if (appEl)  appEl.style.display  = 'none';
 
-  // Step 2: Launch hub map immediately
-  try {
-    if (typeof menuHomeInit === 'function') menuHomeInit();
-  } catch(e) {}
+  // Check beta flag first — determines whether to show hub or go straight to login
+  var launched = false;
 
-  // Step 3: Silently restore session in background — no UI interruption
-  // Uses a short delay so the map renders first
+  function launchHub() {
+    if (launched) return;
+    launched = true;
+    try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
+    startSessionRestore();
+  }
+
+  function launchAuth() {
+    if (launched) return;
+    launched = true;
+    // Skip hub entirely — show login screen directly
+    window._pendingDTSLOEntry = true;
+    if (authEl) {
+      authEl.style.display  = 'flex';
+      authEl.style.zIndex   = '9999';
+      authEl.style.position = 'fixed';
+      authEl.style.inset    = '0';
+    }
+    // Hide the back button since there is no hub to go back to
+    var backBtn = document.getElementById('auth-back-btn');
+    if (backBtn) backBtn.style.display = 'none';
+    startSessionRestore();
+  }
+
+  // Try to read beta flag from Supabase — fallback to hub if fails or table missing
+  // Use a tight timeout so slow connections don't block the load
+  var betaCheckDone = false;
+  var betaTimeout = setTimeout(function() {
+    if (!betaCheckDone) { betaCheckDone = true; launchHub(); }
+  }, 1500);
+
+  try {
+    supabaseClient.from('app_settings')
+      .select('value')
+      .eq('key', 'skip_hub_on_load')
+      .limit(1)
+      .then(function(res) {
+        if (betaCheckDone) return;
+        betaCheckDone = true;
+        clearTimeout(betaTimeout);
+        var skipHub = res.data && res.data[0] && (res.data[0].value === 'true' || res.data[0].value === true);
+        if (skipHub) { launchAuth(); } else { launchHub(); }
+      })
+      .catch(function() {
+        if (!betaCheckDone) { betaCheckDone = true; clearTimeout(betaTimeout); launchHub(); }
+      });
+  } catch(e) {
+    clearTimeout(betaTimeout);
+    launchHub();
+  }
+};
+
+function startSessionRestore() {
+  // Silently restore session in background — no UI interruption
   setTimeout(function() {
     try {
       supabaseClient.auth.getSession().then(function(result) {
         var session = result && result.data && result.data.session;
         if (session && session.user) {
-          // Session found — restore silently, no visible change
           currentUser = session.user;
-          // Pre-load user data in background without showing app
-          try { loadUserStats(); } catch(e) {}
-          try { renderAvatar(); } catch(e) {}
+          // If we launched into auth screen and have a session, skip to app
+          var authEl = document.getElementById('auth-screen');
+          if (authEl && authEl.style.display !== 'none') {
+            goToDTSLO();
+          } else {
+            try { loadUserStats(); } catch(e) {}
+            try { renderAvatar(); } catch(e) {}
+          }
         }
       }).catch(function() {});
     } catch(e) {}
 
-    // Listen for future auth changes (sign in / sign out)
     try {
       supabaseClient.auth.onAuthStateChange(function(event, session) {
-        if (event === 'SIGNED_OUT') {
-          currentUser = null;
-        }
-        // SIGNED_IN is handled by requireAuthForDTSLO — not here
+        if (event === 'SIGNED_OUT') { currentUser = null; }
       });
     } catch(e) {}
-  }, 800); // Wait for map to render first
-};
+  }, 300);
+}
 
 // Called when user taps DTSLO hub
 async function requireAuthForDTSLO() {
