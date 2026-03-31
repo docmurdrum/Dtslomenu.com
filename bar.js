@@ -234,41 +234,6 @@ window.openBarMerch = openBarMerch;
 // BAR PAGE TABS — Menu / Merch / Info
 // ══════════════════════════════════════════════
 
-// ── SAMPLE MENU DATA (hardcoded until business_menu_items table exists) ──
-var SAMPLE_MENU_ITEMS = {
-  "Black Sheep Bar & Grill": [
-    { id:'bs1', cat:'🍺 Drinks', emoji:'🍺', name:'House Draft', desc:'Rotating local tap on draft', price:'$5' },
-    { id:'bs2', cat:'🍺 Drinks', emoji:'🥃', name:'Whiskey Sour', desc:'Bourbon, lemon, simple syrup, egg white', price:'$9' },
-    { id:'bs3', cat:'🍺 Drinks', emoji:'🍸', name:'Margarita', desc:'Silver tequila, triple sec, fresh lime', price:'$10' },
-    { id:'bs4', cat:'🍔 Food',   emoji:'🍔', name:'Bar Burger', desc:'Half-pound, cheddar, house sauce', price:'$14' },
-    { id:'bs5', cat:'🍔 Food',   emoji:'🍟', name:'Loaded Fries', desc:'Bacon, cheese, green onion', price:'$9' },
-    { id:'bs6', cat:'🎉 Happy Hour · 4–7 PM', emoji:'⭐', name:'$2 Off All Drafts', desc:'Every weekday 4–7pm', price:'$3' },
-  ],
-  "Bull's Tavern": [
-    { id:'bt1', cat:'🍺 Drinks', emoji:'🍺', name:'House Draft', desc:'Rotating local tap', price:'$5' },
-    { id:'bt2', cat:'🍺 Drinks', emoji:'🥃', name:'Whiskey Sour', desc:'Bourbon, lemon, egg white', price:'$9' },
-    { id:'bt3', cat:'🍺 Drinks', emoji:'🍸', name:'Margarita', desc:'Silver tequila, lime, triple sec', price:'$10' },
-    { id:'bt4', cat:'🍺 Drinks', emoji:'🍻', name:'Pitcher of Beer', desc:'64oz house draft, great for groups', price:'$18' },
-    { id:'bt5', cat:'🎉 Happy Hour · 4–7 PM', emoji:'⭐', name:'$2 Off All Drafts', desc:'Mon–Fri 4–7pm', price:'$3' },
-  ],
-  "Frog & Peach Pub": [
-    { id:'fp1', cat:'🍺 Drinks', emoji:'🍻', name:'Creek Side Pint', desc:'Frog and Peach exclusive brew', price:'$7' },
-    { id:'fp2', cat:'🍺 Drinks', emoji:'🍹', name:'Peach Smash', desc:'Vodka, peach puree, fresh mint', price:'$11' },
-    { id:'fp3', cat:'🍺 Drinks', emoji:'🍺', name:'House Cider', desc:'Local SLO cider on tap', price:'$6' },
-    { id:'fp4', cat:'🎉 Happy Hour · 4–6 PM', emoji:'⭐', name:'Pint and a Shot', desc:'Any draft plus well shot', price:'$8' },
-  ],
-  "High Bar": [
-    { id:'hb1', cat:'🍸 Cocktails', emoji:'🍸', name:'High Ball', desc:'Signature rooftop cocktail', price:'$13' },
-    { id:'hb2', cat:'🍸 Cocktails', emoji:'🥂', name:'Champagne Toast', desc:'House champagne, seasonal fruit', price:'$11' },
-    { id:'hb3', cat:'🍸 Cocktails', emoji:'🍹', name:'SLO Sunset', desc:'Tequila, blood orange, agave', price:'$12' },
-  ],
-  "McCarthy's Irish Pub": [
-    { id:'mc1', cat:'🍺 Drinks', emoji:'🍺', name:'Guinness Pint', desc:'Perfectly poured, every time', price:'$7' },
-    { id:'mc2', cat:'🍺 Drinks', emoji:'🥃', name:'Irish Whiskey', desc:'Jameson, Tullamore, or Bushmills', price:'$8' },
-    { id:'mc3', cat:'🍺 Drinks', emoji:'🍀', name:'Irish Car Bomb', desc:'Guinness, Baileys, Jameson', price:'$10' },
-    { id:'mc4', cat:'🍔 Food',   emoji:'🥩', name:'Shepherd\'s Pie', desc:'Classic Irish recipe, house made', price:'$13' },
-  ],
-};
 
 var BAR_WEBSITES = {
   "Black Sheep Bar & Grill":   'blacksheepslo.com',
@@ -309,54 +274,16 @@ function renderBarMenu(barIndex) {
   var el = document.getElementById('bar-page-menu');
   if (!el) return;
 
-  var items = SAMPLE_MENU_ITEMS[bar.name];
-  if (!items || !items.length) {
-    var website = BAR_WEBSITES[bar.name];
-    el.innerHTML =
-      '<div class="bar-no-menu">' +
-        '<div class="bar-no-menu-icon">🍽</div>' +
-        '<div class="bar-no-menu-title">Menu coming soon</div>' +
-        '<div class="bar-no-menu-sub">We are getting this set up. Browse their website in the meantime.</div>' +
-        (website
-          ? '<a href="https://' + website + '" target="_blank" class="bar-website-link">🌐 Visit ' + website + ' →</a>'
-          : '') +
-      '</div>';
-    return;
-  }
-
-  // Group by category
-  var cats = {};
-  items.forEach(function(item) {
-    if (!cats[item.cat]) cats[item.cat] = [];
-    cats[item.cat].push(item);
-  });
-
-  var saved = getBarSavedItems(bar.name);
-  var html = '';
-  Object.keys(cats).forEach(function(cat) {
-    html += '<div class="bar-menu-cat">' + cat + '</div>';
-    cats[cat].forEach(function(item) {
-      var isSaved = saved.indexOf(item.id) !== -1;
-      html +=
-        '<div class="bar-menu-item' + (isSaved ? ' bmi-saved' : '') + '" id="bmi-' + item.id + '">' +
-          '<span class="bmi-emoji">' + item.emoji + '</span>' +
-          '<div class="bmi-info">' +
-            '<div class="bmi-name">' + item.name + '</div>' +
-            '<div class="bmi-desc">' + item.desc + '</div>' +
-          '</div>' +
-          '<div class="bmi-right">' +
-            '<span class="bmi-price">' + item.price + '</span>' +
-            '<button class="bmi-save-btn' + (isSaved ? ' saved' : '') + '" onclick="event.stopPropagation();toggleSaveMenuItem(\'' + item.id + '\',\'' + bar.name.replace(/'/g,"\\'") + '\')">' +
-              (isSaved ? '✓ Saved' : '+ Save') +
-            '</button>' +
-          '</div>' +
-        '</div>';
-    });
-  });
-  el.innerHTML = html;
-
-  // Update tab badge
-  updateMenuTabBadge(bar.name);
+  var website = BAR_WEBSITES[bar.name];
+  el.innerHTML =
+    '<div class="bar-no-menu">' +
+      '<div class="bar-no-menu-icon">🍽</div>' +
+      '<div class="bar-no-menu-title">Menu coming soon</div>' +
+      '<div class="bar-no-menu-sub">We are partnering with ' + bar.name + ' to bring you their full menu. Check back soon.</div>' +
+      (website
+        ? '<a href="https://' + website + '" target="_blank" class="bar-website-link">🌐 View their website →</a>'
+        : '') +
+    '</div>';
 }
 window.renderBarMenu = renderBarMenu;
 

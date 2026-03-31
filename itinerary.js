@@ -151,7 +151,7 @@ function openItinFromSaved() {
         '<div style="font-size:40px;margin-bottom:12px">🗓</div>' +
         '<div style="font-size:18px;font-weight:800;font-family:Georgia,serif;margin-bottom:8px">No saved plans yet</div>' +
         '<div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:24px">Use Plan It to generate your first night out plan</div>' +
-        '<button onclick="closeItinerary()" style="width:100%;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">Open Plan It</button>' +
+        '<button onclick="closeItinerary();showPage(\'resources\')" style="width:100%;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">Open Plan It</button>' +
       '</div>'
     );
   } else {
@@ -163,28 +163,45 @@ function openItinFromSaved() {
       saved.map(function(s) {
         var stopCount = (s.stops||[]).length;
         var date = new Date(s.created).toLocaleDateString('en-US',{month:'short',day:'numeric'});
-        return '<div style="padding:13px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;margin-bottom:8px;cursor:pointer" onclick="itinOpen(\'' + s.id + '\')">' +
+        return '<div class="itin-saved-row" data-itin-id="' + s.id + '" style="padding:13px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;margin-bottom:8px;cursor:pointer">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
             '<div style="font-size:14px;font-weight:800">' + (s.name||'My Plan') + '</div>' +
             '<div style="display:flex;gap:8px;align-items:center">' +
               '<div style="font-size:10px;color:rgba(255,255,255,0.3)">' + date + '</div>' +
-              '<button onclick="event.stopPropagation();itinDelete(\'' + s.id + '\')" style="background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;font-size:14px;padding:0">✕</button>' +
+              '<button class="itin-delete-btn" data-itin-id="' + s.id + '" style="background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;font-size:14px;padding:0">✕</button>' +
             '</div>' +
           '</div>' +
           '<div style="font-size:11px;color:rgba(255,255,255,0.4)">⏰ ' + s.start_time + ' · ' + stopCount + ' stops' + (s.total_cost?' · '+s.total_cost:'') + '</div>' +
           '<div style="display:flex;gap:6px;margin-top:8px">' +
-            '<button onclick="event.stopPropagation();itinOpenLive(\'' + s.id + '\')" style="flex:1;padding:8px;border-radius:10px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">▶ Go Live</button>' +
-            '<button onclick="event.stopPropagation();itinShare(\'' + s.id + '\')" style="padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">Share ↗</button>' +
+            '<button class="itin-live-btn" data-itin-id="' + s.id + '" style="flex:1;padding:8px;border-radius:10px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">▶ Go Live</button>' +
+            '<button class="itin-share-btn" data-itin-id="' + s.id + '" style="padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">Share ↗</button>' +
           '</div>' +
         '</div>';
       }).join('') +
-
-      '<button onclick="closeItinerary()" style="width:100%;margin-top:8px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Close</button>'
+      '<button class="itin-close-btn" style="width:100%;margin-top:8px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Close</button>'
     );
+
+    // Attach events via delegation — no inline onclick needed
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) { closeItinerary(); return; }
+      var row  = e.target.closest('.itin-saved-row');
+      var del  = e.target.closest('.itin-delete-btn');
+      var live = e.target.closest('.itin-live-btn');
+      var shr  = e.target.closest('.itin-share-btn');
+      var cls  = e.target.closest('.itin-close-btn');
+      if (cls)  { closeItinerary(); return; }
+      if (del)  { e.stopPropagation(); itinDelete(del.dataset.itinId); return; }
+      if (live) { e.stopPropagation(); itinOpenLive(live.dataset.itinId); return; }
+      if (shr)  { e.stopPropagation(); itinShare(shr.dataset.itinId); return; }
+      if (row)  { itinOpen(row.dataset.itinId); }
+    });
   }
 
   document.body.appendChild(modal);
-  modal.addEventListener('click', function(e) { if(e.target===modal) closeItinerary(); });
+  // No-saved path still needs click-outside-to-close
+  if (!saved.length) {
+    modal.addEventListener('click', function(e) { if(e.target===modal) closeItinerary(); });
+  }
   setTimeout(function() {
     var inner = modal.querySelector('#itin-inner');
     if (inner) inner.style.transform = 'translateY(0)';
