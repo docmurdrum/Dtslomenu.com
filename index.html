@@ -15,17 +15,17 @@
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
 
 <!-- ── STYLES ── -->
-<link rel="stylesheet" href="base.css?v=6.3.1">
-<link rel="stylesheet" href="auth.css?v=6.3.1">
-<link rel="stylesheet" href="lines.css?v=6.3.1">
-<link rel="stylesheet" href="delivery.css?v=6.3.1">
-<link rel="stylesheet" href="lost.css?v=6.3.1">
-<link rel="stylesheet" href="profile.css?v=6.3.1">
-<link rel="stylesheet" href="games.css?v=6.3.1">
-<link rel="stylesheet" href="achievements.css?v=6.3.1">
-<link rel="stylesheet" href="missions.css?v=6.3.1">
-<link rel="stylesheet" href="bar.css?v=6.3.1">
-<link rel="stylesheet" href="friends.css?v=6.3.1">
+<link rel="stylesheet" href="base.css?v=6.3.3">
+<link rel="stylesheet" href="auth.css?v=6.3.3">
+<link rel="stylesheet" href="lines.css?v=6.3.3">
+<link rel="stylesheet" href="delivery.css?v=6.3.3">
+<link rel="stylesheet" href="lost.css?v=6.3.3">
+<link rel="stylesheet" href="profile.css?v=6.3.3">
+<link rel="stylesheet" href="games.css?v=6.3.3">
+<link rel="stylesheet" href="achievements.css?v=6.3.3">
+<link rel="stylesheet" href="missions.css?v=6.3.3">
+<link rel="stylesheet" href="bar.css?v=6.3.3">
+<link rel="stylesheet" href="friends.css?v=6.3.3">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -130,11 +130,6 @@ window.closeTopModal = closeTopModal;
       <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
       <button class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
     </div>
-
-    <!-- DEV LOGIN -->
-    <button class="btn-primary" onclick="devLogin()" style="margin-bottom:16px;background:#22c55e;font-size:13px;padding:10px">
-      🛠️ Dev Login (Temp)
-    </button>
 
     <!-- LOGIN -->
     <div id="login-form" class="auth-form">
@@ -853,16 +848,7 @@ window.closeTopModal = closeTopModal;
         <span class="toggle-slider"></span>
       </label>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--surface2);border-radius:14px;margin-bottom:10px;border:1px solid var(--border)">
-      <div>
-        <div style="font-size:14px;font-weight:700">Skip to DTSLO</div>
-        <div style="font-size:11px;color:var(--text2)">Skip hub screen, go straight to DTSLO</div>
-      </div>
-      <label class="toggle-switch">
-        <input type="checkbox" id="pref-skip-to-dtslo" onchange="menuHomeSkipToggle(this.checked);saveSkipToDTSLOPref(this.checked)">
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
+
 
     <div class="profile-section-label">Account</div>
 
@@ -893,40 +879,9 @@ window.closeTopModal = closeTopModal;
       </button>
     </div>
 
-    <div class="profile-section-label">⚙️ Settings</div>
-
-    <!-- GPS Bypass -->
-    <div class="profile-action" style="justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:12px">
-        <span class="pa-icon">📍</span>
-        <div>
-          <div class="pa-label">Bypass Location Check</div>
-          <div style="font-size:10px;color:var(--text2)" id="gps-bypass-status-app">Dev mode off</div>
-        </div>
-      </div>
-      <label class="toggle-switch-sm">
-        <input type="checkbox" id="gps-bypass-app-toggle" onchange="toggleGPSBypassApp(this.checked)">
-        <span class="toggle-slider-sm"></span>
-      </label>
-    </div>
-
-    <div class="profile-section-label">🛠️ Developer Tools</div>
-
-    <button class="profile-action" onclick="devAddXP()">
-      <span class="pa-icon">⚡</span>
-      <span class="pa-label">Add 100 XP</span>
-      <span class="pa-arrow">›</span>
-    </button>
-
-    <button class="profile-action" onclick="devResetXP()">
-      <span class="pa-icon">🔄</span>
-      <span class="pa-label">Reset to Level 0</span>
-      <span class="pa-arrow">›</span>
-    </button>
-
-    <button class="profile-action" onclick="devToggleGender()">
-      <span class="pa-icon">🔀</span>
-      <span class="pa-label">Toggle Gender: <span id="dev-gender-label">—</span></span>
+    <button class="profile-action" onclick="rewatchOnboarding()">
+      <span class="pa-icon">🎓</span>
+      <span class="pa-label">Rewatch App Tour</span>
       <span class="pa-arrow">›</span>
     </button>
 
@@ -1066,23 +1021,7 @@ window.closeTopModal = closeTopModal;
   </div>
 
   <!-- ── ONBOARDING MODAL ── -->
-  <div id="onboarding-modal" class="onboarding-modal">
-    <div class="onboarding-box">
-      <div class="ob-content" id="ob-content">
-        <span class="ob-icon" id="ob-icon">🌃</span>
-        <div class="ob-title" id="ob-title">Welcome to DTSLO</div>
-        <div class="ob-body" id="ob-body">Your guide to downtown San Luis Obispo nightlife.</div>
-        <div class="ob-dots">
-          <div class="ob-dot active"></div>
-          <div class="ob-dot"></div>
-          <div class="ob-dot"></div>
-          <div class="ob-dot"></div>
-        </div>
-        <button class="ob-cta" id="ob-cta" onclick="onboardingNext()">Next →</button>
-        <button class="ob-skip" onclick="closeOnboarding()">Skip</button>
-      </div>
-    </div>
-  </div>
+  <!-- Onboarding overlay built dynamically by onboarding.js -->
 
   <!-- ── REDEMPTION MODAL ── -->
   <div id="redemption-overlay" class="redemption-overlay" onclick="if(event.target===this)closeRedemptionModal()">
@@ -1598,48 +1537,48 @@ window.closeTopModal = closeTopModal;
 
 <!-- ══════════════════ SCRIPTS ══════════════════ -->
 <!-- Load order matters: shared first, then pages -->
-<script src="globals.js?v=6.3.1"></script>
-  <script src="shared.js?v=6.3.1"></script>
-<script src="profile.js?v=6.3.1"></script>
-<script src="lines.js?v=6.3.1"></script>
-<script src="delivery.js?v=6.3.1"></script>
-<script src="lost.js?v=6.3.1"></script>
-<script src="missions.js?v=6.3.1"></script>
-  <script src="leaderboard.js?v=6.3.1"></script>
-<script src="missed_connections.js?v=6.3.1"></script>
-<script src="games.js?v=6.3.1"></script>
-<script src="dice.js?v=6.3.1"></script>
-<script src="bar.js?v=6.3.1"></script>
-<script src="friends.js?v=6.3.1"></script>
-<script src="party_games.js?v=6.3.1"></script>
-<script src="achievements.js?v=6.3.1"></script>
-<script src="onboarding.js?v=6.3.1"></script>
-<script src="intro.js?v=6.3.1"></script>
-  <script src="line_skip.js?v=6.3.1"></script>
-  <script src="budget.js?v=6.3.1"></script>
-  <script src="crafting.js?v=6.3.1"></script>
-  <script src="sync.js?v=6.3.1"></script>
-  <script src="smart_start.js?v=6.3.1"></script>
+<script src="globals.js?v=6.3.3"></script>
+  <script src="shared.js?v=6.3.3"></script>
+<script src="profile.js?v=6.3.3"></script>
+<script src="lines.js?v=6.3.3"></script>
+<script src="delivery.js?v=6.3.3"></script>
+<script src="lost.js?v=6.3.3"></script>
+<script src="missions.js?v=6.3.3"></script>
+  <script src="leaderboard.js?v=6.3.3"></script>
+<script src="missed_connections.js?v=6.3.3"></script>
+<script src="games.js?v=6.3.3"></script>
+<script src="dice.js?v=6.3.3"></script>
+<script src="bar.js?v=6.3.3"></script>
+<script src="friends.js?v=6.3.3"></script>
+<script src="party_games.js?v=6.3.3"></script>
+<script src="achievements.js?v=6.3.3"></script>
+<script src="onboarding.js?v=6.3.3"></script>
+<script src="intro.js?v=6.3.3"></script>
+  <script src="line_skip.js?v=6.3.3"></script>
+  <script src="budget.js?v=6.3.3"></script>
+  <script src="crafting.js?v=6.3.3"></script>
+  <script src="sync.js?v=6.3.3"></script>
+  <script src="smart_start.js?v=6.3.3"></script>
 
-  <script src="hub_animation.js?v=6.3.1"></script>
-  <script src="menu_home.js?v=6.3.1"></script>
-  <script src="beach_hub.js?v=6.3.1"></script>
-  <script src="wine_hub.js?v=6.3.1"></script>
-  <script src="brewery_hub.js?v=6.3.1"></script>
-  <script src="nature_hub.js?v=6.3.1"></script>
-  <script src="events_hub.js?v=6.3.1"></script>
-  <script src="calpoly_hub.js?v=6.3.1"></script>
-  <script src="city_hub.js?v=6.3.1"></script>
-  <script src="thrill_hub.js?v=6.3.1"></script>
-  <script src="bar_golf.js?v=6.3.1"></script>
-  <script src="itinerary.js?v=6.3.1"></script>
-  <script src="merch.js?v=6.3.1"></script>
-  <script src="restaurant_hub.js?v=6.3.1"></script>
-  <script src="travel.js?v=6.3.1"></script>
-  <script src="plan_it.js?v=6.3.1"></script>
-  <script src="pin_mover.js?v=6.3.1"></script>
-  <script src="tool_sheets.js?v=6.3.1"></script>
-  <script src="auth.js?v=6.3.1"></script>
+  <script src="hub_animation.js?v=6.3.3"></script>
+  <script src="menu_home.js?v=6.3.3"></script>
+  <script src="beach_hub.js?v=6.3.3"></script>
+  <script src="wine_hub.js?v=6.3.3"></script>
+  <script src="brewery_hub.js?v=6.3.3"></script>
+  <script src="nature_hub.js?v=6.3.3"></script>
+  <script src="events_hub.js?v=6.3.3"></script>
+  <script src="calpoly_hub.js?v=6.3.3"></script>
+  <script src="city_hub.js?v=6.3.3"></script>
+  <script src="thrill_hub.js?v=6.3.3"></script>
+  <script src="bar_golf.js?v=6.3.3"></script>
+  <script src="itinerary.js?v=6.3.3"></script>
+  <script src="merch.js?v=6.3.3"></script>
+  <script src="restaurant_hub.js?v=6.3.3"></script>
+  <script src="travel.js?v=6.3.3"></script>
+  <script src="plan_it.js?v=6.3.3"></script>
+  <script src="pin_mover.js?v=6.3.3"></script>
+  <script src="tool_sheets.js?v=6.3.3"></script>
+  <script src="auth.js?v=6.3.3"></script>
 
 <script>
 if ('serviceWorker' in navigator) {

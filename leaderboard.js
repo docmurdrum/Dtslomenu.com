@@ -92,6 +92,24 @@ function getLbCutoff(period) {
 }
 
 // ── LOAD LEADERBOARD ──
+// ── FETCH USERNAMES ──
+// Separate query for usernames — avoids schema cache join errors
+async function fetchUsernameMap(userIds) {
+  var map = {};
+  if (!userIds || !userIds.length) return map;
+  try {
+    var res = await supabaseClient
+      .from('profiles')
+      .select('id, username')
+      .in('id', userIds);
+    if (res.error) throw res.error;
+    (res.data || []).forEach(function(r) { map[r.id] = r.username; });
+  } catch(e) {
+    console.warn('[leaderboard] fetchUsernameMap:', e.message);
+  }
+  return map;
+}
+
 async function loadLeaderboard() {
   var listEl    = document.getElementById('leaderboard-list');
   var loadingEl = document.getElementById('lb-loading');
@@ -123,53 +141,55 @@ async function loadLeaderboard() {
     if (lbTab === 'xp') {
       var res = await supabaseClient
         .from('characters')
-        .select('user_id, xp, profiles(username)')
+        .select('user_id, xp')
         .order('xp', { ascending: false })
         .limit(50);
       if (res.error) throw res.error;
-      data = (res.data || [])
+      var xpRows = (res.data || [])
         .filter(function(r) { return lbScope === 'global' || friendIds.indexOf(r.user_id) !== -1; })
-        .slice(0, 20)
-        .map(function(r) { return {
-          user_id:  r.user_id,
-          username: (r.profiles && r.profiles.username) || 'Unknown',
-          value:    r.xp || 0,
-          unit:     'XP'
-        }; });
+        .slice(0, 20);
+      var userIds = xpRows.map(function(r) { return r.user_id; });
+      var nameMap = await fetchUsernameMap(userIds);
+      data = xpRows.map(function(r) { return {
+        user_id:  r.user_id,
+        username: nameMap[r.user_id] || 'Unknown',
+        value:    r.xp || 0,
+        unit:     'XP'
+      }; });
 
     } else if (lbTab === 'reports') {
       var res2 = await supabaseClient
         .from('reports')
-        .select('user_id, profiles(username)')
+        .select('user_id')
         .gte('created_at', cutoff);
       if (res2.error) throw res2.error;
       var counts = {};
-      var names  = {};
       (res2.data || []).forEach(function(r) {
         if (lbScope === 'friends' && friendIds.indexOf(r.user_id) === -1) return;
         counts[r.user_id] = (counts[r.user_id] || 0) + 1;
-        names[r.user_id]  = (r.profiles && r.profiles.username) || 'Unknown';
       });
-      data = Object.keys(counts)
-        .map(function(uid) { return { user_id: uid, username: names[uid], value: counts[uid], unit: 'reports' }; })
+      var repIds = Object.keys(counts);
+      var nameMap2 = await fetchUsernameMap(repIds);
+      data = repIds
+        .map(function(uid) { return { user_id: uid, username: nameMap2[uid] || 'Unknown', value: counts[uid], unit: 'reports' }; })
         .sort(function(a, b) { return b.value - a.value; })
         .slice(0, 20);
 
     } else if (lbTab === 'checkins') {
       var res3 = await supabaseClient
         .from('bump_sessions')
-        .select('user_id, profiles(username)')
+        .select('user_id')
         .gte('created_at', cutoff);
       if (res3.error) throw res3.error;
       var counts2 = {};
-      var names2  = {};
       (res3.data || []).forEach(function(r) {
         if (lbScope === 'friends' && friendIds.indexOf(r.user_id) === -1) return;
         counts2[r.user_id] = (counts2[r.user_id] || 0) + 1;
-        names2[r.user_id]  = (r.profiles && r.profiles.username) || 'Unknown';
       });
-      data = Object.keys(counts2)
-        .map(function(uid) { return { user_id: uid, username: names2[uid], value: counts2[uid], unit: 'check-ins' }; })
+      var ciIds = Object.keys(counts2);
+      var nameMap3 = await fetchUsernameMap(ciIds);
+      data = ciIds
+        .map(function(uid) { return { user_id: uid, username: nameMap3[uid] || 'Unknown', value: counts2[uid], unit: 'check-ins' }; })
         .sort(function(a, b) { return b.value - a.value; })
         .slice(0, 20);
     }
@@ -251,13 +271,18 @@ async function loadProfileRank() {
   try {
     var res = await supabaseClient
       .from('characters')
-      .select('user_id, xp, profiles(username)')
+      .select('user_id, xp')
       .order('xp', { ascending: false });
     if (res.error) throw res.error;
 
     var data  = res.data || [];
     var myIdx = data.findIndex(function(r) { return r.user_id === currentUser.id; });
     var rank  = myIdx + 1;
+
+    // Fetch usernames for top 3 + me
+    var idsToFetch = data.slice(0, 3).map(function(r) { return r.user_id; });
+    if (myIdx >= 3) idsToFetch.push(data[myIdx].user_id);
+    var nameMap = await fetchUsernameMap(idsToFetch);
 
     // Update rank badge
     var badge    = document.getElementById('profile-rank-badge');
@@ -272,7 +297,7 @@ async function loadProfileRank() {
     miniEl.innerHTML = top3.map(function(row, i) {
       var isMe    = row.user_id === currentUser.id;
       var color   = LB_COLORS[i % LB_COLORS.length];
-      var username = (row.profiles && row.profiles.username) || (isMe ? 'You' : '—');
+      var username = nameMap[row.user_id] || (isMe ? 'You' : '—');
       var initial  = username[0].toUpperCase();
       return '<div class="lb-row' + (isMe ? ' lb-you' : '') + '" style="padding:8px 0">' +
         '<div class="lb-rank" style="width:28px;font-size:16px">' + LB_MEDALS[i] + '</div>' +
@@ -284,7 +309,7 @@ async function loadProfileRank() {
 
     if (myIdx >= 3) {
       var myData = data[myIdx];
-      var myUsername = (myData.profiles && myData.profiles.username) || 'You';
+      var myUsername = nameMap[myData.user_id] || 'You';
       miniEl.innerHTML +=
         '<div style="height:1px;background:rgba(255,255,255,0.06);margin:4px 0"></div>' +
         '<div class="lb-row lb-you" style="padding:8px 0">' +
@@ -339,34 +364,34 @@ async function loadBarLeaderboard() {
     if (barLbTab === 'checkins') {
       var res = await supabaseClient
         .from('bump_sessions')
-        .select('user_id, profiles(username)')
+        .select('user_id')
         .eq('bar_name', barName);
       if (res.error) throw res.error;
       var counts = {};
-      var names  = {};
       (res.data || []).forEach(function(r) {
         counts[r.user_id] = (counts[r.user_id] || 0) + 1;
-        names[r.user_id]  = (r.profiles && r.profiles.username) || 'Unknown';
       });
-      data = Object.keys(counts)
-        .map(function(uid) { return { user_id: uid, username: names[uid], value: counts[uid], unit: 'check-ins' }; })
+      var ciIds = Object.keys(counts);
+      var nameMap = await fetchUsernameMap(ciIds);
+      data = ciIds
+        .map(function(uid) { return { user_id: uid, username: nameMap[uid] || 'Unknown', value: counts[uid], unit: 'check-ins' }; })
         .sort(function(a, b) { return b.value - a.value; })
         .slice(0, barLbRange);
 
     } else if (barLbTab === 'reports') {
       var res2 = await supabaseClient
         .from('reports')
-        .select('user_id, profiles(username)')
+        .select('user_id')
         .eq('bar', barName);
       if (res2.error) throw res2.error;
       var counts2 = {};
-      var names2  = {};
       (res2.data || []).forEach(function(r) {
         counts2[r.user_id] = (counts2[r.user_id] || 0) + 1;
-        names2[r.user_id]  = (r.profiles && r.profiles.username) || 'Unknown';
       });
-      data = Object.keys(counts2)
-        .map(function(uid) { return { user_id: uid, username: names2[uid], value: counts2[uid], unit: 'reports' }; })
+      var repIds = Object.keys(counts2);
+      var nameMap2 = await fetchUsernameMap(repIds);
+      data = repIds
+        .map(function(uid) { return { user_id: uid, username: nameMap2[uid] || 'Unknown', value: counts2[uid], unit: 'reports' }; })
         .sort(function(a, b) { return b.value - a.value; })
         .slice(0, barLbRange);
     }

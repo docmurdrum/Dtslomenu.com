@@ -432,3 +432,24 @@
   width: 100%;
   margin-top: 6px;
 }
+
+/* ── ONBOARDING SPOTLIGHT WALKTHROUGH ── */
+#ob-overlay {
+  position: fixed; inset: 0; z-index: 9800;
+  pointer-events: none; transition: opacity 0.3s;
+}
+#ob-spotlight {
+  position: absolute; pointer-events: none;
+  border-radius: 16px;
+  box-shadow: 0 0 0 9999px rgba(0,0,10,0.82);
+  transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+#ob-bubble {
+  position: fixed; z-index: 9900;
+  max-width: 320px; width: calc(100vw - 32px);
+  background: #0e0e1a; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px; padding: 20px; pointer-events: all;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  transition: opacity 0.35s, top 0.35s cubic-bezier(0.4,0,0.2,1), bottom 0.35s cubic-bezier(0.4,0,0.2,1);
+  left: 16px; right: 16px;
+}
