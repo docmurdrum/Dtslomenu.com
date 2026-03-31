@@ -96,10 +96,16 @@ async function doLogin() {
   const email    = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
   const btn      = document.getElementById('login-btn');
+  const stayIn   = document.getElementById('stay-signed-in');
   document.getElementById('login-error').style.display = 'none';
   if (!email || !password) { showAuthError('login', 'Please fill in all fields.'); return; }
   btn.disabled = true; btn.textContent = 'Signing in…';
   try {
+    // Set session persistence based on checkbox
+    if (stayIn && !stayIn.checked) {
+      await supabaseClient.auth.setSession({ access_token: '', refresh_token: '' }).catch(() => {});
+      supabaseClient.auth.persistSession = false;
+    }
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) throw error;
     await onLogin(data.user);

@@ -4,7 +4,7 @@
 // Never redeclare these in other files
 // ══════════════════════════════════════════════
 
-var BUILD_VERSION = '6.3.6';
+var BUILD_VERSION = '6.3.9';
 var BUILD_DATE    = '2026-03-26';
 
 // ── MAP ──
@@ -486,3 +486,29 @@ function pwaDismiss() {
   try { localStorage.setItem('pwa_dismissed', '1'); } catch(e) {}
 }
 window.pwaDismiss = pwaDismiss;
+
+// ── CLEAR CACHE & RELOAD ──
+async function clearCacheAndReload() {
+  if (!confirm('This will clear the app cache and reload. Use this if something looks broken. Continue?')) return;
+  try {
+    // Unregister service workers
+    if ('serviceWorker' in navigator) {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      for (var r of regs) await r.unregister();
+    }
+    // Clear all caches
+    if ('caches' in window) {
+      var keys = await caches.keys();
+      for (var k of keys) await caches.delete(k);
+    }
+    // Clear localStorage keys that might cause stale state
+    var keepKeys = ['gps_bypass','dtslo_onboarding_done','pwa_dismissed'];
+    var allKeys = Object.keys(localStorage);
+    allKeys.forEach(function(k) {
+      if (!keepKeys.includes(k)) localStorage.removeItem(k);
+    });
+  } catch(e) {}
+  // Hard reload
+  window.location.href = window.location.href.split('?')[0] + '?cache_bust=' + Date.now();
+}
+window.clearCacheAndReload = clearCacheAndReload;

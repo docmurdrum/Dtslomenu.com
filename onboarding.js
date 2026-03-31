@@ -117,6 +117,16 @@ function menuIntroReset() { localStorage.removeItem('menu_intro_seen'); location
 // INTERACTIVE SPOTLIGHT WALKTHROUGH
 // ══════════════════════════════════════════════
 
+var OB_BETA_STEP = {
+  id: 'beta',
+  target: null,
+  title: 'You are in beta 🧪',
+  body: 'DTSLO is brand new and still being polished. You might hit a rough edge — if anything looks broken, go to Profile and tap "Clear Cache & Reload". That fixes 90% of issues. Use the Send Feedback button to report anything else. Thanks for being here early.',
+  cta: 'Got it →',
+  position: 'center',
+  isBeta: true,
+};
+
 var OB_STEPS = [
   {
     id: 'welcome',
@@ -192,8 +202,20 @@ var OB_STEPS = [
   },
 ];
 
-var obStep  = 0;
+var obStep   = 0;
 var obActive = false;
+var obSteps  = OB_STEPS; // active steps — may include beta screen
+
+// ── LOAD ACTIVE STEPS (checks beta flag) ──
+async function obLoadSteps() {
+  try {
+    var res = await supabaseClient.from('app_settings').select('value').eq('key', 'show_beta_screen').limit(1);
+    var showBeta = res.data && res.data[0] && res.data[0].value === 'true';
+    obSteps = showBeta ? [OB_BETA_STEP].concat(OB_STEPS) : OB_STEPS;
+  } catch(e) {
+    obSteps = OB_STEPS;
+  }
+}
 
 // ── BUILD ONBOARDING DOM ──
 function obBuildDOM() {
@@ -235,7 +257,7 @@ function obBuildDOM() {
 
 // ── SHOW STEP ──
 function obShowStep(idx) {
-  var step     = OB_STEPS[idx];
+  var step     = obSteps[idx];
   var overlay  = document.getElementById('ob-overlay');
   var spotlight = document.getElementById('ob-spotlight');
   var bubble   = document.getElementById('ob-bubble');
@@ -251,7 +273,7 @@ function obShowStep(idx) {
   }
 
   // Progress dots
-  progress.innerHTML = OB_STEPS.map(function(s, i) {
+  progress.innerHTML = obSteps.map(function(s, i) {
     return '<div style="width:' + (i === idx ? '20px' : '6px') + ';height:6px;border-radius:3px;background:' +
       (i === idx ? '#ff2d78' : i < idx ? 'rgba(255,45,120,0.4)' : 'rgba(255,255,255,0.15)') +
       ';transition:all 0.3s"></div>';
@@ -319,9 +341,10 @@ function obShowStep(idx) {
 }
 
 // ── START / NEXT / SKIP / CLOSE ──
-function showOnboarding() {
+async function showOnboarding() {
+  await obLoadSteps();
   obBuildDOM();
-  obStep  = 0;
+  obStep   = 0;
   obActive = true;
   var overlay = document.getElementById('ob-overlay');
   var bubble  = document.getElementById('ob-bubble');
@@ -337,7 +360,7 @@ window.showOnboarding = showOnboarding;
 
 function obNext() {
   obStep++;
-  if (obStep >= OB_STEPS.length) {
+  if (obStep >= obSteps.length) {
     obFinish();
     return;
   }
