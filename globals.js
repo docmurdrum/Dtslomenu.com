@@ -4,7 +4,7 @@
 // Never redeclare these in other files
 // ══════════════════════════════════════════════
 
-var BUILD_VERSION = '6.3.16';
+var BUILD_VERSION = '6.3.17';
 var BUILD_DATE    = '2026-03-26';
 
 // ── MAP ──
@@ -603,8 +603,7 @@ window.guestGoLogin = guestGoLogin;
 // ══════════════════════════════════════════════
 function showBetaWelcome() {
   if (currentUser) return;
-  var existing = document.getElementById('beta-welcome-overlay');
-  if (existing) return;
+  if (document.getElementById('beta-welcome-overlay')) return;
 
   var overlay = document.createElement('div');
   overlay.id = 'beta-welcome-overlay';
@@ -619,7 +618,7 @@ function showBetaWelcome() {
       '<div style="font-size:14px;color:rgba(255,255,255,0.65);line-height:1.75;margin-bottom:22px;text-align:center">' +
         'Hey, you found us before we\'re cool 😅' +
         '<br><br>' +
-        'We\'re in beta and would love to have you join! This popup disappears after you sign up and the rest of the app opens up to explore.' +
+        'We\'re in beta and would love to have you join! After sign up this pop up will no longer appear.' +
         '<br><br>' +
         'Your numbers matter — the more users we have, the easier it is to get downtown bars and businesses on board with real rewards. You\'ll never pay to use this, it\'s built for you.' +
         '<br><br>' +
@@ -627,8 +626,10 @@ function showBetaWelcome() {
       '</div>' +
       '<button onclick="betaGoSignup()" style="width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#ff2d78,#b44fff);color:white;font-size:15px;font-weight:900;font-family:inherit;cursor:pointer;margin-bottom:10px">Create Free Account →</button>' +
       '<button onclick="betaTour()" style="width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.7);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px">Show me around first 👀</button>' +
-      '<button onclick="betaBrowse()" style="width:100%;padding:12px;border-radius:14px;border:none;background:transparent;color:rgba(255,255,255,0.35);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px">Just browsing →</button>' +
-      '<button onclick="betaGoLogin()" style="width:100%;padding:10px;border-radius:14px;border:none;background:transparent;color:rgba(255,255,255,0.25);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer">Already have an account? Sign In</button>' +
+      '<div style="display:flex;gap:8px;margin-top:4px">' +
+        '<button onclick="betaBrowse()" style="flex:1;padding:10px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer">Just browsing</button>' +
+        '<button onclick="betaGoLogin()" style="flex:1;padding:10px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer">Sign In</button>' +
+      '</div>' +
     '</div>';
 
   document.body.appendChild(overlay);
@@ -664,13 +665,11 @@ window.betaGoLogin = betaGoLogin;
 
 function betaBrowse() {
   closeBetaWelcome();
-  // Stay on Lines, popup will return next visit
 }
 window.betaBrowse = betaBrowse;
 
 function betaTour() {
   closeBetaWelcome();
-  // Run a short Lines-only spotlight tour, then re-show welcome after
   runLinesTour();
 }
 window.betaTour = betaTour;
@@ -687,7 +686,7 @@ var LINES_TOUR_STEPS = [
     target: null,
     targetSelector: '.bar-card-v2',
     title: 'Tap any bar to open it 📍',
-    body: 'See crowd levels, recent reports, check-in counts, and more. Once you sign up you can check in and earn XP.',
+    body: 'See crowd levels, recent reports, and check-in counts. Sign up to check in and earn XP.',
     position: 'below',
   },
   {
@@ -703,15 +702,20 @@ var _linesTourStep = 0;
 
 function runLinesTour() {
   _linesTourStep = 0;
-  showLinesTourStep();
+  _showLinesTourStep();
 }
 
-function showLinesTourStep() {
-  var existing = document.getElementById('lines-tour-overlay');
-  if (existing) existing.remove();
+function _cleanTourElements() {
+  var o = document.getElementById('lines-tour-overlay');
+  var b = document.getElementById('lines-tour-bubble');
+  if (o) o.remove();
+  if (b) b.remove();
+}
+
+function _showLinesTourStep() {
+  _cleanTourElements();
 
   if (_linesTourStep >= LINES_TOUR_STEPS.length) {
-    // Tour done — show welcome popup again
     setTimeout(function() { showBetaWelcome(); }, 400);
     return;
   }
@@ -721,13 +725,13 @@ function showLinesTourStep() {
     ? document.querySelector(step.target)
     : step.targetSelector ? document.querySelector(step.targetSelector) : null;
 
+  // Overlay + spotlight
   var overlay = document.createElement('div');
   overlay.id = 'lines-tour-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9550;pointer-events:none';
 
-  // Spotlight
   var spotlight = document.createElement('div');
-  spotlight.style.cssText = 'position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,10,0.82);transition:all 0.3s;pointer-events:none';
+  spotlight.style.cssText = 'position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,10,0.82);pointer-events:none';
   if (targetEl) {
     var r = targetEl.getBoundingClientRect();
     var pad = 8;
@@ -736,70 +740,57 @@ function showLinesTourStep() {
     spotlight.style.width  = (r.width + pad * 2) + 'px';
     spotlight.style.height = (r.height + pad * 2) + 'px';
   } else {
-    spotlight.style.width  = '0';
-    spotlight.style.height = '0';
-    spotlight.style.left   = '50%';
-    spotlight.style.top    = '50%';
-    spotlight.style.boxShadow = '0 0 0 9999px rgba(0,0,10,0.82)';
+    spotlight.style.cssText += ';width:0;height:0;left:50%;top:50%';
   }
   overlay.appendChild(spotlight);
   document.body.appendChild(overlay);
 
-  // Bubble
+  // Bubble — separate element with stable ID
   var bubble = document.createElement('div');
-  bubble.style.cssText = 'position:fixed;z-index:9560;left:16px;right:16px;max-width:340px;margin:0 auto;background:#0e0e1a;border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:20px;box-shadow:0 8px 40px rgba(0,0,0,0.6);pointer-events:all';
+  bubble.id = 'lines-tour-bubble';
+  bubble.style.cssText = 'position:fixed;z-index:9560;left:16px;right:16px;max-width:340px;margin:0 auto;background:#0e0e1a;border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:20px;box-shadow:0 8px 40px rgba(0,0,0,0.6)';
 
-  // Position bubble
   if (targetEl) {
     var r2 = targetEl.getBoundingClientRect();
     if (step.position === 'above') {
       bubble.style.bottom = (window.innerHeight - r2.top + 16) + 'px';
-      bubble.style.top = 'auto';
     } else {
       bubble.style.top = (r2.bottom + 16) + 'px';
-      bubble.style.bottom = 'auto';
     }
   } else {
     bubble.style.top = '50%';
     bubble.style.transform = 'translateY(-50%)';
   }
 
-  var total = LINES_TOUR_STEPS.length;
-  var current = _linesTourStep + 1;
+  var isLast = _linesTourStep === LINES_TOUR_STEPS.length - 1;
 
   bubble.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
       '<div style="display:flex;gap:4px">' +
         LINES_TOUR_STEPS.map(function(s, i) {
-          return '<div style="width:' + (i === _linesTourStep ? '18px' : '6px') + ';height:6px;border-radius:3px;background:' + (i <= _linesTourStep ? '#ff2d78' : 'rgba(255,255,255,0.15)') + ';transition:all 0.3s"></div>';
+          return '<div style="width:' + (i === _linesTourStep ? '18px' : '6px') + ';height:6px;border-radius:3px;background:' + (i <= _linesTourStep ? '#ff2d78' : 'rgba(255,255,255,0.15)') + '"></div>';
         }).join('') +
       '</div>' +
-      '<button onclick="skipLinesTour()" style="background:none;border:none;color:rgba(255,255,255,0.3);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;padding:0;pointer-events:all">Skip</button>' +
+      '<button onclick="skipLinesTour()" style="background:none;border:none;color:rgba(255,255,255,0.3);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;padding:0">Skip</button>' +
     '</div>' +
     '<div style="font-size:17px;font-weight:900;margin-bottom:8px">' + step.title + '</div>' +
     '<div style="font-size:13px;color:rgba(255,255,255,0.6);line-height:1.6;margin-bottom:16px">' + step.body + '</div>' +
-    '<button onclick="nextLinesTourStep()" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#ff2d78,#b44fff);color:white;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;pointer-events:all">' +
-      (current < total ? 'Next →' : 'Got it — show me more 🎉') +
+    '<button onclick="nextLinesTourStep()" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#ff2d78,#b44fff);color:white;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">' +
+      (isLast ? 'Got it 🎉' : 'Next →') +
     '</button>';
 
   document.body.appendChild(bubble);
 }
+window._showLinesTourStep = _showLinesTourStep;
 
 function nextLinesTourStep() {
-  var overlay = document.getElementById('lines-tour-overlay');
-  if (overlay) overlay.remove();
-  var bubble = document.querySelector('[id="lines-tour-overlay"] ~ div');
-  // Remove all tour bubbles
-  document.querySelectorAll('div[style*="z-index:9560"]').forEach(function(el) { el.remove(); });
   _linesTourStep++;
-  showLinesTourStep();
+  _showLinesTourStep();
 }
 window.nextLinesTourStep = nextLinesTourStep;
 
 function skipLinesTour() {
-  var overlay = document.getElementById('lines-tour-overlay');
-  if (overlay) overlay.remove();
-  document.querySelectorAll('div[style*="z-index:9560"]').forEach(function(el) { el.remove(); });
+  _cleanTourElements();
   setTimeout(function() { showBetaWelcome(); }, 400);
 }
 window.skipLinesTour = skipLinesTour;
