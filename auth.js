@@ -147,6 +147,7 @@ async function doSignup() {
     if (error) throw error;
 
     if (data.session) {
+      window._pendingDTSLOEntry = true;
       await onLogin(data.user, true); // true = new user
       return;
     }
