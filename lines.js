@@ -4,21 +4,21 @@
 
 // ── BAR DATA ──
 const bars = [
-  { name: "Black Sheep Bar & Grill", emoji: '🐑', address: 'Downtown SLO', reports: [], color: '#7c6af7', headcountAvg: 0 },
-  { name: "Bull's Tavern",           emoji: '🐂', address: 'Downtown SLO', reports: [], color: '#f59e0b', headcountAvg: 0 },
-  { name: "Frog & Peach Pub",        emoji: '🐸', address: 'Downtown SLO', reports: [], color: '#22c55e', headcountAvg: 0 },
-  { name: "High Bar",                emoji: '🌆', address: 'Hotel SLO Rooftop · Downtown SLO', reports: [], color: '#6366f1', headcountAvg: 0 },
-  { name: "Nightcap",                emoji: '🌙', address: 'Downtown SLO', reports: [], color: '#8b5cf6', headcountAvg: 0 },
-  { name: "Feral Kitchen & Lounge",  emoji: '🌿', address: 'Downtown SLO', reports: [], color: '#10b981', headcountAvg: 0 },
-  { name: "The Library",             emoji: '📚', address: 'Downtown SLO', reports: [], color: '#7c6af7', headcountAvg: 0 },
-  { name: "The Mark",                emoji: '🎯', address: 'Downtown SLO', reports: [], color: '#ec4899', headcountAvg: 0 },
-  { name: "McCarthy's Irish Pub",    emoji: '🍀', address: 'Downtown SLO', reports: [], color: '#22c55e', headcountAvg: 0 },
-  { name: "Sidecar SLO",             emoji: '🥂', address: 'Downtown SLO', reports: [], color: '#f59e0b', headcountAvg: 0 },
-  { name: "Eureka!",                 emoji: '💡', address: 'Downtown SLO', reports: [], color: '#ef4444', headcountAvg: 0 },
-  { name: "Finney's Crafthouse",     emoji: '🍺', address: 'Downtown SLO', reports: [], color: '#f97316', headcountAvg: 0 },
-  { name: "Novo Restaurant & Lounge",emoji: '🌊', address: 'Downtown SLO', reports: [], color: '#06b6d4', headcountAvg: 0 },
-  { name: "BA Start Arcade Bar",     emoji: '🕹️', address: 'Downtown SLO', reports: [], color: '#a855f7', headcountAvg: 0 },
-  { name: "The Carrisa",             emoji: '🏨', address: 'Downtown SLO', reports: [], color: '#d4a855', headcountAvg: 0 },
+  { name: "Black Sheep Bar & Grill", emoji: '🐑', address: '1117 Chorro St',  reports: [], color: '#7c6af7', headcountAvg: 0 },
+  { name: "Bull's Tavern",           emoji: '🐂', address: '1040 Chorro St',  reports: [], color: '#f59e0b', headcountAvg: 0 },
+  { name: "Frog & Peach Pub",        emoji: '🐸', address: '728 Higuera St',  reports: [], color: '#22c55e', headcountAvg: 0 },
+  { name: "High Bar",                emoji: '🌆', address: '877 Palm St · Hotel SLO Rooftop', reports: [], color: '#6366f1', headcountAvg: 0 },
+  { name: "Nightcap",                emoji: '🌙', address: '1130 Morro St',   reports: [], color: '#8b5cf6', headcountAvg: 0 },
+  { name: "Feral Kitchen & Lounge",  emoji: '🌿', address: '725 Higuera St',  reports: [], color: '#10b981', headcountAvg: 0 },
+  { name: "The Library",             emoji: '📚', address: '723 Higuera St',  reports: [], color: '#7c6af7', headcountAvg: 0 },
+  { name: "The Mark",                emoji: '🎯', address: '673 Higuera St',  reports: [], color: '#ec4899', headcountAvg: 0 },
+  { name: "McCarthy's Irish Pub",    emoji: '🍀', address: '600 Marsh St',    reports: [], color: '#22c55e', headcountAvg: 0 },
+  { name: "Sidecar SLO",             emoji: '🥂', address: '1040 Broad St',   reports: [], color: '#f59e0b', headcountAvg: 0 },
+  { name: "Eureka!",                 emoji: '💡', address: '1141 Chorro St',  reports: [], color: '#ef4444', headcountAvg: 0 },
+  { name: "Finney's Crafthouse",     emoji: '🍺', address: '857 Monterey St', reports: [], color: '#f97316', headcountAvg: 0 },
+  { name: "Novo Restaurant & Lounge",emoji: '🌊', address: '726 Higuera St',  reports: [], color: '#06b6d4', headcountAvg: 0 },
+  { name: "BA Start Arcade Bar",     emoji: '🕹️', address: '647 Higuera St',  reports: [], color: '#a855f7', headcountAvg: 0 },
+  { name: "The Carrisa",             emoji: '🏨', address: '736 Higuera St',  reports: [], color: '#d4a855', headcountAvg: 0 },
 ];
 
 
@@ -113,22 +113,22 @@ async function loadBarsFromDB() {
 
 // ── LOCATION VERIFICATION ──
 const BAR_COORDS = {
-  'Black Sheep Bar & Grill':   [35.2793, -120.6639],  // 1117 Higuera
-  "Bull's Tavern":             [35.2816, -120.6662],  // 709 Higuera
-  'Frog & Peach Pub':          [35.2815, -120.6661],  // 728 Higuera
-  'High Bar':                  [35.2800, -120.6644],  // Hotel SLO, 1 Garden St
-  'Nightcap':                  [35.2791, -120.6640],  // 1144 Chorro St
-  'Feral Kitchen & Lounge':    [35.2806, -120.6655],  // 893 Higuera
-  'The Library':               [35.2801, -120.6648],  // 996 Higuera
-  'The Mark':                  [35.2791, -120.6638],  // 1124 Garden St
-  "McCarthy's Irish Pub":      [35.2821, -120.6658],  // 600 Marsh St
-  'Sidecar SLO':               [35.2788, -120.6629],  // 1127 Broad St
-  'Eureka!':                   [35.2792, -120.6638],  // 1141 Higuera
-  "Finney's Crafthouse":       [35.2792, -120.6637],  // 1144 Higuera
-  'Novo Restaurant & Lounge':  [35.2815, -120.6660],  // 726 Higuera
-  'BA Start Arcade Bar':       [35.2818, -120.6663],  // 647 Higuera
-  'The Carrisa':               [35.2786, -120.6635],  // 1234 Garden St
-}
+  'Black Sheep Bar & Grill':   [35.2818, -120.6607],  // 1117 Chorro St
+  "Bull's Tavern":             [35.2810, -120.6622],  // 1040 Chorro St
+  'Frog & Peach Pub':          [35.2796, -120.6636],  // 728 Higuera St
+  'High Bar':                  [35.2825, -120.6617],  // 877 Palm St
+  'Nightcap':                  [35.2821, -120.6599],  // 1130 Morro St
+  'Feral Kitchen & Lounge':    [35.2795, -120.6637],  // 725 Higuera St
+  'The Library':               [35.2795, -120.6637],  // 725 Higuera St area
+  'The Mark':                  [35.2793, -120.6644],  // 673 Higuera St
+  "McCarthy's Irish Pub":      [35.2783, -120.6652],  // 600 Marsh St
+  'Sidecar SLO':               [35.2809, -120.6611],  // 1040 Broad St
+  'Eureka!':                   [35.2820, -120.6605],  // 1141 Chorro St
+  "Finney's Crafthouse":       [35.2822, -120.6613],  // 857 Monterey St
+  'Novo Restaurant & Lounge':  [35.2795, -120.6635],  // 726 Higuera St
+  'BA Start Arcade Bar':       [35.2789, -120.6648],  // 647 Higuera St
+  'The Carrisa':               [35.2797, -120.6634],  // 736 Higuera St
+};
 const GPS_RADIUS_METERS = 50;
 
 function isGPSBypassed() {

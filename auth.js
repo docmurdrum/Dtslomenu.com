@@ -371,12 +371,16 @@ window.onload = function () {
     });
   }
 
-  // Try to read beta flag from Supabase — fallback to hub if fails or table missing
-  // Use a tight timeout so slow connections don't block the load
+  // Try to read beta flag from Supabase
+  // Fallback to launchGuest (safer than hub) if it takes too long
   var betaCheckDone = false;
   var betaTimeout = setTimeout(function() {
-    if (!betaCheckDone) { betaCheckDone = true; launchHub(); }
-  }, 1500);
+    if (!betaCheckDone) {
+      betaCheckDone = true;
+      // Default to guest mode if flag check times out
+      launchGuest();
+    }
+  }, 3000);
 
   try {
     supabaseClient.from('app_settings')
@@ -391,11 +395,11 @@ window.onload = function () {
         if (skipHub) { launchGuest(); } else { launchHub(); }
       })
       .catch(function() {
-        if (!betaCheckDone) { betaCheckDone = true; clearTimeout(betaTimeout); launchHub(); }
+        if (!betaCheckDone) { betaCheckDone = true; clearTimeout(betaTimeout); launchGuest(); }
       });
   } catch(e) {
     clearTimeout(betaTimeout);
-    launchHub();
+    launchGuest();
   }
 };
 
