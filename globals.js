@@ -4,7 +4,7 @@
 // Never redeclare these in other files
 // ══════════════════════════════════════════════
 
-var BUILD_VERSION = '6.3.17';
+var BUILD_VERSION = '6.3.19';
 var BUILD_DATE    = '2026-03-26';
 
 // ── MAP ──
@@ -794,3 +794,45 @@ function skipLinesTour() {
   setTimeout(function() { showBetaWelcome(); }, 400);
 }
 window.skipLinesTour = skipLinesTour;
+
+// ══════════════════════════════════════════════
+// BETA TESTER BADGE POPUP
+// Shows once after signup during beta
+// ══════════════════════════════════════════════
+var BETA_BADGE_URL = 'https://jwgwufggptpdmgcmmqes.supabase.co/storage/v1/object/public/characters/badges/beta-tester.png';
+
+function showBetaBadge() {
+  var existing = document.getElementById('beta-badge-overlay');
+  if (existing) return;
+
+  var overlay = document.createElement('div');
+  overlay.id = 'beta-badge-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,0.88);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:24px';
+
+  overlay.innerHTML =
+    '<div style="width:100%;max-width:360px;background:#0e0e1a;border-radius:28px;border:1px solid rgba(255,215,0,0.25);padding:36px 24px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,0.7)">' +
+      '<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#b44fff;text-transform:uppercase;margin-bottom:16px">🎉 Welcome to the team</div>' +
+      '<img src="' + BETA_BADGE_URL + '" style="width:180px;height:180px;border-radius:50%;object-fit:cover;margin:0 auto 20px;display:block;border:3px solid rgba(255,215,0,0.4);box-shadow:0 0 40px rgba(255,215,0,0.2)">' +
+      '<div style="font-size:24px;font-weight:900;margin-bottom:8px;letter-spacing:-0.5px">Beta Tester Badge 🏅</div>' +
+      '<div style="font-size:14px;color:rgba(255,255,255,0.55);line-height:1.7;margin-bottom:24px">' +
+        'You helped build DTSLO from the ground up. This badge is yours forever — even after beta ends and the app grows.' +
+        '<br><br>' +
+        '<strong style="color:rgba(255,215,0,0.8)">OG status confirmed.</strong>' +
+      '</div>' +
+      '<button onclick="closeBetaBadge()" style="width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:16px;font-weight:900;font-family:inherit;cursor:pointer">Let\'s Go! 🍻</button>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+  try { triggerConfetti && triggerConfetti(); } catch(e) {}
+}
+window.showBetaBadge = showBetaBadge;
+
+function closeBetaBadge() {
+  var el = document.getElementById('beta-badge-overlay');
+  if (el) {
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.3s';
+    setTimeout(function() { el.remove(); }, 300);
+  }
+}
+window.closeBetaBadge = closeBetaBadge;

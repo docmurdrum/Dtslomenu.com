@@ -207,6 +207,10 @@ async function onLogin(user, isNewUser = false) {
       try { await unlockFreshmanStarter(user); } catch(e) {}
       // Migrate any guest itineraries to the new account
       try { migrateGuestItineraries(user); } catch(e) {}
+      // Show beta tester badge
+      setTimeout(function() {
+        try { showBetaBadge(); } catch(e) {}
+      }, 1200);
     }
     // Handle pending itinerary upgrade flow
     if (window._pendingItinUpgrade) {

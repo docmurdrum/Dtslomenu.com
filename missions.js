@@ -29,13 +29,45 @@ async function loadMissions() {
       .order('created_at', { ascending: false });
     if (error) throw error;
     if (data && data.length) {
-      renderMissions(data);
+      // Normalize Supabase column names to what renderMissions expects
+      const normalized = data.map(function(m) {
+        return {
+          id:       m.id,
+          title:    m.title || '',
+          bar:      m.bar_name || null,
+          barEmoji: m.bar_name ? '🍺' : '🎯',
+          desc:     m.description || m.mission_desc || '',
+          cat:      m.category || m.cat || 'tonight',
+          type:     m.type || 'solo',
+          expiry:   m.end_at ? new Date(m.end_at).toLocaleDateString('en-US', { weekday:'short', hour:'numeric', minute:'2-digit' }) : 'Ongoing',
+          rewards:  Array.isArray(m.rewards) ? m.rewards : buildRewardsArray(m),
+          spots:    m.max_completions ? { total: m.max_completions, claimed: m.spots_claimed || 0 } : null,
+          condition:   m.condition || 'checkin_one',
+          condition_n: m.condition_n || null,
+          condition_time: m.condition_time || null,
+          badge_emoji: m.badge_emoji || '🏅',
+          badge_image_url: m.badge_image_url || null,
+          badge_name: m.badge_name || null,
+          visibility: m.visibility || 'all',
+        };
+      });
+      renderMissions(normalized);
     } else {
       renderMissionsEmpty();
     }
   } catch(e) {
+    console.warn('[missions]', e.message);
     renderMissionsEmpty();
   }
+}
+
+function buildRewardsArray(m) {
+  var rewards = [];
+  if (m.xp_reward)        rewards.push({ label: '+' + m.xp_reward + ' XP', type: 'xp' });
+  if (m.mennys_reward)    rewards.push({ label: m.mennys_reward + ' Mennys', type: 'mennys' });
+  if (m.prize_description) rewards.push({ label: m.prize_description, type: 'prize' });
+  if (m.badge_name)       rewards.push({ label: (m.badge_emoji || '🏅') + ' ' + m.badge_name, type: 'badge' });
+  return rewards;
 }
 
 function renderMissionsEmpty() {
@@ -169,7 +201,7 @@ function buildMissionCard(m) {
     <div class="mission-card ${catClass} ${isDone ? 'completed' : ''}">
       <div class="mission-top">
         <div class="mission-bar-label">
-          <span>${m.barEmoji}</span><span>${m.bar}</span>
+          <span>${m.barEmoji}</span><span>${m.bar || 'General Mission'}</span>
         </div>
         <span class="mission-type-badge ${badgeClass}">${catLabel}</span>
       </div>
@@ -189,44 +221,95 @@ function completeMission(id) {
   const mission = _loadedMissions.find(m => m.id === id);
   if (!mission || completedMissions.has(id)) return;
 
-  // Generate one-time code
-  const code = 'DT-' + Math.floor(1000 + Math.random() * 9000);
-  const prize = mission.rewards.filter(r => r.type === 'prize').map(r => r.label).join(', ');
-
-  document.getElementById('redemption-mission-title').textContent = mission.title;
-  document.getElementById('redemption-bar-name').textContent = `${mission.barEmoji} ${mission.bar}`;
-  document.getElementById('redemption-prize').textContent = prize || 'your reward';
-  document.getElementById('redemption-code-display').textContent = code;
-
-  // Start countdown
-  redemptionSeconds = 600;
-  clearInterval(redemptionTimer);
-  updateRedemptionTimer();
-  redemptionTimer = setInterval(() => {
-    redemptionSeconds--;
-    updateRedemptionTimer();
-    if (redemptionSeconds <= 0) clearInterval(redemptionTimer);
-  }, 1000);
-
   // Award XP
-  const xpReward = mission.rewards.find(r => r.type === 'xp');
-  if (xpReward && currentUser) {
-    const xpAmount = parseInt(xpReward.label.replace(/\D/g, '')) || 25;
-    gainXP(xpAmount);
-    awardXP(xpAmount, 'mission_complete');
+  const xpReward = mission.rewards ? mission.rewards.find(r => r.type === 'xp') : null;
+  const xpAmount = xpReward ? (parseInt(xpReward.label.replace(/\D/g, '')) || 25) : 0;
+  if (xpAmount && currentUser) {
+    try { gainXP(xpAmount); } catch(e) {}
+    try { awardXP(xpAmount, 'mission_complete'); } catch(e) {}
   }
 
-  // Mark completed and persist
+  // Mark completed
   completedMissions.add(id);
-  safeStore.set('completed_missions', JSON.stringify([...completedMissions]));
+  try { safeStore.set('completed_missions', JSON.stringify([...completedMissions])); } catch(e) {}
 
-  // Show modal
-  document.getElementById('redemption-overlay').classList.add('show');
+  // Record completion in Supabase
+  if (currentUser) {
+    supabaseClient.from('mission_completions').insert({
+      mission_id: id,
+      user_id: currentUser.id,
+      completed_at: new Date().toISOString()
+    }).catch(function() {});
+  }
+
+  // Show celebration popup
+  showMissionComplete(mission, xpAmount);
+
+  // Re-render
   if (_loadedMissions.length) renderMissions(_loadedMissions); else renderMissionsEmpty();
-
-  // Check achievements
-  checkAchievements();
+  try { checkAchievements(); } catch(e) {}
 }
+window.completeMission = completeMission;
+
+// ── MISSION COMPLETE CELEBRATION ──
+function showMissionComplete(mission, xpAmount) {
+  var existing = document.getElementById('mission-complete-overlay');
+  if (existing) existing.remove();
+
+  var prize = mission.rewards ? mission.rewards.filter(r => r.type === 'prize').map(r => r.label).join(', ') : '';
+  var badgeEmoji = mission.badge_emoji || '🏅';
+  var badgeName  = mission.badge_name || '';
+  var badgeImg   = mission.badge_image_url || '';
+
+  var overlay = document.createElement('div');
+  overlay.id = 'mission-complete-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:24px';
+
+  overlay.innerHTML =
+    '<div style="width:100%;max-width:360px;background:#0e0e1a;border-radius:24px;border:1px solid rgba(255,215,0,0.25);padding:32px 24px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.6)">' +
+
+      // Badge
+      (badgeImg
+        ? '<img src="' + badgeImg + '" style="width:80px;height:80px;border-radius:20px;object-fit:cover;margin:0 auto 16px;display:block;border:2px solid rgba(255,215,0,0.3)">'
+        : '<div style="font-size:64px;margin-bottom:16px">' + badgeEmoji + '</div>') +
+
+      '<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#ffd700;text-transform:uppercase;margin-bottom:8px">Mission Complete!</div>' +
+      '<div style="font-size:22px;font-weight:900;margin-bottom:6px;letter-spacing:-0.3px">' + mission.title + '</div>' +
+
+      // XP earned
+      (xpAmount ? '<div style="display:inline-block;background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);border-radius:20px;padding:6px 16px;font-size:15px;font-weight:900;color:#ffd700;margin-bottom:16px">+' + xpAmount + ' XP earned</div>' : '') +
+
+      // Prize if any
+      (prize ? '<div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:8px">🎁 ' + prize + '</div>' : '') +
+
+      // Badge unlocked
+      (badgeName ? '<div style="display:flex;align-items:center;gap:8px;justify-content:center;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:12px;padding:10px 14px;margin:12px 0">' +
+        '<span style="font-size:18px">' + badgeEmoji + '</span>' +
+        '<div><div style="font-size:9px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;text-transform:uppercase">Badge Unlocked</div>' +
+        '<div style="font-size:13px;font-weight:800;color:#ffd700">' + badgeName + '</div></div>' +
+      '</div>' : '') +
+
+      '<button onclick="closeMissionComplete()" style="width:100%;margin-top:16px;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#ff2d78,#b44fff);color:white;font-size:15px;font-weight:900;font-family:inherit;cursor:pointer">🎉 Awesome!</button>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+
+  // Confetti
+  try { triggerConfetti && triggerConfetti(); } catch(e) {}
+}
+window.showMissionComplete = showMissionComplete;
+
+function closeMissionComplete() {
+  var el = document.getElementById('mission-complete-overlay');
+  if (el) {
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.3s';
+    setTimeout(function() { el.remove(); }, 300);
+  }
+}
+window.closeMissionComplete = closeMissionComplete;
+
+
 
 function updateRedemptionTimer() {
   const m = Math.floor(redemptionSeconds / 60);
