@@ -986,7 +986,6 @@ function setView(v) {
 async function loadReports() {
   await loadBarsFromDB();
   if (!document.getElementById('bars')) return;
-  document.getElementById('bars').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
     const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabaseClient
@@ -994,12 +993,16 @@ async function loadReports() {
       .gte('created_at', cutoff)
       .order('created_at', { ascending: false });
     if (error) throw error;
+    // Only clear and repopulate if fetch succeeds — never wipe on failure
     bars.forEach(b => b.reports = []);
-    data.forEach(r => {
+    (data || []).forEach(r => {
       const bar = bars.find(b => b.name === r.bar);
       if (bar) bar.reports.push({ status: r.status, time: new Date(r.created_at).getTime(), user_id: r.user_id });
     });
-  } catch (e) { console.error('[loadReports]', e.message || e); showToast('❌ Could not load reports'); }
+  } catch (e) {
+    console.error('[loadReports]', e.message || e);
+    // Keep existing reports on screen — don't clear on error
+  }
   renderBars();
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(loadReports, 60000);
