@@ -993,12 +993,34 @@ async function loadReports() {
       .gte('created_at', cutoff)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    // Only clear and repopulate if fetch succeeds — never wipe on failure
-    bars.forEach(b => b.reports = []);
+
+    const fetchTime = Date.now();
+
+    // Preserve any in-memory reports added since last fetch (local optimistic updates)
+    const localReports = {};
+    bars.forEach(b => {
+      const fresh = b.reports.filter(r => r._local && r.time > (b._lastFetch || 0));
+      if (fresh.length) localReports[b.name] = fresh;
+    });
+
+    // Clear and repopulate from Supabase
+    bars.forEach(b => { b.reports = []; b._lastFetch = fetchTime; });
     (data || []).forEach(r => {
       const bar = bars.find(b => b.name === r.bar);
       if (bar) bar.reports.push({ status: r.status, time: new Date(r.created_at).getTime(), user_id: r.user_id });
     });
+
+    // Re-inject any local reports not yet in Supabase
+    bars.forEach(b => {
+      if (localReports[b.name]) {
+        localReports[b.name].forEach(lr => {
+          if (!b.reports.find(r => r.user_id === lr.user_id && Math.abs(r.time - lr.time) < 5000)) {
+            b.reports.unshift(lr);
+          }
+        });
+      }
+    });
+
   } catch (e) {
     console.error('[loadReports]', e.message || e);
     // Keep existing reports on screen — don't clear on error
@@ -1024,12 +1046,12 @@ async function report(i, status, headcount) {
   // Verify location before submitting
   verifyLocation(bar.name, async (allowed) => {
     if (!allowed) return;
-    bar.reports = bar.reports.filter(r => !(r.user_id === currentUser.id && r.time > Date.now() - 30*60*1000));
-    bar.reports.unshift({ status, time: Date.now(), user_id: currentUser.id, headcount: headcount || null });
+    bar.reports = bar.reports.filter(r => !(r.user_id === (currentUser && currentUser.id) && r.time > Date.now() - 30*60*1000));
+    bar.reports.unshift({ status, time: Date.now(), user_id: currentUser ? currentUser.id : 'guest', headcount: headcount || null, _local: true });
     renderBars();
   try {
     await supabaseClient.from('reports').insert([{
-      bar: bar.name, status, user_id: currentUser.id,
+      bar: bar.name, status, user_id: currentUser ? currentUser.id : null,
       headcount: headcount || null
     }]);
     gainXP(10); reportCount++;
@@ -1120,7 +1142,7 @@ async function confirmCheckin(type, status, headcount) {
 
   // Also push a report so bar status updates immediately
   if (bars[ciBarIndex] && status) {
-    bars[ciBarIndex].reports.unshift({ status: status, time: now, user_id: currentUser ? currentUser.id : 'guest' });
+    bars[ciBarIndex].reports.unshift({ status: status, time: now, user_id: currentUser ? currentUser.id : 'guest', _local: true });
   }
 
   let xpGained = 15;
