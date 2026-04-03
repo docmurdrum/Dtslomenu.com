@@ -4,7 +4,7 @@
 // Never redeclare these in other files
 // ══════════════════════════════════════════════
 
-var BUILD_VERSION = '6.3.24';
+var BUILD_VERSION = '6.3.27';
 var BUILD_DATE    = '2026-03-26';
 
 // ── MAP ──
@@ -602,8 +602,10 @@ window.guestGoLogin = guestGoLogin;
 // Shows every visit until user signs up
 // ══════════════════════════════════════════════
 function showBetaWelcome() {
-  if (currentUser) return;
+  if (currentUser) return; // already signed in — skip
   if (document.getElementById('beta-welcome-overlay')) return;
+  // Show once per device — resets after signup
+  try { if (localStorage.getItem('dtslo_beta_welcome_seen')) return; } catch(e) {}
 
   var overlay = document.createElement('div');
   overlay.id = 'beta-welcome-overlay';
@@ -618,11 +620,11 @@ function showBetaWelcome() {
       '<div style="font-size:14px;color:rgba(255,255,255,0.65);line-height:1.75;margin-bottom:22px;text-align:center">' +
         'Hey, you found us before we\'re cool 😅' +
         '<br><br>' +
-        'We\'re in beta and would love to have you join! After sign up this pop up will no longer appear.' +
+        'We\'re in beta and the app is free to use — no sign up required to browse. Create an account to report bars, check in, earn XP, and get your exclusive BETA badge.' +
         '<br><br>' +
-        'Your numbers matter — the more users we have, the easier it is to get downtown bars and businesses on board with real rewards. You\'ll never pay to use this, it\'s built for you.' +
+        'Your numbers matter — the more users we have, the easier it is to get downtown bars on board with real rewards. It\'s built for you, always free.' +
         '<br><br>' +
-        '<strong style="color:white">Oh, and early beta users get an exclusive BETA badge.</strong> 🏅' +
+        '<strong style="color:white">Early beta users get an exclusive BETA badge.</strong> 🏅' +
       '</div>' +
       '<button onclick="betaGoSignup()" style="width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#ff2d78,#b44fff);color:white;font-size:15px;font-weight:900;font-family:inherit;cursor:pointer;margin-bottom:10px">Create Free Account →</button>' +
       '<button onclick="betaTour()" style="width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.7);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px">Show me around first 👀</button>' +
@@ -633,6 +635,7 @@ function showBetaWelcome() {
     '</div>';
 
   document.body.appendChild(overlay);
+  try { localStorage.setItem('dtslo_beta_welcome_seen', '1'); } catch(e) {}
 }
 window.showBetaWelcome = showBetaWelcome;
 
@@ -836,3 +839,66 @@ function closeBetaBadge() {
   }
 }
 window.closeBetaBadge = closeBetaBadge;
+
+// ══════════════════════════════════════════════
+// MESSAGE OF THE DAY POPUP
+// Admin publishes via app_settings key popup_message
+// Shows once per message to logged-in users
+// ══════════════════════════════════════════════
+async function checkMotd() {
+  if (!currentUser) return;
+  try {
+    var res = await supabaseClient
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'popup_message')
+      .limit(1);
+    if (res.error || !res.data || !res.data[0]) return;
+
+    var data = JSON.parse(res.data[0].value);
+    if (!data || !data.body) return;
+
+    // Only show once per unique message (tracked by timestamp)
+    var seenKey = 'dtslo_motd_seen_' + data.ts;
+    try { if (localStorage.getItem(seenKey)) return; } catch(e) {}
+
+    showMotdPopup(data.title, data.body, seenKey);
+  } catch(e) { /* silent */ }
+}
+window.checkMotd = checkMotd;
+
+function showMotdPopup(title, body, seenKey) {
+  var existing = document.getElementById('motd-overlay');
+  if (existing) return;
+
+  var overlay = document.createElement('div');
+  overlay.id = 'motd-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:24px';
+
+  overlay.innerHTML =
+    '<div style="width:100%;max-width:380px;background:#0e0e1a;border-radius:22px;border:1px solid rgba(255,255,255,0.08);padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,0.6)">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">' +
+        '<span style="font-size:24px">📢</span>' +
+        '<div style="font-size:17px;font-weight:900">' + (title || 'Message from DTSLO') + '</div>' +
+      '</div>' +
+      '<div style="font-size:14px;color:rgba(255,255,255,0.7);line-height:1.7;margin-bottom:20px">' + body + '</div>' +
+      '<button onclick="dismissMotd(\'' + seenKey + '\')" style="width:100%;padding:13px;border-radius:13px;border:none;background:linear-gradient(135deg,#ff2d78,#b44fff);color:white;font-size:15px;font-weight:900;font-family:inherit;cursor:pointer">Got it 👍</button>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) dismissMotd(seenKey);
+  });
+}
+window.showMotdPopup = showMotdPopup;
+
+function dismissMotd(seenKey) {
+  try { localStorage.setItem(seenKey, '1'); } catch(e) {}
+  var el = document.getElementById('motd-overlay');
+  if (el) {
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.3s';
+    setTimeout(function() { el.remove(); }, 300);
+  }
+}
+window.dismissMotd = dismissMotd;

@@ -39,13 +39,6 @@ function showToast(msg) {
 function showPage(p) {
   if (p === 'leaderboard') { try { openLbPopup(); } catch(e) {} return; }
 
-  // Guest wall — Lines page is always accessible, everything else requires login
-  var guestPages = { missions:'missions', games:'games', friends:'friends', resources:'resources', profile:'profile' };
-  if (!currentUser && guestPages[p]) {
-    if (typeof showGuestPrompt === 'function') showGuestPrompt(p);
-    return;
-  }
-
   if (p === 'rides')       { try { initRides(); } catch(e) {} }
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));

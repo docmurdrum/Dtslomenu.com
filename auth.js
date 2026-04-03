@@ -206,9 +206,16 @@ async function onLogin(user, isNewUser = false) {
     if (isNewUser) {
       try { maybeShowOnboarding(true); } catch(e) {}
       try { await unlockFreshmanStarter(user); } catch(e) {}
-      // Migrate any guest itineraries to the new account
       try { migrateGuestItineraries(user); } catch(e) {}
-      // Show beta tester badge
+      // Award beta tester achievement
+      try {
+        if (typeof earnAchievement === 'function') earnAchievement('beta_tester');
+        else {
+          // Fallback — write directly to Supabase
+          supabaseClient.from('achievements').insert({ user_id: user.id, achievement_id: 'beta_tester' }).catch(function(){});
+        }
+      } catch(e) {}
+      // Show beta tester badge popup
       setTimeout(function() {
         try { showBetaBadge(); } catch(e) {}
       }, 1200);
@@ -353,12 +360,12 @@ window.onload = function () {
         try { renderAvatar(); } catch(e) {}
         try { updateUsernameBar(); } catch(e) {}
       } else {
-        // No session — show app as guest on Lines page
+        // No session — show full app, no login required
         var appEl = document.getElementById('app');
         if (appEl) { appEl.style.display = 'block'; appEl.style.opacity = '1'; }
         if (authEl) authEl.style.display = 'none';
         try { if (typeof loadReports === 'function') loadReports(); } catch(e) {}
-        // Show beta welcome popup after a short delay
+        // Show beta welcome once per device
         setTimeout(function() {
           if (typeof showBetaWelcome === 'function') showBetaWelcome();
         }, 800);

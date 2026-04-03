@@ -146,6 +146,8 @@ function haversineDistance(lat1, lng1, lat2, lng2) {
 }
 
 function verifyLocation(barName, callback) {
+  // Location check disabled for beta
+  callback(true); return;
   if (isGPSBypassed()) { callback(true); return; }
 
   const barCoord = BAR_COORDS[barName];
@@ -1014,7 +1016,7 @@ function handleVote(event, i, status) {
 }
 
 async function report(i, status, headcount) {
-  if (!currentUser) { if (typeof showGuestPrompt === 'function') showGuestPrompt('report'); return; }
+
   const bar = bars[i];
   // Verify location before submitting
   verifyLocation(bar.name, async (allowed) => {
@@ -1047,7 +1049,6 @@ let activeCheckins = {};
 let waitTimeData = {};
 
 function openCheckinModal(barIndex) {
-  if (!currentUser) { if (typeof showGuestPrompt === 'function') showGuestPrompt('checkin'); return; }
   ciBarIndex  = barIndex;
   ciBarName   = bars[barIndex].name;
   document.getElementById('ci-bar-name').textContent = 'Check In · ' + ciBarName;

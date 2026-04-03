@@ -3,6 +3,9 @@
 // ══════════════════════════════════════════════
 
 const ACHIEVEMENTS = [
+  // ── SPECIAL / BETA ──
+  { id: 'beta_tester', icon: '🏅', name: 'Beta Tester', desc: 'Joined DTSLO during beta — OG status confirmed', cat: 'special', imageUrl: 'https://jwgwufggptpdmgcmmqes.supabase.co/storage/v1/object/public/characters/badges/beta-tester.png' },
+
   // ── XP MILESTONES ──
   { id: 'lvl_10',    icon: '⚡', name: 'Night Owl',        desc: 'Reach Level 10',              cat: 'xp',       req: 10,   stat: 'level' },
   { id: 'lvl_25',    icon: '🌙', name: 'Regular',          desc: 'Reach Level 25',              cat: 'xp',       req: 25,   stat: 'level' },
@@ -144,7 +147,9 @@ function renderRecentBadges() {
   const recent = earned.slice(-6).reverse();
   container.innerHTML = recent.map(a => `
     <div class="badge-chip earned" title="${a.desc}">
-      <span class="badge-chip-icon">${a.icon}</span>
+      ${a.imageUrl
+        ? `<img src="${a.imageUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover">`
+        : `<span class="badge-chip-icon">${a.icon}</span>`}
       <span class="badge-chip-name">${a.name}</span>
     </div>`).join('');
 }

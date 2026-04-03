@@ -571,6 +571,9 @@ async function loadProfileExtras() {
 
   // PWA install prompt — show 3s after first login
   setTimeout(function() { if (typeof pwaShowBanner === 'function') pwaShowBanner(); }, 3000);
+
+  // Message of the day
+  setTimeout(function() { if (typeof checkMotd === 'function') checkMotd(); }, 1500);
 }
 
 // ── RENDER CHARACTER CARD — auto-loads from storage ──
