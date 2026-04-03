@@ -1113,6 +1113,16 @@ async function confirmCheckin(type, status, headcount) {
     checkedInAt: now, status
   };
 
+  // Update checkin count on bar immediately so card reflects it
+  if (bars[ciBarIndex]) {
+    bars[ciBarIndex].checkinCount = (bars[ciBarIndex].checkinCount || 0) + 1;
+  }
+
+  // Also push a report so bar status updates immediately
+  if (bars[ciBarIndex] && status) {
+    bars[ciBarIndex].reports.unshift({ status: status, time: now, user_id: currentUser ? currentUser.id : 'guest' });
+  }
+
   let xpGained = 15;
   if (headcount > 0) xpGained += 20;
   gainXP(xpGained);
@@ -1120,13 +1130,23 @@ async function confirmCheckin(type, status, headcount) {
 
   if (headcount > 0) bars[ciBarIndex].headcountAvg = headcount;
 
-  try {
-    await supabaseClient.from('checkins').insert([{
-      user_id: currentUser.id, bar: ciBarName, type,
-      headcount: headcount || null,
-      checked_in_at: new Date(now).toISOString()
-    }]);
-  } catch(e) { console.log('Checkin save failed:', e.message); }
+  if (currentUser) {
+    try {
+      await supabaseClient.from('checkins').insert([{
+        user_id: currentUser.id, bar: ciBarName, type,
+        headcount: headcount || null,
+        checked_in_at: new Date(now).toISOString()
+      }]);
+    } catch(e) { console.log('Checkin save failed:', e.message); }
+
+    // Also write to bump_sessions for leaderboard
+    try {
+      await supabaseClient.from('bump_sessions').insert([{
+        user_id: currentUser.id, bar_name: ciBarName,
+        created_at: new Date(now).toISOString()
+      }]);
+    } catch(e) { console.log('Bump session save failed:', e.message); }
+  }
 
   showToast(`📍 Checked in at ${ciBarName} · +${xpGained} XP`);
 
@@ -1134,7 +1154,6 @@ async function confirmCheckin(type, status, headcount) {
   try { awardBarStamp(ciBarName, bars[ciBarIndex]); } catch(e) {}
 
   // ── ITINERARY LIVE MODE HOOK ──
-  // Only fires if there's an active itinerary in live mode
   try { itinHandleCheckin(ciBarName); } catch(e) {}
 
   renderBars();
