@@ -33,8 +33,7 @@ async function loadBarsFromDB() {
       .from('businesses')
       .select('*')
       .eq('type', 'bar')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true });
+      .eq('is_active', true);
     if (res.error) throw res.error;
     if (!res.data || !res.data.length) return;
 
