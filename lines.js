@@ -1158,6 +1158,14 @@ async function confirmCheckin(type, status, headcount) {
 
   renderBars();
 
+  // If bar page is open for this bar, refresh it too
+  try {
+    var barPageEl = document.getElementById('bar');
+    if (barPageEl && barPageEl.classList.contains('active') && currentBarIndex === ciBarIndex) {
+      if (typeof openBarPage === 'function') openBarPage(ciBarIndex);
+    }
+  } catch(e) {}
+
   if (type === 'line') startNudgeTimer();
   startDurationTicker();
   }); // end verifyLocation
