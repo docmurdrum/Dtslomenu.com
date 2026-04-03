@@ -4,7 +4,7 @@
 // Never redeclare these in other files
 // ══════════════════════════════════════════════
 
-var BUILD_VERSION = '6.3.31';
+var BUILD_VERSION = '6.3.32';
 var BUILD_DATE    = '2026-03-26';
 
 // ── MAP ──
@@ -214,7 +214,8 @@ window.setHubGlowVisible = setHubGlowVisible;
 
   function checkDevMode() {
     _isDevMode = localStorage.getItem('dtslo_dev_mode') === '1' ||
-                 localStorage.getItem('dtslo_dev_errors') === '1';
+                 localStorage.getItem('dtslo_dev_errors') === '1' ||
+                 (currentUser && currentUser.email === 'dtslomenu@gmail.com');
   }
 
   function getOverlay() {
