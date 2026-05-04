@@ -1,230 +1,65 @@
 // ══════════════════════════════════════════════
 // BEACH HUB.JS
+// Data sourced from Supabase beaches table
 // ══════════════════════════════════════════════
 
-// BEACH HUB
-// ══════════════════════════════════════════════
+var BEACHES = []; // populated from Supabase on open
 
-var BEACHES = [
-  {
-    id: 'avila', name: 'Avila Beach', emoji: '🏖', drive: '10 min', miles: 8,
-    vibe: 'Calm & family-friendly', rating: 'Good', surf: '1-2 ft',
-    wind: 'Light offshore', water: '58°F', uv: 6, tide: 'Incoming',
-    color: '#22c55e', coords: [-120.7319, 35.1797],
-    parking: [
-      {name:'Front Beach Lot', cost:'$2/hr', status:'Open'},
-      {name:'Avila Village Lot', cost:'Free 2hr', status:'Open'},
-      {name:'Harford Pier Lot', cost:'$1/hr', status:'Busy'},
-    ],
-    trails: [
-      {name:'Bob Jones Trail', dist:'3.5 mi one way', diff:'Easy', dogs:true, notes:'Paved, connects SLO to Avila'},
-      {name:'Cave Landing Trail', dist:'1.2 mi', diff:'Easy', dogs:true, notes:'Ocean views and sea caves'},
-    ],
-    rentals: [
-      {name:'Central Coast Kayaks', type:'Kayak/SUP', price:'$20/hr', link:'https://centralcoastkayaks.com'},
-      {name:'Avila Beach Surf School', type:'Surf lessons', price:'$75', link:'https://avilabeachsurfschool.com'},
-      {name:'Avila Bike Rentals', type:'Bikes', price:'$15/hr', link:''},
-    ],
-    eat: [
-      {name:'Custom House Restaurant', vibe:'Seafood on the pier', price:'$$$'},
-      {name:'Old Custom House', vibe:'Casual beachfront', price:'$$'},
-      {name:'Avila Grocery', vibe:'Deli & snacks', price:'$'},
-    ],
-    cams: ['https://www.805webcams.com/avila-beach'],
-    bus: {route:'Route 6 - Avila Beach', fare:1.50, freq:'Hourly'},
-    sunrise: '6:42 AM', sunset: '7:28 PM',
-  },
-  {
-    id: 'pismo', name: 'Pismo Beach', emoji: '🌊', drive: '15 min', miles: 12,
-    vibe: 'Classic boardwalk vibes', rating: 'Fair', surf: '2-3 ft',
-    wind: 'W swell, light winds', water: '57°F', uv: 7, tide: 'Outgoing',
-    color: '#06b6d4', coords: [-120.6413, 35.1427],
-    parking: [
-      {name:'Pismo Pier Lot', cost:'$2/hr', status:'Busy'},
-      {name:'Price St Lot', cost:'$1.50/hr', status:'Open'},
-      {name:'Dolliver St Parking', cost:'Free 2hr', status:'Open'},
-    ],
-    trails: [
-      {name:'Pismo Beach Boardwalk', dist:'0.5 mi', diff:'Easy', dogs:true, notes:'Flat beachfront walk'},
-      {name:'Pismo Preserve Trail', dist:'5.5 mi loop', diff:'Moderate', dogs:true, notes:'Oak woodland and ocean views'},
-      {name:'Monarch Butterfly Grove', dist:'0.3 mi', diff:'Easy', dogs:false, notes:'Oct-Feb only — thousands of monarchs'},
-    ],
-    rentals: [
-      {name:'Pismo Beach Surf Shop', type:'Board rentals', price:'$15/hr', link:''},
-      {name:'Pismo Surf School', type:'Surf lessons', price:'$80', link:''},
-      {name:'Beach Rentals SLO', type:'Bikes/boards/chairs', price:'$10/hr', link:''},
-    ],
-    eat: [
-      {name:'Splash Cafe', vibe:'Famous clam chowder', price:'$$'},
-      {name:'Old West Cinnamon Rolls', vibe:'Local institution', price:'$'},
-      {name:'Cracked Crab', vibe:'Seafood buckets', price:'$$$'},
-    ],
-    cams: ['https://www.805webcams.com/pismo-beach'],
-    bus: {route:'Route 10 - Pismo Beach', fare:1.50, freq:'Every 2 hrs'},
-    sunrise: '6:42 AM', sunset: '7:29 PM',
-  },
-  {
-    id: 'shell', name: 'Shell Beach', emoji: '🪨', drive: '12 min', miles: 10,
-    vibe: 'Dramatic cliffs, local fave', rating: 'Fair', surf: '2-4 ft',
-    wind: 'NW swell, choppy', water: '56°F', uv: 6, tide: 'Outgoing',
-    color: '#f59e0b', coords: [-120.6600, 35.1552],
-    parking: [
-      {name:'Shell Beach Rd Lot', cost:'Free', status:'Open'},
-      {name:'Cliff Ave Parking', cost:'Free', status:'Open'},
-    ],
-    trails: [
-      {name:'Pelican Point Trail', dist:'1.5 mi', diff:'Easy', dogs:true, notes:'Dramatic ocean bluff walk'},
-      {name:'Spyglass Park Loop', dist:'2 mi', diff:'Easy', dogs:true, notes:'Hidden coves and tide pools'},
-    ],
-    rentals: [
-      {name:'See Pismo/Avila for nearest surf rentals', type:'None local', price:'', link:''},
-    ],
-    eat: [
-      {name:'Sea Venture Restaurant', vibe:'Oceanfront fine dining', price:'$$$'},
-      {name:'Shell Beach Bar & Grill', vibe:'Casual coastal', price:'$$'},
-    ],
-    cams: ['https://www.805webcams.com'],
-    bus: {route:'Route 10 via Pismo', fare:1.50, freq:'Every 2 hrs'},
-    sunrise: '6:42 AM', sunset: '7:28 PM',
-  },
-  {
-    id: 'morro', name: 'Morro Bay', emoji: '🦦', drive: '30 min', miles: 14,
-    vibe: 'Wildlife & Morro Rock', rating: 'Poor', surf: '3-4 ft',
-    wind: 'Cross-shore winds', water: '55°F', uv: 5, tide: 'Incoming',
-    color: '#b44fff', coords: [-120.8500, 35.3658],
-    parking: [
-      {name:'Embarcadero Lot', cost:'$1.50/hr', status:'Open'},
-      {name:'Coleman Park Lot', cost:'Free', status:'Open'},
-      {name:'Morro Strand Lot', cost:'$10/day', status:'Open'},
-    ],
-    trails: [
-      {name:'Morro Strand State Beach', dist:'3 mi', diff:'Easy', dogs:true, notes:'Wide flat beach, good for walking'},
-      {name:'Black Hill Trail', dist:'2 mi', diff:'Moderate', dogs:true, notes:'Views of Morro Rock and bay'},
-      {name:'Cerro Cabrillo Peak', dist:'3.5 mi', diff:'Moderate', dogs:true, notes:'One of the Nine Sisters'},
-    ],
-    rentals: [
-      {name:'Central Coast Outdoors', type:'Kayak tours', price:'$65', link:''},
-      {name:'Rock Kayak', type:'Kayak rentals', price:'$25/hr', link:''},
-      {name:'Morro Bay Bike Rentals', type:'Bikes', price:'$12/hr', link:''},
-    ],
-    eat: [
-      {name:'Taco Temple', vibe:'Best fish tacos on coast', price:'$'},
-      {name:'Dockside Too', vibe:'Waterfront seafood', price:'$$'},
-      {name:'Sub-Sub Sandwich', vibe:'Local legend', price:'$'},
-    ],
-    cams: ['https://www.805webcams.com/morro-bay'],
-    bus: {route:'RTA Route 12 - Morro Bay', fare:1.75, freq:'Every 90 min'},
-    sunrise: '6:44 AM', sunset: '7:31 PM',
-  },
-  {
-    id: 'cayucos', name: 'Cayucos', emoji: '🏄', drive: '35 min', miles: 20,
-    vibe: 'Old California charm', rating: 'Good', surf: '2-3 ft',
-    wind: 'NW offshore', water: '56°F', uv: 5, tide: 'Incoming',
-    color: '#22c55e', coords: [-120.8939, 35.4426],
-    parking: [
-      {name:'Cayucos Pier Lot', cost:'Free', status:'Open'},
-      {name:'Ocean Ave Street', cost:'Free', status:'Open'},
-    ],
-    trails: [
-      {name:'Cayucos to Morro Bay Beach Walk', dist:'5 mi one way', diff:'Easy', dogs:true, notes:'Flat beach walk between towns'},
-    ],
-    rentals: [
-      {name:'Good Clean Fun Surf Shop', type:'Surf/board rentals', price:'$15/hr', link:''},
-    ],
-    eat: [
-      {name:'Cayucos Scoop', vibe:'Best ice cream on the coast', price:'$'},
-      {name:'Hoppe\'s Garden Bistro', vibe:'Upscale farm to table', price:'$$$'},
-      {name:'Sea Shanty', vibe:'Classic beachside diner', price:'$$'},
-    ],
-    cams: ['https://www.805webcams.com'],
-    bus: {route:'RTA Route 12', fare:1.75, freq:'Limited'},
-    sunrise: '6:44 AM', sunset: '7:31 PM',
-  },
-  {
-    id: 'cambria', name: 'Cambria', emoji: '🌲', drive: '55 min', miles: 35,
-    vibe: 'Artist colony, wild coast', rating: 'Fair', surf: '3-5 ft',
-    wind: 'NW winds, rough', water: '54°F', uv: 4, tide: 'Outgoing',
-    color: '#06b6d4', coords: [-121.1025, 35.5641],
-    parking: [
-      {name:'Moonstone Beach Lot', cost:'Free', status:'Open'},
-      {name:'Santa Rosa Creek Lot', cost:'Free', status:'Open'},
-    ],
-    trails: [
-      {name:'Moonstone Beach Boardwalk', dist:'1.5 mi', diff:'Easy', dogs:true, notes:'Dramatic rocky coast, great for tidepooling'},
-      {name:'Fiscalini Ranch Preserve', dist:'4 mi loop', diff:'Moderate', dogs:true, notes:'Old growth Monterey pines and coastal bluffs'},
-    ],
-    rentals: [
-      {name:'Limited local rentals - bring your own', type:'', price:'', link:''},
-    ],
-    eat: [
-      {name:'Robin\'s Restaurant', vibe:'World cuisine, local legend', price:'$$$'},
-      {name:'Linn\'s Restaurant', vibe:'Famous for ollalieberry pie', price:'$$'},
-      {name:'Wild Ginger Cafe', vibe:'Asian fusion', price:'$$'},
-    ],
-    cams: ['https://www.805webcams.com'],
-    bus: {route:'RTA Route 12 (limited)', fare:2.00, freq:'Very limited'},
-    sunrise: '6:45 AM', sunset: '7:32 PM',
-  },
-  {
-    id: 'oceano', name: 'Oceano Dunes', emoji: '🏜', drive: '18 min', miles: 13,
-    vibe: 'OHV dunes, wide open beach', rating: 'Fair', surf: '2-3 ft',
-    wind: 'NW onshore', water: '57°F', uv: 7, tide: 'Outgoing',
-    color: '#f59e0b', coords: [-120.6214, 35.1052],
-    parking: [
-      {name:'Oceano SVRA Day Use', cost:'$5/day', status:'Open'},
-      {name:'Pismo State Beach', cost:'$10/day', status:'Open'},
-    ],
-    trails: [
-      {name:'Oso Flaco Lake Trail', dist:'2.5 mi RT', diff:'Easy', dogs:false, notes:'Freshwater lake through sand dunes to ocean'},
-      {name:'Oceano Dunes SVRA Walk', dist:'Variable', diff:'Easy', dogs:true, notes:'Drive or walk on beach — 5 miles of open sand'},
-    ],
-    rentals: [
-      {name:'Arnie\'s ATV Rentals', type:'OHV/ATV rentals', price:'$50/hr', link:''},
-      {name:'Steve\'s ATV Rentals', type:'Quads & bikes', price:'$45/hr', link:''},
-    ],
-    eat: [
-      {name:'Oceano Depot', vibe:'Historic train depot restaurant', price:'$$'},
-      {name:'Mango Mango', vibe:'Tropical smoothies & bowls', price:'$'},
-    ],
-    cams: ['https://www.805webcams.com'],
-    bus: {route:'Route 10 - Oceano', fare:1.50, freq:'Hourly'},
-    sunrise: '6:42 AM', sunset: '7:28 PM',
-  },
-  {
-    id: 'mdo', name: 'Montana de Oro', emoji: '🌿', drive: '40 min', miles: 16,
-    vibe: 'Wild untouched coastline', rating: 'Poor', surf: '4-7 ft',
-    wind: 'Strong NW', water: '54°F', uv: 4, tide: 'Outgoing',
-    color: '#22c55e', coords: [-120.8894, 35.2659],
-    parking: [
-      {name:'Spooners Cove Lot', cost:'Free', status:'Open'},
-      {name:'Hazard Canyon Lot', cost:'Free', status:'Open'},
-      {name:'Bluff Trail Lot', cost:'Free', status:'Open'},
-    ],
-    trails: [
-      {name:'Bluff Trail', dist:'3 mi RT', diff:'Easy', dogs:true, notes:'Most dramatic coastal scenery in SLO County'},
-      {name:'Valencia Peak', dist:'4 mi RT', diff:'Hard', dogs:true, notes:'1347ft — 360 degree views on clear day'},
-      {name:'Hazard Canyon Reef', dist:'1 mi RT', diff:'Easy', dogs:true, notes:'Excellent tide pools at low tide'},
-      {name:'Dune Trail', dist:'2 mi loop', diff:'Easy', dogs:true, notes:'Sand dunes through beach scrub'},
-    ],
-    rentals: [
-      {name:'No rentals on site — self-contained trip', type:'', price:'', link:''},
-    ],
-    eat: [
-      {name:'No food on site — bring your own', vibe:'Pack a lunch', price:''},
-      {name:'Nearest food in Los Osos (5 min)', vibe:'Small town diners', price:'$'},
-    ],
-    cams: ['https://www.805webcams.com'],
-    bus: {route:'No direct bus — drive only', fare:0, freq:'None'},
-    sunrise: '6:44 AM', sunset: '7:30 PM',
-  },
-];
+async function loadBeaches(filterId) {
+  try {
+    var sb = window.supabaseClient;
+    if (!sb) throw new Error('No Supabase client');
+    var q = sb.from('beaches').select('*').eq('city_id', 'slo').eq('active', true).order('sort_order', { ascending: true });
+    if (filterId === 'close')  q = q.lte('distance_miles', 18);
+    if (filterId === 'dogs')   q = q.eq('dogs_allowed', true);
+    if (filterId === 'surf')   q = q.eq('surfing', true);
+    var res = await q;
+    if (res.error) throw res.error;
+    return (res.data || []).map(function(r) {
+      return {
+        id:       String(r.id),
+        name:     r.name,
+        emoji:    r.emoji || '🏖',
+        drive:    r.drive_time || '',
+        miles:    r.distance_miles || 0,
+        vibe:     r.short_desc || '',
+        rating:   'Good',
+        surf:     '—',
+        wind:     '—',
+        water:    r.water_temp || '—',
+        uv:       '—',
+        tide:     '—',
+        color:    '#06b6d4',
+        coords:   (r.lng && r.lat) ? [r.lng, r.lat] : null,
+        parking:  r.parking ? [{ name: r.parking, cost: r.parking_fee || '', status: 'Open' }] : [],
+        trails:   [],
+        rentals:  [],
+        eat:      r.nearby_eats ? [{ name: r.nearby_eats, vibe: '', price: '' }] : [],
+        bus:      { route: 'Check SLO Transit', fare: 0, freq: 'Varies' },
+        sunrise:  '—',
+        sunset:   '—',
+        tip:      r.tip || '',
+        tags:     r.tags || [],
+        dogs:     r.dogs_allowed !== false,
+        swimming: r.swimming !== false,
+        surfing:  r.surfing === true,
+        facilities: r.facilities || [],
+        best_for: r.best_for || [],
+      };
+    });
+  } catch(e) {
+    console.warn('[BeachHub] Supabase load failed:', e);
+    return [];
+  }
+}
 
 // ── OPEN BEACH HUB (beach selector) ──
 function openBeachHub() {
+  if (typeof trackHubVisit === 'function') trackHubVisit('beach');
   var existing = document.getElementById('mh-beach-hub');
   if (existing) existing.remove();
 
-if (!document.getElementById('mh-bh-css')) {
+  if (!document.getElementById('mh-bh-css')) {
     var s = document.createElement('style');
     s.id = 'mh-bh-css';
     s.textContent = [
@@ -245,13 +80,96 @@ if (!document.getElementById('mh-bh-css')) {
       '.mh-rental-card{padding:11px 12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}',
       '.mh-eat-row{padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:space-between;font-size:13px}',
       '.mh-cost-calc{padding:16px;background:rgba(6,182,212,0.05);border:1px solid rgba(6,182,212,0.15);border-radius:16px;margin-bottom:16px}',
+      '@keyframes bh-shimmer{0%,100%{opacity:0.5}50%{opacity:1}}',
     ].join('');
     document.head.appendChild(s);
   }
+
+  var hub = document.createElement('div');
+  hub.id = 'mh-beach-hub';
+  hub.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;background:rgba(6,6,15,0.96);backdrop-filter:blur(8px);opacity:0;transition:opacity 0.3s';
+
+  hub.innerHTML =
+    '<div style="padding:52px 20px 0;flex-shrink:0">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">' +
+        '<button onclick="menuHomeCloseBeachHub()" style="background:rgba(255,255,255,0.08);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer;flex-shrink:0">←</button>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif">🏖 Beach Hub</div>' +
+          '<div id="bh-count" style="font-size:11px;color:rgba(255,255,255,0.4)">Beaches · Surf · Trails</div>' +
+        '</div>' +
+        '<button onclick="menuHomeCloseBeachHub()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer">✕</button>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:12px">' +
+        '<button class="mh-bh-filter active" onclick="bhFilterLoad(this,\'all\')">🌊 All</button>' +
+        '<button class="mh-bh-filter" onclick="bhFilterLoad(this,\'close\')">📍 Closest</button>' +
+        '<button class="mh-bh-filter" onclick="bhFilterLoad(this,\'dogs\')">🐕 Dogs OK</button>' +
+        '<button class="mh-bh-filter" onclick="bhFilterLoad(this,\'surf\')">🏄 Surfing</button>' +
+      '</div>' +
+    '</div>' +
+    '<div id="bh-list" style="flex:1;overflow-y:auto;padding:0 20px 48px">' +
+      bhRenderLoading() +
+    '</div>';
+
+  getHubParent().appendChild(hub);
+  setTimeout(function() { hub.style.opacity = '1'; }, 30);
+  tipsInjectButton('beach');
+
+  loadBeaches('all').then(function(beaches) {
+    BEACHES = beaches;
+    var listEl = document.getElementById('bh-list');
+    var countEl = document.getElementById('bh-count');
+    if (listEl) listEl.innerHTML = bhRenderList(beaches);
+    if (countEl) countEl.textContent = 'Beaches · Surf · Trails · ' + beaches.length + ' beaches';
+  });
 }
 window.menuHomeOpenBeachHub = openBeachHub;
 
+function bhRenderLoading() {
+  return '<div style="display:flex;flex-direction:column;gap:8px;padding-top:4px">' +
+    [1,2,3,4].map(function() {
+      return '<div style="height:80px;border-radius:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);animation:bh-shimmer 1.4s infinite"></div>';
+    }).join('') + '</div>';
+}
+
+function bhRenderList(beaches) {
+  if (!beaches.length) return '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.3);font-size:13px">No beaches found</div>';
+  return beaches.map(function(b) {
+    return '<div class="mh-bh-card" data-id="' + b.id + '" data-drive="' + b.miles + '" onclick="openBeach(\'' + b.id + '\')">' +
+      '<div style="display:flex;align-items:center;gap:12px">' +
+        '<div style="font-size:32px">' + b.emoji + '</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:15px;font-weight:800">' + b.name + '</div>' +
+          '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">' + b.vibe + '</div>' +
+          '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">' +
+            (b.tags||[]).slice(0,3).map(function(t) {
+              return '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.18);color:rgba(6,182,212,0.8)">' + t + '</span>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+        '<div style="text-align:right;flex-shrink:0">' +
+          '<div style="font-size:13px;font-weight:800;color:#06b6d4">' + b.drive + '</div>' +
+          '<div style="font-size:10px;color:rgba(255,255,255,0.3)">' + b.miles + ' mi</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function bhFilterLoad(el, type) {
+  document.querySelectorAll('.mh-bh-filter').forEach(function(b) { b.classList.remove('active'); });
+  el.classList.add('active');
+  var listEl = document.getElementById('bh-list');
+  if (listEl) listEl.innerHTML = bhRenderLoading();
+  loadBeaches(type).then(function(beaches) {
+    BEACHES = beaches;
+    if (listEl) listEl.innerHTML = bhRenderList(beaches);
+  });
+}
+window.menuHomeBhFilter = bhFilterLoad;
+
 function closeBeachHub() {
+  hubDeactivateMapMode();
+  tipsRemoveButton('beach');
   var s = document.getElementById('mh-beach-hub');
   if (s) { s.style.opacity = '0'; setTimeout(function() { s.remove(); }, 300); }
 }
@@ -272,20 +190,35 @@ function bhFilter(el, type) {
 }
 window.menuHomeBhFilter = bhFilter;
 
-// ── INDIVIDUAL BEACH HUB ──
+// ── INDIVIDUAL BEACH DETAIL ──
 function openBeach(id) {
-  var beach = null;
-  for (var i = 0; i < BEACHES.length; i++) { if (BEACHES[i].id === id) { beach = BEACHES[i]; break; } }
-  if (!beach) return;
-
-  // Fly map to beach
-  if (homeMap) {
-    try {
-      homeMap.flyTo({ center: beach.coords, zoom: 14, pitch: 50, bearing: 0, duration: 1200 });
-    } catch(e) {}
+  var beach = BEACHES.find(function(b) { return b.id === id; });
+  if (!beach) {
+    // Fallback — fetch directly
+    window.supabaseClient.from('beaches').select('*').eq('id', id).limit(1).then(function(res) {
+      if (res.data && res.data[0]) {
+        var r = res.data[0];
+        var b = {
+          id: String(r.id), name: r.name, emoji: r.emoji || '🏖',
+          drive: r.drive_time || '', miles: r.distance_miles || 0,
+          vibe: r.short_desc || '', rating: 'Good', surf: '—', wind: '—',
+          water: r.water_temp || '—', uv: '—', tide: '—', color: '#06b6d4',
+          coords: (r.lng && r.lat) ? [r.lng, r.lat] : null,
+          parking: r.parking ? [{ name: r.parking, cost: r.parking_fee || '', status: 'Open' }] : [],
+          trails: [], rentals: [],
+          eat: r.nearby_eats ? [{ name: r.nearby_eats, vibe: '', price: '' }] : [],
+          bus: { route: 'Check SLO Transit', fare: 0, freq: 'Varies' },
+          sunrise: '—', sunset: '—', tip: r.tip || '', tags: r.tags || [],
+        };
+        closeBeachHub();
+        setTimeout(function() { showBeachDetail(b); }, 400);
+      }
+    });
+    return;
   }
-
-  // Close selector, open beach hub
+  if (homeMap && beach.coords) {
+    try { homeMap.flyTo({ center: beach.coords, zoom: 14, pitch: 50, bearing: 0, duration: 1200 }); } catch(e) {}
+  }
   closeBeachHub();
   setTimeout(function() { showBeachDetail(beach); }, 400);
 }

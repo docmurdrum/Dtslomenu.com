@@ -531,16 +531,89 @@
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
   opacity: 0.5;
 }
-/* Packed — use CSS transition on box-shadow only, NO animation, no stacking context */
-.bar-card-v2.v2-packed {
-  border-color: rgba(255,45,120,0.6);
-  box-shadow: 0 0 0 1.5px rgba(255,45,120,0.5), 0 0 30px rgba(255,45,120,0.2);
+/* ── STAGE 1: EMPTY — quiet, dim, clearly dead ── */
+.bar-card-v2.v2-collapsed {
+  opacity: 0.45;
+  filter: saturate(0.4);
+  transform: scale(0.98);
 }
+
+/* ── STAGE 2: BUSY — warm, alive, breathing ── */
 .bar-card-v2.v2-busy {
-  border-color: rgba(245,158,11,0.3);
-  box-shadow: 0 0 15px rgba(245,158,11,0.1);
+  border-color: rgba(245,158,11,0.45);
+  box-shadow: 0 0 0 1px rgba(245,158,11,0.3), 0 0 20px rgba(245,158,11,0.12), 0 4px 20px rgba(0,0,0,0.4);
+  animation: card-breathe-busy 3s ease-in-out infinite;
 }
-.bar-card-v2.v2-collapsed { opacity: 0.6; }
+@keyframes card-breathe-busy {
+  0%,100% { box-shadow: 0 0 0 1px rgba(245,158,11,0.3), 0 0 20px rgba(245,158,11,0.12), 0 4px 20px rgba(0,0,0,0.4); }
+  50%      { box-shadow: 0 0 0 1px rgba(245,158,11,0.5), 0 0 32px rgba(245,158,11,0.22), 0 4px 24px rgba(0,0,0,0.5); }
+}
+.bar-card-v2.v2-busy .bar-emblem-glow {
+  animation: emblem-glow-pulse-busy 3s ease-in-out infinite !important;
+}
+@keyframes emblem-glow-pulse-busy {
+  0%,100% { opacity: 0.35; transform: scale(1); }
+  50%      { opacity: 0.65; transform: scale(1.08); }
+}
+.bar-card-v2.v2-busy .bar-emblem-disc {
+  animation: emblem-breathe 3s ease-in-out infinite;
+}
+@keyframes emblem-breathe {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+
+/* ── STAGE 3: PACKED — full energy, jumping ── */
+.bar-card-v2.v2-packed {
+  border-color: rgba(255,45,120,0.7);
+  box-shadow: 0 0 0 1.5px rgba(255,45,120,0.6), 0 0 40px rgba(255,45,120,0.25), 0 0 80px rgba(255,45,120,0.08), 0 6px 24px rgba(0,0,0,0.5);
+  animation: card-throb-packed 1.4s ease-in-out infinite;
+}
+@keyframes card-throb-packed {
+  0%,100% { box-shadow: 0 0 0 1.5px rgba(255,45,120,0.6), 0 0 40px rgba(255,45,120,0.25), 0 0 80px rgba(255,45,120,0.08), 0 6px 24px rgba(0,0,0,0.5); }
+  50%      { box-shadow: 0 0 0 2px rgba(255,45,120,0.9), 0 0 60px rgba(255,45,120,0.4), 0 0 100px rgba(255,45,120,0.15), 0 8px 28px rgba(0,0,0,0.6); }
+}
+/* Packed photo area gets a hot shimmer sweep */
+.bar-card-v2.v2-packed .bar-photo-v2::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255,45,120,0.08) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: shimmer-sweep 2s linear infinite;
+  pointer-events: none;
+  z-index: 3;
+  border-radius: 20px;
+}
+@keyframes shimmer-sweep {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+/* Packed emblem — energetic bounce */
+.bar-card-v2.v2-packed .bar-emblem-glow {
+  animation: emblem-glow-pulse-packed 1.4s ease-in-out infinite !important;
+}
+@keyframes emblem-glow-pulse-packed {
+  0%,100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.18); }
+}
+.bar-card-v2.v2-packed .bar-emblem-disc {
+  animation: emblem-pop 1.4s ease-in-out infinite;
+}
+@keyframes emblem-pop {
+  0%,100% { transform: scale(1) translateY(0); }
+  40%     { transform: scale(1.1) translateY(-4px); }
+  60%     { transform: scale(0.96) translateY(1px); }
+}
+/* Packed status badge pulses */
+.bar-card-v2.v2-packed .bar-status-badge-v2 {
+  animation: badge-pulse 1.4s ease-in-out infinite;
+}
+@keyframes badge-pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.85; transform: scale(1.05); }
+}
+
 /* Body and content always above noise overlay */
 .bar-body-v2, .vote-row, .checkin-strip, .bar-friends-btn { position: relative; z-index: 2; }
 

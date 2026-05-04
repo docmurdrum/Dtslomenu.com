@@ -6,7 +6,7 @@
 try {
   supabaseClient = window.supabase.createClient(
     "https://jwgwufggptpdmgcmmqes.supabase.co",
-    "sb_publishable_uIxE2Eol_nC2TFvkT_G1EQ_WxWWt7A3"
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Z3d1ZmdncHRwZG1nY21tcWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNTExNTAsImV4cCI6MjA4OTYyNzE1MH0.mzbgdrq10Y203l1-oj-m4WjoQs9Z3KgsrFoEU24lV18"
   );
 } catch(e) {
   console.warn('[DTSLO] Supabase init failed — running offline:', e.message);
@@ -46,7 +46,7 @@ function showPage(p) {
   if (pageEl) pageEl.classList.add('active');
   const nb = document.getElementById('nav-' + p);
   if (nb) nb.classList.add('active');
-  if (p === 'profile')  { renderProfile(); renderCharacterCard(); initAppSettings(); try { loadSkipIntroPref(); loadSkipToDTSLOPref(); } catch(e) {} }
+  if (p === 'profile')  { renderProfile(); initAppSettings(); try { loadSkipIntroPref(); loadSkipToDTSLOPref(); } catch(e) {} }
   if (p === 'games')    { initGamesPage(); }
   if (p === 'missions') { initMissionsPage(); }
   if (p === 'resources'){ renderResources(); }
@@ -54,7 +54,7 @@ function showPage(p) {
   if (p === 'friends')  { try { initFriends(); } catch(e) {} }
   if (p === 'events')   { try { initEvents(); } catch(e) {} }
   if (p === 'line')     { if (typeof loadReports === 'function') loadReports(); }
-  if (p === 'lineskip')  { try { initLineSkip(); } catch(e) {} }
+  if (p === 'lineskip') { try { initLineSkip(); } catch(e) {} }
 }
 
 // ── HANDLE VOTE FROM BAR PAGE ──
@@ -229,17 +229,21 @@ function startPackedParticles() {
 }
 
 // ── LOAD USER STATS ──
+// XP is authoritative from profiles table.
+// reportCount + postCount are for achievement tracking only.
 async function loadUserStats() {
   if (!currentUser) return;
   try {
-    const [rr, pr] = await Promise.all([
-      supabaseClient.from('reports').select('id',   { count: 'exact', head: true }).eq('user_id', currentUser.id),
+    const [profileRes, rr, pr] = await Promise.all([
+      supabaseClient.from('profiles').select('xp').eq('id', currentUser.id).limit(1),
+      supabaseClient.from('reports').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id),
       supabaseClient.from('lost_found').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id)
     ]);
-    reportCount = rr.count  || 0;
-    postCount   = pr.count  || 0;
-    userXP      = (reportCount * 10) + (postCount * 15);
-  } catch (e) {
+    const profileRow = Array.isArray(profileRes.data) ? profileRes.data[0] : profileRes.data;
+    userXP      = profileRow?.xp || 0;
+    reportCount = rr.count || 0;
+    postCount   = pr.count || 0;
+  } catch(e) {
     console.log('Stats skipped:', e.message);
   }
 }
@@ -268,7 +272,6 @@ function inviteFriends() {
 
 // ── DONATION ──
 function openDonation() {
-  // Opens Venmo/PayPal/Ko-fi — placeholder URL for now
   window.open('https://ko-fi.com/dtslomenu', '_blank');
 }
 
@@ -288,38 +291,125 @@ function toggleGPSBypassApp(enabled) {
   showToast(enabled ? '⚠️ GPS bypass ON' : '✅ GPS bypass OFF');
 }
 
-// ── XP SYSTEM ──
+// ══════════════════════════════════════════════
+// HUB VISIT TRACKING
+// Called when a user opens any hub.
+// Persists distinct hub IDs to profiles.hubs_visited.
+// Triggers badge check after each new hub is recorded.
+// ══════════════════════════════════════════════
+
+var _hubVisitDebounce = null;
+var _hubsVisitedLocal = null; // in-memory cache for this session
+
+async function trackHubVisit(hubId) {
+  if (!hubId) return;
+
+  // Always update local cache
+  if (!_hubsVisitedLocal) {
+    // Init from localStorage for guests or as fallback
+    try { _hubsVisitedLocal = JSON.parse(localStorage.getItem('dtslo_hubs_visited') || '[]'); } catch(e) { _hubsVisitedLocal = []; }
+  }
+
+  if (_hubsVisitedLocal.includes(hubId)) return; // already recorded — nothing to do
+  _hubsVisitedLocal.push(hubId);
+
+  try { localStorage.setItem('dtslo_hubs_visited', JSON.stringify(_hubsVisitedLocal)); } catch(e) {}
+
+  if (!currentUser || !supabaseClient) return;
+
+  // Debounce Supabase write — 800ms
+  clearTimeout(_hubVisitDebounce);
+  _hubVisitDebounce = setTimeout(async function() {
+    try {
+      var res = await supabaseClient
+        .from('profiles')
+        .select('hubs_visited')
+        .eq('id', currentUser.id)
+        .limit(1);
+
+      var profileRow = Array.isArray(res.data) ? res.data[0] : res.data;
+      var existing   = (profileRow && Array.isArray(profileRow.hubs_visited))
+        ? profileRow.hubs_visited
+        : [];
+
+      // Merge local + remote, deduplicate
+      var merged = Array.from(new Set([...existing, ..._hubsVisitedLocal]));
+
+      // Only write if something actually changed
+      if (merged.length === existing.length) return;
+
+      await supabaseClient
+        .from('profiles')
+        .update({ hubs_visited: merged })
+        .eq('id', currentUser.id);
+
+      // Check badge eligibility
+      if (typeof checkBadges === 'function') checkBadges();
+
+    } catch(e) {
+      console.warn('[trackHubVisit]', e.message);
+    }
+  }, 800);
+}
+window.trackHubVisit = trackHubVisit;
+
+// ══════════════════════════════════════════════
+// XP SYSTEM
+// Single source of truth for all XP awards.
+// Writes to profiles table, keeps userXP in sync,
+// triggers level-up callback and badge check.
+// Max level: 100. XP per level: 100.
+// ══════════════════════════════════════════════
 async function addXP(amount) {
   amount = Math.floor(amount || 0);
   if (amount <= 0) return;
+
+  // Guest: store locally, apply on signup
   if (!currentUser) {
-    // Store locally if not logged in
     var local = parseInt(localStorage.getItem('dtslo_xp') || '0') + amount;
     localStorage.setItem('dtslo_xp', local);
     return;
   }
+
   try {
-    // Load current XP — limit(1) guards against duplicate profile rows
     var res = await supabaseClient
       .from('profiles')
-      .select('xp, level')
+      .select('xp')
       .eq('id', currentUser.id)
       .limit(1);
-    
+
     var profileRow = Array.isArray(res.data) ? res.data[0] : res.data;
-    if (profileRow) {
-      var newXP = (profileRow.xp || 0) + amount;
-      var newLevel = Math.floor(newXP / 100) + 1;
-      await supabaseClient
-        .from('profiles')
-        .update({ xp: newXP, level: newLevel })
-        .eq('id', currentUser.id);
-      
-      // Award XP shard materials
-      if (typeof awardXPShard === 'function') awardXPShard(amount);
-      
-      if (typeof showToast === 'function' && !window._devSuppressXPToast) showToast('⚡ +' + amount + ' XP');
+    if (!profileRow) return;
+
+    var oldXP    = profileRow.xp || 0;
+    var newXP    = oldXP + amount;
+    var oldLevel = Math.min(100, Math.floor(oldXP  / 100) + 1);
+    var newLevel = Math.min(100, Math.floor(newXP / 100) + 1);
+
+    await supabaseClient
+      .from('profiles')
+      .update({ xp: newXP, level: newLevel })
+      .eq('id', currentUser.id);
+
+    userXP = newXP;
+
+    if (typeof showToast === 'function' && !window._devSuppressXPToast) {
+      showToast('⚡ +' + amount + ' XP');
     }
+
+    // Level-up celebration
+    if (newLevel > oldLevel) {
+      if (typeof onLevelUp === 'function') onLevelUp(newLevel);
+    }
+
+    // Re-render profile if open
+    if (document.getElementById('profile')?.classList.contains('active')) {
+      if (typeof renderProfile === 'function') renderProfile();
+    }
+
+    // Check badge eligibility
+    if (typeof checkBadges === 'function') checkBadges();
+
   } catch(e) {
     console.warn('[addXP]', e);
   }

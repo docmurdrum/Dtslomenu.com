@@ -1,62 +1,96 @@
 // ══════════════════════════════════════════════
 // WINE_HUB.JS — Wine Country Hub
-// Paso Robles + SLO Wine region
+// Data sourced from Supabase venues table
 // ══════════════════════════════════════════════
 
-var WINE_REGIONS = [
-  {
-    id: 'paso', name: 'Paso Robles', emoji: '🍷', color: '#7c2d8e',
-    desc: '200+ wineries · 45 min north', drive: '45 min',
-    coords: [-120.6908, 35.6244],
-    highlights: ['Cabernet capital of CA', 'Hot days, cool nights', 'Old vine Zinfandel'],
-    wineries: [
-      { name: 'Justin Winery',          vibe: 'Upscale estate',        price: '$$$', hours: '10am-6pm', tip: 'Book the ISOSCELES tasting' },
-      { name: 'Tablas Creek',            vibe: 'Rhone varieties, biodynamic', price: '$$', hours: '10am-5pm', tip: 'Best for wine nerds' },
-      { name: 'Epoch Estate',            vibe: 'Hilltop views',         price: '$$$', hours: '11am-5pm', tip: 'Incredible Grenache' },
-      { name: 'Daou Vineyards',          vibe: 'Mountain views, stunning', price: '$$$', hours: '10am-5pm', tip: 'Go for the views alone' },
-      { name: 'Adelaida Cellars',        vibe: 'Historic estate',       price: '$$',  hours: '10am-5pm', tip: 'Vikings White is a must' },
-      { name: 'Sculpterra',              vibe: 'Sculpture garden + wine', price: '$', hours: '10am-5pm', tip: 'Wildly underrated' },
-    ],
-    food: [
-      { name: 'La Cosecha',    vibe: 'Farm-to-table, downtown Paso',  price: '$$$' },
-      { name: 'Thomas Hill Organics', vibe: 'Organic bistro',         price: '$$$' },
-      { name: 'McPhee\'s Grill', vibe: 'Casual wine country lunch',   price: '$$'  },
-    ],
-  },
-  {
-    id: 'slo_wine', name: 'SLO Wine', emoji: '🌿', color: '#b44fff',
-    desc: 'Edna Valley · Arroyo Grande', drive: '15-25 min',
-    coords: [-120.5950, 35.2200],
-    highlights: ['Cool coastal influence', 'Chardonnay & Pinot country', 'Close to town'],
-    wineries: [
-      { name: 'Talley Vineyards',        vibe: 'Family estate, elegant',  price: '$$$', hours: '10:30am-4:30pm', tip: 'Best Pinot in the county' },
-      { name: 'Edna Valley Vineyard',    vibe: 'Classic, approachable',   price: '$$',  hours: '10am-5pm',       tip: 'Great intro to the region' },
-      { name: 'Claiborne & Churchill',   vibe: 'Alsatian style',          price: '$$',  hours: '11am-5pm',       tip: 'Amazing dry Riesling' },
-      { name: 'Center of Effort',        vibe: 'Sustainable, modern',     price: '$$',  hours: '10am-5pm',       tip: 'Farm views are stunning' },
-      { name: 'Tolosa Winery',           vibe: 'Contemporary estate',     price: '$$$', hours: '10am-5pm',       tip: 'No-Oak Chardonnay is iconic' },
-    ],
-    food: [
-      { name: 'Ciopinot',        vibe: 'Seafood meets wine country',  price: '$$$' },
-      { name: 'Spirit of San Luis', vibe: 'Overlooking Edna Valley', price: '$$$' },
-    ],
-  },
-  {
-    id: 'downtown_wine', name: 'Downtown SLO Wine', emoji: '🥂', color: '#ff2d78',
-    desc: 'Wine bars & tasting rooms in DTSLO', drive: 'Walking',
-    coords: [-120.6640, 35.2800],
-    highlights: ['Walk between spots', 'Local pours', 'Happy hour deals'],
-    wineries: [
-      { name: 'SLO Wine Tasting Lounge', vibe: 'All local wines, no pretension', price: '$$', hours: '12pm-9pm', tip: 'Best intro to the region' },
-      { name: 'Bon Temps',               vibe: 'French inspired wine bar',        price: '$$$', hours: '4pm-10pm', tip: 'Perfect date spot' },
-      { name: 'Pour Choices Wine Bar',   vibe: 'Casual, great by-the-glass',      price: '$$',  hours: '3pm-11pm', tip: 'Best rotating selection' },
-      { name: 'Luna Red',                vibe: 'Tapas + wine list',               price: '$$$', hours: '11am-10pm', tip: 'Patio on warm evenings' },
-    ],
-    food: [
-      { name: 'Luna Red',         vibe: 'Best tapas pairing in SLO',  price: '$$$' },
-      { name: 'Novo Restaurant',  vibe: 'Creekside, excellent list',   price: '$$$' },
-    ],
-  },
-];
+var WINE_REGIONS = []; // populated from Supabase on open
+var WINE_FLAT = [];    // flat list of all wineries
+
+async function loadWineVenues(catId) {
+  try {
+    var sb = window.supabaseClient;
+    if (!sb) throw new Error('No Supabase client');
+    var q = sb.from('venues')
+      .select('*')
+      .eq('hub_id', 'wine')
+      .eq('city_id', 'slo')
+      .eq('active', true)
+      .order('name', { ascending: true });
+    if (catId && catId !== 'all') {
+      if (catId === 'paso')         q = q.eq('category', 'paso_robles');
+      else if (catId === 'slo_wine') q = q.eq('category', 'edna_valley');
+      else if (catId === 'downtown_wine') q = q.eq('category', 'downtown');
+    }
+    var res = await q;
+    if (res.error) throw res.error;
+    return res.data || [];
+  } catch(e) {
+    console.warn('[WineHub] Supabase load failed:', e);
+    return [];
+  }
+}
+
+function wineRenderLoading() {
+  return '<div style="display:flex;flex-direction:column;gap:8px;padding-top:4px">' +
+    [1,2,3,4].map(function() {
+      return '<div style="height:72px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);animation:wine-shimmer 1.4s infinite"><style>@keyframes wine-shimmer{0%,100%{opacity:0.5}50%{opacity:1}}</style></div>';
+    }).join('') + '</div>';
+}
+
+function wineRenderFlat(venues) {
+  if (!venues.length) return '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.3);font-size:13px">No venues found</div>';
+  return venues.map(function(v) {
+    var catLabel = v.category === 'paso_robles' ? 'Paso Robles' : v.category === 'edna_valley' ? 'Edna Valley' : 'Downtown SLO';
+    return '<div class="wh-winery-card" data-id="' + v.id + '" style="cursor:pointer;margin-bottom:8px" onclick="wineOpenDetail(this.dataset.id)">' +
+      '<div style="display:flex;align-items:center;gap:10px">' +
+        '<div style="font-size:24px">🍷</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:14px;font-weight:800">' + v.name + '</div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">' + (v.description ? v.description.substring(0,80) + '...' : catLabel) + '</div>' +
+        '</div>' +
+        '<div style="font-size:11px;font-weight:700;color:rgba(180,79,255,0.7)">' + ('$'.repeat(v.price_range || 2)) + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function wineOpenDetail(id) {
+  var v = WINE_FLAT.find(function(x) { return String(x.id) === String(id); });
+  if (!v) return;
+  var existing = document.getElementById('mh-wine-detail');
+  if (existing) existing.remove();
+
+  var sheet = document.createElement('div');
+  sheet.id = 'mh-wine-detail';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
+
+  var inner = document.createElement('div');
+  inner.style.cssText = 'width:100%;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(124,45,142,0.3);padding:14px 20px 52px;max-height:85vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)';
+
+  inner.innerHTML =
+    '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 16px;cursor:pointer" onclick="wineCloseDetail()"></div>' +
+    '<div style="font-size:32px;margin-bottom:8px">🍷</div>' +
+    '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif;margin-bottom:4px">' + v.name + '</div>' +
+    '<div style="font-size:12px;color:rgba(180,79,255,0.7);font-weight:700;margin-bottom:12px">' + ('$'.repeat(v.price_range||2)) + ' · ' + (v.category === 'paso_robles' ? 'Paso Robles' : v.category === 'edna_valley' ? 'Edna Valley' : 'Downtown SLO') + '</div>' +
+    '<div style="font-size:13px;color:rgba(255,255,255,0.65);line-height:1.6;margin-bottom:14px">' + (v.description||'') + '</div>' +
+    (v.tags && v.tags.length ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">' + v.tags.map(function(t){return '<span style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(124,45,142,0.1);border:1px solid rgba(124,45,142,0.25);color:rgba(180,79,255,0.8)">' + t + '</span>';}).join('') + '</div>' : '') +
+    (v.address ? '<a href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(v.address + ' CA') + '" target="_blank" style="display:block;width:100%;padding:13px;border-radius:14px;background:rgba(124,45,142,0.1);border:1px solid rgba(124,45,142,0.25);color:#b44fff;text-decoration:none;font-size:13px;font-weight:800;text-align:center">Get Directions ↗</a>' : '');
+
+  sheet.appendChild(inner);
+  getHubParent().appendChild(sheet);
+  setTimeout(function() {
+    sheet.style.opacity = '1';
+    inner.style.transform = 'translateY(0)';
+  }, 30);
+  sheet.addEventListener('click', function(e) { if (e.target === sheet) sheet.remove(); });
+}
+window.wineOpenDetail = wineOpenDetail;
+
+function wineCloseDetail() {
+  var d = document.getElementById('mh-wine-detail');
+  if (d) d.remove();
+}
+window.wineCloseDetail = wineCloseDetail;
 
 var WINE_FILTERS = [
   { id:'all',      label:'All',          emoji:'🍷' },
@@ -67,6 +101,7 @@ var WINE_FILTERS = [
 ];
 
 function openWineHub() {
+  if (typeof trackHubVisit === 'function') trackHubVisit('wine');
   var existing = document.getElementById('mh-wine-hub');
   if (existing) existing.remove();
 
@@ -104,18 +139,26 @@ if (!document.getElementById('wine-hub-css')) {
       '</div>' +
     '</div>' +
     '<div id="wh-content" style="flex:1;overflow-y:auto;padding:0 20px 48px">' +
-      whRenderAll() +
+      wineRenderLoading() +
     '</div>';
 
   getHubParent().appendChild(hub);
   setTimeout(function() { hub.style.opacity = '1'; }, 30);
+  tipsInjectButton('wine');
+
+  loadWineVenues('all').then(function(venues) {
+    WINE_FLAT = venues;
+    var content = document.getElementById('wh-content');
+    if (content) content.innerHTML = wineRenderFlat(venues);
+  });
 }
 window.menuHomeOpenWineHub = openWineHub;
 
 function closeWineHub() {
   hubDeactivateMapMode();
+  tipsRemoveButton('wine');
   var h = document.getElementById('mh-wine-hub');
-  if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
+  if (h) { h.style.opacity = '0'; h.style.pointerEvents = 'none'; setTimeout(function() { h.remove(); }, 300); }
 }
 window.menuHomeCloseWineHub = closeWineHub;
 
@@ -127,12 +170,13 @@ function whFilter(el, filterId) {
 
   if (filterId === 'tour') {
     content.innerHTML = whRenderTourPlanner();
-  } else if (filterId === 'all') {
-    content.innerHTML = whRenderAll();
-  } else {
-    var region = WINE_REGIONS.find(function(r) { return r.id === filterId; });
-    content.innerHTML = region ? whRenderRegion(region) : whRenderAll();
+    return;
   }
+  content.innerHTML = wineRenderLoading();
+  loadWineVenues(filterId).then(function(venues) {
+    WINE_FLAT = venues;
+    if (content) content.innerHTML = wineRenderFlat(venues);
+  });
 }
 window.whFilter = whFilter;
 

@@ -86,13 +86,13 @@
           el.style.display = 'none';
           if (introMap) { try { introMap.remove(); } catch(e) {} introMap = null; }
           // Launch hub screen
-          try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
+          try { if (typeof welcomeCheckAndLaunch === 'function') welcomeCheckAndLaunch(); else if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
         }, 550);
       }
     } catch(e) {
       var el2 = document.getElementById('menu-intro');
       if (el2) el2.style.display = 'none';
-      try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
+      try { if (typeof welcomeCheckAndLaunch === 'function') welcomeCheckAndLaunch(); else if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
     }
   }
 

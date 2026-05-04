@@ -1,7 +1,6 @@
 // ══════════════════════════════════════════════
 // SYNC.JS — Supabase sync layer
-// Handles: itineraries, bar_stamps, crafting_inventory,
-//          missions_progress, preferences
+// Handles: itineraries, bar_stamps, missions_progress, preferences
 //
 // Pattern: localStorage is source of truth for speed.
 // Supabase is synced in background on every write.
@@ -28,7 +27,6 @@ async function syncPullAll(userId) {
     await Promise.all([
       syncPullItineraries(userId),
       syncPullStamps(userId),
-      syncPullCrafting(userId),
       syncPullMissions(userId),
       syncPullPreferences(userId),
     ]);
@@ -157,65 +155,6 @@ function syncPushStamp(barName, barColor, barEmoji) {
   });
 }
 window.syncPushStamp = syncPushStamp;
-
-
-// ══════════════════════════════════════════════
-// CRAFTING INVENTORY
-// ══════════════════════════════════════════════
-
-async function syncPullCrafting(userId) {
-  try {
-    var res = await supabaseClient
-      .from('crafting_inventory')
-      .select('*')
-      .eq('user_id', userId);
-    if (res.error) throw res.error;
-    if (!res.data || !res.data.length) return;
-
-    // Remote is source of truth for crafting quantities
-    var local = {};
-    try { local = JSON.parse(localStorage.getItem('dtslo_crafting_wallet') || '{}'); } catch(e) {}
-
-    res.data.forEach(function(row) {
-      // Remote wins
-      local[row.item_id] = {
-        id:       row.item_id,
-        name:     row.item_name,
-        type:     row.item_type,
-        quantity: row.quantity,
-      };
-    });
-
-    localStorage.setItem('dtslo_crafting_wallet', JSON.stringify(local));
-  } catch(e) {
-    console.warn('[Sync] crafting pull:', e.message);
-  }
-}
-
-function syncPushCraftingItem(itemId, itemName, itemType, quantity) {
-  if (!currentUser) return;
-  syncDebounce('craft_' + itemId, async function() {
-    try {
-      if (quantity <= 0) {
-        await supabaseClient.from('crafting_inventory')
-          .delete()
-          .eq('user_id', currentUser.id)
-          .eq('item_id', itemId);
-      } else {
-        await supabaseClient.from('crafting_inventory').upsert({
-          user_id:   currentUser.id,
-          item_id:   itemId,
-          item_name: itemName,
-          item_type: itemType || 'material',
-          quantity:  quantity,
-        }, { onConflict: 'user_id,item_id' });
-      }
-    } catch(e) {
-      console.warn('[Sync] crafting push:', e.message);
-    }
-  });
-}
-window.syncPushCraftingItem = syncPushCraftingItem;
 
 
 // ══════════════════════════════════════════════

@@ -1,179 +1,64 @@
 // ══════════════════════════════════════════════
 // THRILL_HUB.JS — SLO Adventure & Thrill Hub
-// Ziplines, ATVs, skydiving, watersports
+// Data sourced from Supabase thrill_spots table
 // ══════════════════════════════════════════════
 
-var THRILL_SPOTS = [
-  {
-    id: 'margarita_adventures',
-    name: 'Margarita Adventures',
-    emoji: '🪂',
-    category: 'zipline',
-    price: '$89-129',
-    drive: '20 min from SLO',
-    duration: '3-4 hours',
-    coords: [-120.6000, 35.4000],
-    phone: '(805) 438-3850',
-    website: 'margaritaadventures.com',
-    tip: 'Six ziplines over 7,500 feet of cable, up to 400 feet in the air. Add the Zip \'n Sip package for wine tasting at Ancient Peaks after. Book ahead — sells out on weekends.',
-    highlights: ['6 ziplines','Canyon suspension bridge','Wine tasting add-on','Guided tour of the ranch'],
-    thrill_level: 4,
-    best_for: ['Groups','Dates','Bucket list'],
-    booking_required: true,
-  },
-  {
-    id: 'vista_lago',
-    name: 'Vista Lago Adventure Park',
-    emoji: '🧗',
-    category: 'adventure_park',
-    price: '$59-69',
-    drive: '20 min (Lopez Lake)',
-    duration: '2-4 hours',
-    coords: [-120.5600, 35.1800],
-    phone: null,
-    website: 'vistalagoadventurepark.com',
-    tip: '3 ziplines totaling 1,800+ feet including a 40-foot free fall QuickJump. Plus 40-obstacle ropes course. Great for groups. Go All Access ($69) — worth it for bragging rights.',
-    highlights: ['High-speed ziplines','40-ft free fall jump','50+ obstacle course','Wine barrel bridge'],
-    thrill_level: 5,
-    best_for: ['Thrill seekers','Groups','Families (5+)'],
-    booking_required: true,
-  },
-  {
-    id: 'banner_airways',
-    name: 'Banner Airways Biplane Rides',
-    emoji: '✈️',
-    category: 'air',
-    price: '$100-200+',
-    drive: '30 min (Pismo Beach Airport)',
-    duration: '15-30 min flights',
-    coords: [-120.6230, 35.1420],
-    phone: null,
-    website: 'bannerairways.com',
-    tip: 'Open cockpit WWII biplane over Pismo Beach and the Oceano Dunes. Top Gun vibes, zero training required. One of the most unique experiences on the Central Coast.',
-    highlights: ['Open cockpit WWII biplane','Pismo Beach aerial views','Oceano Dunes tour','Multiple route options'],
-    thrill_level: 3,
-    best_for: ['Unique experience','Dates','Photography'],
-    booking_required: true,
-  },
-  {
-    id: 'wingEnvy',
-    name: 'WingEnvy Paragliding',
-    emoji: '🪂',
-    category: 'air',
-    price: '$175-225',
-    drive: '30 min (Cayucos)',
-    duration: '15-20 min flight',
-    coords: [-120.8950, 35.4430],
-    phone: null,
-    website: 'wingenvyparagliding.com',
-    tip: 'Tandem paragliding — launch off a 700ft mountain and land on Cayucos beach. Zero experience needed. Less intense than skydiving but genuinely exhilarating. Stunning coastal views.',
-    highlights: ['700ft launch point','Beach landing','Tandem — no experience needed','Coastal views'],
-    thrill_level: 4,
-    best_for: ['Adventure seekers','Couples','First-timers'],
-    booking_required: true,
-  },
-  {
-    id: 'oceano_atv',
-    name: 'Steve\'s ATV Rentals',
-    emoji: '🏍',
-    category: 'atv',
-    price: '$50-80/hr',
-    drive: '30 min (Oceano Dunes)',
-    duration: 'By the hour',
-    coords: [-120.6200, 35.0900],
-    phone: '(805) 481-0597',
-    website: null,
-    tip: 'Rent ATVs and rip through the Oceano Dunes SVRA — the only coastal dunes open to vehicles in California. Go at sunset for golden hour views across the dunes and ocean.',
-    highlights: ['Only CA coastal dune park','Sunset rides','Multiple rental sizes','Family friendly'],
-    thrill_level: 3,
-    best_for: ['Groups','Sunset rides','Families'],
-    booking_required: false,
-  },
-  {
-    id: 'central_coast_kayaks',
-    name: 'Central Coast Kayaks',
-    emoji: '🛶',
-    category: 'water',
-    price: '$25-65',
-    drive: '30 min (Avila Beach)',
-    duration: '1-5 hours',
-    coords: [-120.7320, 35.1800],
-    phone: '(805) 773-3500',
-    website: 'centralcoastkayaks.com',
-    tip: 'Kayak tours of sea caves, dinosaur caves at Pismo, and open ocean wildlife. Sea otters, dolphins, elephant seals. 5-hour ocean discovery tour is the real deal.',
-    highlights: ['Sea cave kayaking','Wildlife sightings','SUP rentals','Guided tours'],
-    thrill_level: 2,
-    best_for: ['Wildlife lovers','Couples','Beginners'],
-    booking_required: false,
-  },
-  {
-    id: 'surf_lessons_slo',
-    name: 'SLO Surf Lessons',
-    emoji: '🏄',
-    category: 'water',
-    price: '$75-120',
-    drive: '25 min (Avila/Pismo)',
-    duration: '1.5-2 hours',
-    coords: [-120.7050, 35.1700],
-    phone: null,
-    website: null,
-    tip: 'Private lessons at Avila Beach — calmer water than Pismo, perfect for beginners. Most people get up on their first lesson. Surf boards and wetsuit included.',
-    highlights: ['Beginner friendly','Board & wetsuit included','Private lessons','Calm water beach'],
-    thrill_level: 2,
-    best_for: ['Beginners','Families','First timers'],
-    booking_required: true,
-  },
-  {
-    id: 'skydive_santa_barbara',
-    name: 'Skydive Santa Barbara',
-    emoji: '🪂',
-    category: 'skydive',
-    price: '$199-259',
-    drive: '1 hr from SLO',
-    duration: 'Half day',
-    coords: [-120.4500, 34.8300],
-    phone: '(805) 740-9099',
-    website: 'skydivesantabarbara.com',
-    tip: 'Closest skydiving to SLO. Tandem jump from 10,000-15,000 feet over the Central Coast. Book the video package — you\'ll want proof. Must book 48hrs in advance.',
-    highlights: ['Tandem jump','Coastal views','Video available','Most popular skydive near SLO'],
-    thrill_level: 5,
-    best_for: ['Bucket list','Groups','Celebrations'],
-    booking_required: true,
-  },
-  {
-    id: 'horseback_slo',
-    name: 'Central Coast Trailrides',
-    emoji: '🐎',
-    category: 'ranch',
-    price: '$75-150',
-    drive: '25 min',
-    duration: '1-2 hours',
-    coords: [-120.6300, 35.3200],
-    phone: null,
-    website: 'centralcoasttrailrides.com',
-    tip: 'Horseback through vineyards in Paso Robles or technical mountain trails at Santa Margarita Lake. Vineyard ride + wine tasting combo is the move for groups.',
-    highlights: ['Vineyard rides','Mountain trails','Wine tasting combo','Beginner friendly'],
-    thrill_level: 2,
-    best_for: ['Couples','Groups','Unique experience'],
-    booking_required: true,
-  },
-];
+var THRILL_SPOTS = []; // populated from Supabase on open
+
+async function loadThrillSpots(catId) {
+  try {
+    var sb = window.supabaseClient;
+    if (!sb) throw new Error('No Supabase client');
+    var q = sb.from('thrill_spots').select('*').eq('city_id','slo').eq('active',true).order('sort_order',{ascending:true});
+    if (catId && catId !== 'all') q = q.eq('category', catId);
+    var res = await q;
+    if (res.error) throw res.error;
+    return (res.data || []).map(function(r) {
+      return {
+        id:         String(r.id),
+        name:       r.name,
+        emoji:      r.emoji || '⚡',
+        category:   r.category || 'adventure',
+        price:      r.price_note || '',
+        drive:      '',
+        duration:   r.duration || '',
+        coords:     (r.lng && r.lat) ? [r.lng, r.lat] : null,
+        phone:      r.phone || null,
+        website:    r.website_url || null,
+        booking:    r.booking_url || null,
+        tip:        r.tip || '',
+        highlights: r.tags || [],
+        thrill_level: 3,
+        best_for:   r.tags ? r.tags.slice(0,3) : [],
+        booking_required: r.reservations === 'Required',
+        difficulty: r.difficulty || 'All levels',
+        age_min:    r.age_minimum || null,
+        seasonal:   r.seasonal || false,
+        season_note:r.season_note || '',
+      };
+    });
+  } catch(e) {
+    console.warn('[ThrillHub] Supabase load failed:', e);
+    return [];
+  }
+}
 
 var THRILL_CATEGORIES = [
   { id:'all',      label:'All',       emoji:'⚡' },
-  { id:'zipline',  label:'Zipline',   emoji:'🪂' },
-  { id:'air',      label:'Air',       emoji:'✈️' },
   { id:'water',    label:'Water',     emoji:'🌊' },
-  { id:'atv',      label:'ATV/Dunes', emoji:'🏍' },
-  { id:'skydive',  label:'Skydive',   emoji:'🪂' },
+  { id:'atv',      label:'Dunes/ATV', emoji:'🏍' },
+  { id:'air',      label:'Air',       emoji:'🪂' },
+  { id:'climbing', label:'Climbing',  emoji:'🧗' },
   { id:'ranch',    label:'Ranch',     emoji:'🐎' },
+  { id:'land',     label:'Land',      emoji:'🚵' },
 ];
 
 function openThrillHub() {
+  if (typeof trackHubVisit === 'function') trackHubVisit('thrill');
   var existing = document.getElementById('mh-thrill-hub');
   if (existing) existing.remove();
 
-if (!document.getElementById('thrill-hub-css')) {
+  if (!document.getElementById('thrill-hub-css')) {
     var s = document.createElement('style');
     s.id = 'thrill-hub-css';
     s.textContent = [
@@ -181,6 +66,7 @@ if (!document.getElementById('thrill-hub-css')) {
       '.thrill-filter.active{background:rgba(239,68,68,0.15);border-color:#ef4444;color:#ef4444}',
       '.thrill-card{padding:13px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:8px;cursor:pointer;transition:all 0.15s}',
       '.thrill-card:active{background:rgba(239,68,68,0.06);transform:scale(0.98)}',
+      '@keyframes thrill-shimmer{0%,100%{opacity:0.5}50%{opacity:1}}',
     ].join('');
     document.head.appendChild(s);
   }
@@ -195,7 +81,7 @@ if (!document.getElementById('thrill-hub-css')) {
         '<button onclick="menuHomeCloseThrillHub()" style="background:rgba(255,255,255,0.08);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer;flex-shrink:0">←</button>' +
         '<div style="flex:1">' +
           '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif">⚡ Thrill Hub</div>' +
-          '<div style="font-size:11px;color:rgba(255,255,255,0.4)">Ziplines · ATVs · Skydiving · ' + THRILL_SPOTS.length + ' adventures</div>' +
+          '<div id="thrill-hub-count" style="font-size:11px;color:rgba(255,255,255,0.4)">Ziplines · ATVs · Skydiving</div>' +
         '</div>' +
         '<button onclick="menuHomeCloseThrillHub()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer">✕</button>' +
       '</div>' +
@@ -206,45 +92,49 @@ if (!document.getElementById('thrill-hub-css')) {
       '</div>' +
     '</div>' +
     '<div id="thrill-content" style="flex:1;overflow-y:auto;padding:0 20px 48px">' +
-      thrillRenderList(THRILL_SPOTS) +
+      thrillRenderLoading() +
     '</div>';
 
   getHubParent().appendChild(hub);
   setTimeout(function() { hub.style.opacity = '1'; }, 30);
+  tipsInjectButton('thrill');
 
-  // If opened via Find Hubs, sort nearest spots first
-  if (window._findHubsUserCenter) {
-    var uLat = window._findHubsUserCenter[0];
-    var uLng = window._findHubsUserCenter[1];
-    var sorted = THRILL_SPOTS.slice().sort(function(a, b) {
-      if (!a.coords || !b.coords) return 0;
-      var da = typeof geoDistance === 'function' ? geoDistance(uLat, uLng, a.coords[1], a.coords[0]) : 0;
-      var db = typeof geoDistance === 'function' ? geoDistance(uLat, uLng, b.coords[1], b.coords[0]) : 0;
-      return da - db;
-    });
-    var _cEl = document.getElementById('thrill-content');
-    if (_cEl) _cEl.innerHTML = thrillRenderList(sorted);
-    window._findHubsUserCenter = null;
-  }
+  loadThrillSpots('all').then(function(spots) {
+    THRILL_SPOTS = spots;
+    var content = document.getElementById('thrill-content');
+    var countEl = document.getElementById('thrill-hub-count');
+    if (content) content.innerHTML = thrillRenderList(spots);
+    if (countEl) countEl.textContent = 'Ziplines · ATVs · Skydiving · ' + spots.length + ' adventures';
+  });
 }
 window.menuHomeOpenThrillHub = openThrillHub;
 
 function closeThrillHub() {
   hubDeactivateMapMode();
+  tipsRemoveButton('thrill');
   var h = document.getElementById('mh-thrill-hub');
-  if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
+  if (h) { h.style.opacity = '0'; h.style.pointerEvents = 'none'; setTimeout(function() { h.remove(); }, 300); }
 }
 window.menuHomeCloseThrillHub = closeThrillHub;
 
 function thrillFilter(el, filterId) {
   document.querySelectorAll('.thrill-filter').forEach(function(b) { b.classList.remove('active'); });
   el.classList.add('active');
-  var filtered = filterId === 'all' ? THRILL_SPOTS :
-    THRILL_SPOTS.filter(function(s) { return s.category === filterId; });
   var content = document.getElementById('thrill-content');
-  if (content) content.innerHTML = thrillRenderList(filtered);
+  if (content) content.innerHTML = thrillRenderLoading();
+  loadThrillSpots(filterId).then(function(spots) {
+    THRILL_SPOTS = spots;
+    if (content) content.innerHTML = thrillRenderList(spots);
+  });
 }
 window.thrillFilter = thrillFilter;
+
+function thrillRenderLoading() {
+  return '<div style="display:flex;flex-direction:column;gap:8px;padding-top:4px">' +
+    [1,2,3,4].map(function() {
+      return '<div style="height:80px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);animation:thrill-shimmer 1.4s infinite"></div>';
+    }).join('') + '</div>';
+}
 
 function thrillRenderList(spots) {
   if (!spots.length) return '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.3);font-size:13px">No adventures in this category</div>';
@@ -258,7 +148,7 @@ function thrillRenderList(spots) {
         '<div style="font-size:28px;flex-shrink:0">' + s.emoji + '</div>' +
         '<div style="flex:1;min-width:0">' +
           '<div style="font-size:14px;font-weight:800;margin-bottom:2px">' + s.name + '</div>' +
-          '<div style="font-size:11px;color:rgba(255,255,255,0.45)">' + s.drive + ' · ' + s.price + '</div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,0.45)">' + s.difficulty + ' · ' + s.price + '</div>' +
         '</div>' +
         '<div>' + thrillDots + '</div>' +
       '</div>' +
@@ -274,7 +164,7 @@ function thrillRenderList(spots) {
 
 function thrillOpenDetail(id) {
   var s = THRILL_SPOTS.find(function(x) { return x.id === id; });
-  if (!s) return;
+  if (!s) return; // cache miss — data should already be loaded
   var existing = document.getElementById('mh-thrill-detail');
   if (existing) existing.remove();
 

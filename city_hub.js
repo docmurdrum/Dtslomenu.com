@@ -1,130 +1,51 @@
 // ══════════════════════════════════════════════
-// CITY_HUB.JS — SLO City Hub
+// EXPLORE_HUB.JS — SLO Explore Hub
 // Landmarks · Culture · Art · Must-See
+// Data sourced from Supabase landmarks table
 // ══════════════════════════════════════════════
 
-var CITY_SPOTS = [
-  {
-    id: 'mission',
-    name: 'Mission San Luis Obispo de Tolosa',
-    emoji: '⛪',
-    category: 'landmark',
-    free: true,
-    address: '751 Palm St',
-    coords: [-120.6642, 35.2797],
-    desc: 'Founded in 1772 by Father Junipero Serra. The mission that gave SLO its name. The surrounding Mission Plaza hosts concerts, wine tastings, and community events year-round.',
-    tip: 'Free to walk the grounds and gardens. Small donation requested for the museum inside. The plaza benches are the best free seat in downtown.',
-    tags: ['Historic', 'Free', 'Gardens'],
-  },
-  {
-    id: 'bubblegum_alley',
-    name: 'Bubblegum Alley',
-    emoji: '🫧',
-    category: 'weird',
-    free: true,
-    address: '733 Higuera St (between Broad & Garden)',
-    coords: [-120.6648, 35.2806],
-    desc: '70-foot alley completely covered in chewed gum since the 1950s. Equal parts disgusting and iconic. A SLO rite of passage — grab a gumball at Rocket Fizz and add your mark.',
-    tip: 'Open 24/7. Best photos in daylight. Do NOT touch your face after. The wall has been growing for 70+ years and has been featured on The Tonight Show.',
-    tags: ['Iconic', 'Free', '24/7'],
-  },
-  {
-    id: 'slo_museum_art',
-    name: 'SLO Museum of Art',
-    emoji: '🖼',
-    category: 'museum',
-    free: true,
-    address: '1010 Broad St',
-    coords: [-120.6630, 35.2797],
-    desc: 'The cultural heart of the Central Coast. Contemporary California artists, rotating exhibits, art classes, and lectures. Free admission — one of SLO\'s best kept secrets.',
-    tip: 'Free suggested donation. Art After Dark events quarterly on Friday evenings — galleries open late, free wine, live music. Check their calendar.',
-    tags: ['Free', 'Art', 'Local Culture'],
-  },
-  {
-    id: 'fremont_theater',
-    name: 'Fremont Theater',
-    emoji: '🎭',
-    category: 'venue',
-    free: false,
-    address: '1035 Monterey St',
-    coords: [-120.6648, 35.2813],
-    desc: 'Art deco masterpiece built in 1942. 950-seat intimate venue for live music, comedy, and events. The neon sign is one of the most photographed spots in SLO.',
-    tip: 'Even if you\'re not seeing a show, walk past at night for the neon sign photo. The box office is open day-of for remaining tickets.',
-    tags: ['Live Music', 'Historic', 'Iconic'],
-  },
-  {
-    id: 'higuera_street',
-    name: 'Higuera Street',
-    emoji: '🌆',
-    category: 'street',
-    free: true,
-    address: 'Higuera St, Downtown SLO',
-    coords: [-120.6650, 35.2800],
-    desc: 'The spine of downtown SLO. Bars, restaurants, boutiques, and street life from Garden to Nipomo. Shuts down every Thursday night for Farmers Market. The place to be.',
-    tip: 'Parking structures on Palm and Marsh are free after 5pm. The whole strip is walkable in 10 minutes but you\'ll spend hours if you let yourself.',
-    tags: ['Walkable', 'Nightlife', 'Shopping'],
-  },
-  {
-    id: 'san_luis_creek',
-    name: 'San Luis Obispo Creek',
-    emoji: '🌿',
-    category: 'nature',
-    free: true,
-    address: 'Creek Walk, Downtown SLO',
-    coords: [-120.6655, 35.2810],
-    desc: 'A hidden gem running right through downtown. The creekside path connects Novo\'s patio, Mission Plaza, and the natural corridor of oaks and willows. Surprisingly peaceful.',
-    tip: 'Best walked in the morning before the bars open. Look for herons and ducks. Novo Restaurant has the best creek views in the city — worth a drink just for the patio.',
-    tags: ['Free', 'Peaceful', 'Hidden Gem'],
-  },
-  {
-    id: 'madonna_inn',
-    name: 'Madonna Inn',
-    emoji: '🏰',
-    category: 'landmark',
-    free: false,
-    address: '100 Madonna Rd',
-    coords: [-120.6820, 35.2640],
-    desc: '110 uniquely themed rooms — no two alike. The pink steakhouse, the cave-themed dining room, the waterfall urinal in the men\'s room. An American original. Worth a visit even without staying.',
-    tip: 'You can walk in and explore the lobby, gift shop, and restaurant without staying. The Gold Rush Steak House is worth a special dinner. Genuinely one of a kind.',
-    tags: ['Iconic', 'Unique', 'Must See'],
-  },
-  {
-    id: 'slo_childrens_museum',
-    name: 'SLO Children\'s Museum',
-    emoji: '🧒',
-    category: 'museum',
-    free: false,
-    address: '1010 Nipomo St',
-    coords: [-120.6620, 35.2785],
-    desc: 'Hands-on interactive museum for families. One of the top family attractions in California — inventive exhibits and creative programs for kids of all ages.',
-    tip: 'Check their event calendar for special programs. Free for kids under 1. Great for families visiting SLO who need to keep kids entertained.',
-    tags: ['Families', 'Kids', 'Interactive'],
-  },
-  {
-    id: 'palm_theatre',
-    name: 'Palm Theatre',
-    emoji: '🎬',
-    category: 'venue',
-    free: false,
-    address: '817 Palm St',
-    coords: [-120.6635, 35.2793],
-    desc: 'First solar-powered movie theater in the US. Independent, arthouse, and foreign films. SLO\'s answer to multiplex culture — intimate, smart, and community-run.',
-    tip: 'SLO Film Festival screens here every April — biggest cultural event of the year. Check their calendar for cult classics and indie premieres.',
-    tags: ['Film', 'Independent', 'Local'],
-  },
-  {
-    id: 'ah_louis_store',
-    name: 'Ah Louis Store',
-    emoji: '🏛',
-    category: 'landmark',
-    free: true,
-    address: '800 Palm St',
-    coords: [-120.6630, 35.2793],
-    desc: 'Built in 1874, the oldest brick store in SLO. Originally a general store serving Chinese railroad workers. Now a historic landmark — SLO\'s tiny Chinatown and a window into forgotten history.',
-    tip: 'Exterior only to view. Best paired with the VoiceMap Downtown SLO audio tour which tells the full story of this block and its history.',
-    tags: ['Free', 'Historic', 'Hidden History'],
-  },
-];
+var CITY_SPOTS = []; // populated from Supabase on open
+
+async function loadCitySpots(catId) {
+  try {
+    var sb = window.supabaseClient;
+    if (!sb) throw new Error('No Supabase client');
+    var q = sb.from('landmarks')
+      .select('*')
+      .eq('city_id', 'slo')
+      .eq('hub_id', 'explore')
+      .eq('active', true)
+      .order('sort_order', { ascending: true });
+    if (catId && catId !== 'all' && catId !== 'free') {
+      q = q.eq('category', catId);
+    }
+    var res = await q;
+    if (res.error) throw res.error;
+    var rows = res.data || [];
+    // free filter applied client-side
+    if (catId === 'free') {
+      rows = rows.filter(function(r) { return r.price && r.price.toLowerCase().indexOf('free') !== -1; });
+    }
+    // Normalize to match existing shape expected by render functions
+    return rows.map(function(r) {
+      return {
+        id:       String(r.id),
+        name:     r.name,
+        emoji:    r.emoji || '📍',
+        category: r.category,
+        free:     r.price && r.price.toLowerCase().indexOf('free') !== -1,
+        address:  r.address || '',
+        coords:   (r.lng && r.lat) ? [r.lng, r.lat] : null,
+        desc:     r.description || '',
+        tip:      r.tip || '',
+        tags:     r.tags || [],
+      };
+    });
+  } catch(e) {
+    console.warn('[CityHub] Supabase load failed:', e);
+    return [];
+  }
+}
 
 var CITY_CATEGORIES = [
   { id: 'all',      label: 'All',      emoji: '🏙' },
@@ -136,10 +57,11 @@ var CITY_CATEGORIES = [
 ];
 
 function openCityHub() {
+  if (typeof trackHubVisit === 'function') trackHubVisit('explore');
   var existing = document.getElementById('mh-city-hub');
   if (existing) existing.remove();
 
-if (!document.getElementById('city-hub-css')) {
+  if (!document.getElementById('city-hub-css')) {
     var s = document.createElement('style');
     s.id = 'city-hub-css';
     s.textContent = [
@@ -161,8 +83,8 @@ if (!document.getElementById('city-hub-css')) {
       '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">' +
         '<button onclick="menuHomeCloseCityHub()" style="background:rgba(255,255,255,0.08);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer;flex-shrink:0">←</button>' +
         '<div style="flex:1">' +
-          '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif">🏛 City Hub</div>' +
-          '<div style="font-size:11px;color:rgba(255,255,255,0.4)">Landmarks · Culture · Art · ' + CITY_SPOTS.length + ' spots</div>' +
+          '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif">🗺 Explore SLO</div>' +
+          '<div id="city-hub-count" style="font-size:11px;color:rgba(255,255,255,0.4)">Landmarks · Culture · Art</div>' +
         '</div>' +
         '<button onclick="menuHomeCloseCityHub()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer">✕</button>' +
       '</div>' +
@@ -173,30 +95,51 @@ if (!document.getElementById('city-hub-css')) {
       '</div>' +
     '</div>' +
     '<div id="city-content" style="flex:1;overflow-y:auto;padding:0 20px 48px">' +
-      cityRenderList(CITY_SPOTS) +
+      cityRenderLoading() +
     '</div>';
 
   getHubParent().appendChild(hub);
   setTimeout(function() { hub.style.opacity = '1'; }, 30);
+  tipsInjectButton('explore');
+
+  // Load data from Supabase
+  loadCitySpots('all').then(function(spots) {
+    CITY_SPOTS = spots;
+    var content = document.getElementById('city-content');
+    var countEl = document.getElementById('city-hub-count');
+    if (content) content.innerHTML = cityRenderList(spots);
+    if (countEl) countEl.textContent = 'Landmarks · Culture · Art · ' + spots.length + ' spots';  });
 }
 window.menuHomeOpenCityHub = openCityHub;
 
 function closeCityHub() {
   hubDeactivateMapMode();
+  tipsRemoveButton('explore');
   var h = document.getElementById('mh-city-hub');
-  if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
+  if (h) { h.style.opacity = '0'; h.style.pointerEvents = 'none'; setTimeout(function() { h.remove(); }, 300); }
 }
 window.menuHomeCloseCityHub = closeCityHub;
 
 function cityFilter(el, catId) {
   document.querySelectorAll('.city-filter').forEach(function(b) { b.classList.remove('active'); });
   el.classList.add('active');
-  var filtered = catId === 'all' ? CITY_SPOTS :
-    catId === 'free' ? CITY_SPOTS.filter(function(s) { return s.free; }) :
-    CITY_SPOTS.filter(function(s) { return s.category === catId; });
-  document.getElementById('city-content').innerHTML = cityRenderList(filtered);
+  var content = document.getElementById('city-content');
+  if (content) content.innerHTML = cityRenderLoading();
+  loadCitySpots(catId).then(function(spots) {
+    CITY_SPOTS = spots;
+    if (content) content.innerHTML = cityRenderList(spots);
+  });
 }
 window.cityFilter = cityFilter;
+
+function cityRenderLoading() {
+  return '<div style="display:flex;flex-direction:column;gap:8px;padding-top:4px">' +
+    [1,2,3,4,5].map(function() {
+      return '<div style="height:68px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);animation:city-shimmer 1.4s infinite">' +
+        '<style>@keyframes city-shimmer{0%,100%{opacity:0.5}50%{opacity:1}}</style></div>';
+    }).join('') +
+  '</div>';
+}
 
 function cityRenderList(spots) {
   if (!spots.length) return '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.3);font-size:13px">No spots in this category</div>';
@@ -218,8 +161,27 @@ function cityRenderList(spots) {
 }
 
 function cityOpenDetail(id) {
-  var s = CITY_SPOTS.find(function(x) { return x.id === id; });
-  if (!s) return;
+  // First check local cache, then fall back to Supabase fetch
+  var cached = CITY_SPOTS.find(function(x) { return x.id === id; });
+  if (cached) {
+    cityShowDetail(cached);
+  } else {
+    window.supabaseClient.from('landmarks').select('*').eq('id', id).limit(1).then(function(res) {
+      if (res.data && res.data[0]) {
+        var r = res.data[0];
+        cityShowDetail({
+          id: String(r.id), name: r.name, emoji: r.emoji || '📍',
+          category: r.category, free: r.price && r.price.toLowerCase().indexOf('free') !== -1,
+          address: r.address || '', coords: (r.lng && r.lat) ? [r.lng, r.lat] : null,
+          desc: r.description || '', tip: r.tip || '', tags: r.tags || [],
+        });
+      }
+    });
+  }
+}
+window.cityOpenDetail = cityOpenDetail;
+
+function cityShowDetail(s) {
   var existing = document.getElementById('mh-city-detail');
   if (existing) existing.remove();
 
@@ -236,15 +198,15 @@ function cityOpenDetail(id) {
     '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif;margin-bottom:4px">' + s.name + '</div>' +
     '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:14px">' + s.address + '</div>' +
     '<div style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.6;margin-bottom:14px">' + s.desc + '</div>' +
-    '<div style="padding:12px;background:rgba(0,245,255,0.04);border:1px solid rgba(0,245,255,0.12);border-radius:12px;margin-bottom:14px">' +
+    (s.tip ? '<div style="padding:12px;background:rgba(0,245,255,0.04);border:1px solid rgba(0,245,255,0.12);border-radius:12px;margin-bottom:14px">' +
       '<div style="font-size:10px;font-weight:700;color:#00f5ff;margin-bottom:4px">💡 LOCAL TIP</div>' +
       '<div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">' + s.tip + '</div>' +
-    '</div>' +
+    '</div>' : '') +
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">' +
-      s.tags.map(function(t) { return '<span class="city-tag">' + t + '</span>'; }).join('') +
+      (s.tags || []).map(function(t) { return '<span class="city-tag">' + t + '</span>'; }).join('') +
       (s.free ? '<span class="city-tag" style="background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.2);color:#22c55e">Free Entry</span>' : '') +
     '</div>' +
-    '<a href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(s.address + ' San Luis Obispo CA') + '" target="_blank" style="display:block;width:100%;padding:13px;border-radius:14px;background:rgba(0,245,255,0.08);border:1px solid rgba(0,245,255,0.2);color:#00f5ff;text-decoration:none;font-size:13px;font-weight:800;text-align:center">Get Directions ↗</a>';
+    '<a href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent((s.address || '') + ' San Luis Obispo CA') + '" target="_blank" style="display:block;width:100%;padding:13px;border-radius:14px;background:rgba(0,245,255,0.08);border:1px solid rgba(0,245,255,0.2);color:#00f5ff;text-decoration:none;font-size:13px;font-weight:800;text-align:center">Get Directions ↗</a>';
 
   sheet.appendChild(inner);
   getHubParent().appendChild(sheet);
@@ -257,4 +219,3 @@ function cityOpenDetail(id) {
   }, 30);
   sheet.addEventListener('click', function(e) { if (e.target === sheet) sheet.remove(); });
 }
-window.cityOpenDetail = cityOpenDetail;

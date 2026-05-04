@@ -140,7 +140,7 @@ async function loadLeaderboard() {
 
     if (lbTab === 'xp') {
       var res = await supabaseClient
-        .from('characters')
+        .from('profiles')
         .select('user_id, xp')
         .order('xp', { ascending: false })
         .limit(50);
@@ -270,7 +270,7 @@ async function loadProfileRank() {
   if (!currentUser) return;
   try {
     var res = await supabaseClient
-      .from('characters')
+      .from('profiles')
       .select('user_id, xp')
       .order('xp', { ascending: false });
     if (res.error) throw res.error;

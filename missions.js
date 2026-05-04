@@ -226,7 +226,6 @@ function completeMission(id) {
   const xpAmount = xpReward ? (parseInt(xpReward.label.replace(/\D/g, '')) || 25) : 0;
   if (xpAmount && currentUser) {
     try { gainXP(xpAmount); } catch(e) {}
-    try { awardXP(xpAmount, 'mission_complete'); } catch(e) {}
   }
 
   // Mark completed

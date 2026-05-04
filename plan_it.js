@@ -226,7 +226,7 @@ async function piGenerate() {
     'Return ONLY valid JSON: {headline, summary, stops:[{time,name,type,description,cost,tip,duration_mins}], total_cost, ride_note, pro_tip}. duration_mins is estimated time at each stop as an integer (e.g. 60 for 1 hour at a restaurant, 45 for a bar stop). cost is per person estimate like $15-25.';
 
   try {
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+    var resp = await fetch('https://anthropic-proxy.dtslomenu.workers.dev/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

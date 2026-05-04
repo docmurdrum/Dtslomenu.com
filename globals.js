@@ -4,7 +4,7 @@
 // Never redeclare these in other files
 // ══════════════════════════════════════════════
 
-var BUILD_VERSION = '6.3.33';
+var BUILD_VERSION = '6.3.26';
 var BUILD_DATE    = '2026-03-26';
 
 // ── MAP ──
@@ -213,9 +213,19 @@ window.setHubGlowVisible = setHubGlowVisible;
   var _isDevMode = false;
 
   function checkDevMode() {
-    _isDevMode = localStorage.getItem('dtslo_dev_mode') === '1' ||
-                 localStorage.getItem('dtslo_dev_errors') === '1' ||
-                 (currentUser && currentUser.email === 'dtslomenu@gmail.com');
+    // Hub dev environment — always on
+    _isDevMode = true;
+  }
+
+  function ensureBadgeVisible() {
+    // In hub dev, always show the badge even with no errors yet
+    if (!document.body) { setTimeout(ensureBadgeVisible, 500); return; }
+    var badge = getBadge();
+    if (badge && badge.style.display === 'none') {
+      badge.textContent = '0 err';
+      badge.style.display = 'block';
+      badge.style.background = '#444';
+    }
   }
 
   function getOverlay() {
@@ -389,6 +399,7 @@ window.setHubGlowVisible = setHubGlowVisible;
 
   // Init check
   checkDevMode();
+  ensureBadgeVisible();
 })();
 
 // ── EMBLEM DEBUG ──
@@ -598,248 +609,9 @@ function guestGoLogin() {
 }
 window.guestGoLogin = guestGoLogin;
 
-// ══════════════════════════════════════════════
-// BETA WELCOME POPUP
-// Shows every visit until user signs up
-// ══════════════════════════════════════════════
-function showBetaWelcome() {
-  if (currentUser) return; // already signed in — skip
-  if (document.getElementById('beta-welcome-overlay')) return;
-  // Show once per device — resets after signup
-  try { if (localStorage.getItem('dtslo_beta_welcome_seen')) return; } catch(e) {}
 
-  var overlay = document.createElement('div');
-  overlay.id = 'beta-welcome-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px';
 
-  overlay.innerHTML =
-    '<div style="width:100%;max-width:400px;background:#0e0e1a;border-radius:24px;border:1px solid rgba(255,255,255,0.08);padding:28px 22px;box-shadow:0 20px 60px rgba(0,0,0,0.6);max-height:90vh;overflow-y:auto">' +
-      '<div style="display:flex;justify-content:center;margin-bottom:16px">' +
-        '<div style="background:linear-gradient(135deg,rgba(255,45,120,0.15),rgba(180,79,255,0.15));border:1px solid rgba(180,79,255,0.3);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:800;color:#b44fff;letter-spacing:1px;text-transform:uppercase">Beta</div>' +
-      '</div>' +
-      '<div style="font-size:26px;font-weight:900;text-align:center;margin-bottom:12px;letter-spacing:-0.5px">Uhh.... hullo? 👋</div>' +
-      '<div style="font-size:14px;color:rgba(255,255,255,0.65);line-height:1.75;margin-bottom:22px;text-align:center">' +
-        'Hey, you found us before we\'re cool 😅' +
-        '<br><br>' +
-        'We\'re in beta and the app is free to use — no sign up required to browse. Create an account to report bars, check in, earn XP, and get your exclusive BETA badge.' +
-        '<br><br>' +
-        'Your numbers matter — the more users we have, the easier it is to get downtown bars on board with real rewards. It\'s built for you, always free.' +
-        '<br><br>' +
-        '<strong style="color:white">Early beta users get an exclusive BETA badge.</strong> 🏅' +
-      '</div>' +
-      '<button onclick="betaGoSignup()" style="width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#ff2d78,#b44fff);color:white;font-size:15px;font-weight:900;font-family:inherit;cursor:pointer;margin-bottom:10px">Create Free Account →</button>' +
-      '<button onclick="betaTour()" style="width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.7);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px">Show me around first 👀</button>' +
-      '<div style="display:flex;gap:8px;margin-top:4px">' +
-        '<button onclick="betaBrowse()" style="flex:1;padding:10px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer">Just browsing</button>' +
-        '<button onclick="betaGoLogin()" style="flex:1;padding:10px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer">Sign In</button>' +
-      '</div>' +
-    '</div>';
 
-  document.body.appendChild(overlay);
-  try { localStorage.setItem('dtslo_beta_welcome_seen', '1'); } catch(e) {}
-}
-window.showBetaWelcome = showBetaWelcome;
-
-function closeBetaWelcome() {
-  var el = document.getElementById('beta-welcome-overlay');
-  if (el) el.remove();
-}
-
-function betaGoSignup() {
-  closeBetaWelcome();
-  var authEl = document.getElementById('auth-screen');
-  var appEl  = document.getElementById('app');
-  if (appEl)  appEl.style.display  = 'none';
-  if (authEl) { authEl.style.display = 'flex'; authEl.style.zIndex = '9999'; authEl.style.position = 'fixed'; authEl.style.inset = '0'; }
-  if (typeof switchAuthTab === 'function') switchAuthTab('signup');
-  window._pendingDTSLOEntry = true;
-}
-window.betaGoSignup = betaGoSignup;
-
-function betaGoLogin() {
-  closeBetaWelcome();
-  var authEl = document.getElementById('auth-screen');
-  var appEl  = document.getElementById('app');
-  if (appEl)  appEl.style.display  = 'none';
-  if (authEl) { authEl.style.display = 'flex'; authEl.style.zIndex = '9999'; authEl.style.position = 'fixed'; authEl.style.inset = '0'; }
-  if (typeof switchAuthTab === 'function') switchAuthTab('login');
-  window._pendingDTSLOEntry = true;
-}
-window.betaGoLogin = betaGoLogin;
-
-function betaBrowse() {
-  closeBetaWelcome();
-}
-window.betaBrowse = betaBrowse;
-
-function betaTour() {
-  closeBetaWelcome();
-  runLinesTour();
-}
-window.betaTour = betaTour;
-
-// ── LINES MINI TOUR ──
-var LINES_TOUR_STEPS = [
-  {
-    target: '#nav-line',
-    title: 'This is the Lines page 🍺',
-    body: 'Every bar on Higuera Street, live. See who\'s packed, who\'s dead, and where the night is actually happening.',
-    position: 'above',
-  },
-  {
-    target: null,
-    targetSelector: '.bar-card-v2',
-    title: 'Tap any bar to open it 📍',
-    body: 'See crowd levels, recent reports, and check-in counts. Sign up to check in and earn XP.',
-    position: 'below',
-  },
-  {
-    target: null,
-    targetSelector: '.vote-btn',
-    title: 'Report the vibe 📡',
-    body: 'Is it packed? Dead? Tap to report and help everyone have a better night. Signing up earns you 10 XP per report.',
-    position: 'above',
-  },
-];
-
-var _linesTourStep = 0;
-
-function runLinesTour() {
-  _linesTourStep = 0;
-  _showLinesTourStep();
-}
-
-function _cleanTourElements() {
-  var o = document.getElementById('lines-tour-overlay');
-  var b = document.getElementById('lines-tour-bubble');
-  if (o) o.remove();
-  if (b) b.remove();
-}
-
-function _showLinesTourStep() {
-  _cleanTourElements();
-
-  if (_linesTourStep >= LINES_TOUR_STEPS.length) {
-    setTimeout(function() { showBetaWelcome(); }, 400);
-    return;
-  }
-
-  var step = LINES_TOUR_STEPS[_linesTourStep];
-  var targetEl = step.target
-    ? document.querySelector(step.target)
-    : step.targetSelector ? document.querySelector(step.targetSelector) : null;
-
-  // Overlay + spotlight
-  var overlay = document.createElement('div');
-  overlay.id = 'lines-tour-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9550;pointer-events:none';
-
-  var spotlight = document.createElement('div');
-  spotlight.style.cssText = 'position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,10,0.82);pointer-events:none';
-  if (targetEl) {
-    var r = targetEl.getBoundingClientRect();
-    var pad = 8;
-    spotlight.style.left   = (r.left - pad) + 'px';
-    spotlight.style.top    = (r.top - pad) + 'px';
-    spotlight.style.width  = (r.width + pad * 2) + 'px';
-    spotlight.style.height = (r.height + pad * 2) + 'px';
-  } else {
-    spotlight.style.cssText += ';width:0;height:0;left:50%;top:50%';
-  }
-  overlay.appendChild(spotlight);
-  document.body.appendChild(overlay);
-
-  // Bubble — separate element with stable ID
-  var bubble = document.createElement('div');
-  bubble.id = 'lines-tour-bubble';
-  bubble.style.cssText = 'position:fixed;z-index:9560;left:16px;right:16px;max-width:340px;margin:0 auto;background:#0e0e1a;border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:20px;box-shadow:0 8px 40px rgba(0,0,0,0.6)';
-
-  if (targetEl) {
-    var r2 = targetEl.getBoundingClientRect();
-    if (step.position === 'above') {
-      bubble.style.bottom = (window.innerHeight - r2.top + 16) + 'px';
-    } else {
-      bubble.style.top = (r2.bottom + 16) + 'px';
-    }
-  } else {
-    bubble.style.top = '50%';
-    bubble.style.transform = 'translateY(-50%)';
-  }
-
-  var isLast = _linesTourStep === LINES_TOUR_STEPS.length - 1;
-
-  bubble.innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
-      '<div style="display:flex;gap:4px">' +
-        LINES_TOUR_STEPS.map(function(s, i) {
-          return '<div style="width:' + (i === _linesTourStep ? '18px' : '6px') + ';height:6px;border-radius:3px;background:' + (i <= _linesTourStep ? '#ff2d78' : 'rgba(255,255,255,0.15)') + '"></div>';
-        }).join('') +
-      '</div>' +
-      '<button onclick="skipLinesTour()" style="background:none;border:none;color:rgba(255,255,255,0.3);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;padding:0">Skip</button>' +
-    '</div>' +
-    '<div style="font-size:17px;font-weight:900;margin-bottom:8px">' + step.title + '</div>' +
-    '<div style="font-size:13px;color:rgba(255,255,255,0.6);line-height:1.6;margin-bottom:16px">' + step.body + '</div>' +
-    '<button onclick="nextLinesTourStep()" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#ff2d78,#b44fff);color:white;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer">' +
-      (isLast ? 'Got it 🎉' : 'Next →') +
-    '</button>';
-
-  document.body.appendChild(bubble);
-}
-window._showLinesTourStep = _showLinesTourStep;
-
-function nextLinesTourStep() {
-  _linesTourStep++;
-  _showLinesTourStep();
-}
-window.nextLinesTourStep = nextLinesTourStep;
-
-function skipLinesTour() {
-  _cleanTourElements();
-  setTimeout(function() { showBetaWelcome(); }, 400);
-}
-window.skipLinesTour = skipLinesTour;
-
-// ══════════════════════════════════════════════
-// BETA TESTER BADGE POPUP
-// Shows once after signup during beta
-// ══════════════════════════════════════════════
-var BETA_BADGE_URL = 'https://jwgwufggptpdmgcmmqes.supabase.co/storage/v1/object/public/characters/badges/beta-tester.png';
-
-function showBetaBadge() {
-  var existing = document.getElementById('beta-badge-overlay');
-  if (existing) return;
-
-  var overlay = document.createElement('div');
-  overlay.id = 'beta-badge-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,0.88);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:24px';
-
-  overlay.innerHTML =
-    '<div style="width:100%;max-width:360px;background:#0e0e1a;border-radius:28px;border:1px solid rgba(255,215,0,0.25);padding:36px 24px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,0.7)">' +
-      '<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#b44fff;text-transform:uppercase;margin-bottom:16px">🎉 Welcome to the team</div>' +
-      '<img src="' + BETA_BADGE_URL + '" style="width:180px;height:180px;border-radius:50%;object-fit:cover;margin:0 auto 20px;display:block;border:3px solid rgba(255,215,0,0.4);box-shadow:0 0 40px rgba(255,215,0,0.2)">' +
-      '<div style="font-size:24px;font-weight:900;margin-bottom:8px;letter-spacing:-0.5px">Beta Tester Badge 🏅</div>' +
-      '<div style="font-size:14px;color:rgba(255,255,255,0.55);line-height:1.7;margin-bottom:24px">' +
-        'You helped build DTSLO from the ground up. This badge is yours forever — even after beta ends and the app grows.' +
-        '<br><br>' +
-        '<strong style="color:rgba(255,215,0,0.8)">OG status confirmed.</strong>' +
-      '</div>' +
-      '<button onclick="closeBetaBadge()" style="width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#ffd700,#ffaa00);color:#000;font-size:16px;font-weight:900;font-family:inherit;cursor:pointer">Let\'s Go! 🍻</button>' +
-    '</div>';
-
-  document.body.appendChild(overlay);
-  try { triggerConfetti && triggerConfetti(); } catch(e) {}
-}
-window.showBetaBadge = showBetaBadge;
-
-function closeBetaBadge() {
-  var el = document.getElementById('beta-badge-overlay');
-  if (el) {
-    el.style.opacity = '0';
-    el.style.transition = 'opacity 0.3s';
-    setTimeout(function() { el.remove(); }, 300);
-  }
-}
-window.closeBetaBadge = closeBetaBadge;
 
 // ══════════════════════════════════════════════
 // MESSAGE OF THE DAY POPUP

@@ -202,23 +202,13 @@ async function onLogin(user, isNewUser = false) {
   setTimeout(async function() {
     try { await syncPullAll(user.id); } catch(e) {}
     try { await loadAchievements(); } catch(e) {}
+    try { await loadBadges(); } catch(e) {}
     try { await checkAchievements(); } catch(e) {}
+    try { await checkBadges(); } catch(e) {}
     if (isNewUser) {
       try { maybeShowOnboarding(true); } catch(e) {}
-      try { await unlockFreshmanStarter(user); } catch(e) {}
       try { migrateGuestItineraries(user); } catch(e) {}
-      // Award beta tester achievement
-      try {
-        if (typeof earnAchievement === 'function') earnAchievement('beta_tester');
-        else {
-          // Fallback — write directly to Supabase
-          supabaseClient.from('achievements').insert({ user_id: user.id, achievement_id: 'beta_tester' }).catch(function(){});
-        }
-      } catch(e) {}
-      // Show beta tester badge popup
-      setTimeout(function() {
-        try { showBetaBadge(); } catch(e) {}
-      }, 1200);
+
     }
     // Handle pending itinerary upgrade flow
     if (window._pendingItinUpgrade) {
@@ -234,32 +224,6 @@ async function onLogin(user, isNewUser = false) {
 }
 
 
-// ── UNLOCK FRESHMAN STARTER CHARACTER ──
-async function unlockFreshmanStarter(user) {
-  if (!user) return;
-  try {
-    // Check if already unlocked — limit(1) avoids throw on duplicate rows
-    const { data } = await supabaseClient
-      .from('character_progress')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('character_id', 1)
-      .limit(1);
-    if (data && data.length > 0) return; // already has it
-    // Unlock The Freshman
-    await supabaseClient.from('character_progress').insert({
-      user_id:            user.id,
-      character_id:       1,
-      completed_missions: [],
-      completion_pct:     0,
-      unlocked_at:        new Date().toISOString()
-    });
-    showToast('🎭 The Freshman unlocked!');
-  } catch(e) {
-    // Silent — may fail if table not ready
-    console.warn('Starter character unlock:', e.message);
-  }
-}
 
 // ── SIGN OUT ──
 async function doSignout() {
@@ -295,9 +259,8 @@ async function doChangePassword() {
   }
 }
 
-// ── SESSION INIT ──
-// Checks beta mode flag — if skip_hub_on_load is ON, go straight to auth.
-// Otherwise launch hub map as normal.
+// ── SESSION INIT — HUB DEV ──
+// Always launches hub map. No beta flags, no guest mode.
 
 window.onload = function () {
   var authEl = document.getElementById('auth-screen');
@@ -305,14 +268,17 @@ window.onload = function () {
   if (authEl) authEl.style.display = 'none';
   if (appEl)  appEl.style.display  = 'none';
 
-  // Check beta flag first — determines whether to show hub or go straight to login
   var launched = false;
 
   function launchHub() {
     if (launched) return;
     launched = true;
-    try { if (typeof menuHomeInit === 'function') menuHomeInit(); } catch(e) {}
+    try {
+      if (typeof welcomeCheckAndLaunch === 'function') welcomeCheckAndLaunch();
+      else if (typeof menuHomeInit === 'function') menuHomeInit();
+    } catch(e) {}
     startSessionRestore();
+    try { if (typeof syncGPSBypass === 'function') syncGPSBypass(); } catch(e) {}
   }
 
   function launchAuth() {
@@ -360,12 +326,12 @@ window.onload = function () {
         try { renderAvatar(); } catch(e) {}
         try { updateUsernameBar(); } catch(e) {}
       } else {
-        // No session — show full app, no login required
+        // No session — show app as guest on Lines page
         var appEl = document.getElementById('app');
         if (appEl) { appEl.style.display = 'block'; appEl.style.opacity = '1'; }
         if (authEl) authEl.style.display = 'none';
         try { if (typeof loadReports === 'function') loadReports(); } catch(e) {}
-        // Show beta welcome once per device
+        // Show beta welcome popup after a short delay
         setTimeout(function() {
           if (typeof showBetaWelcome === 'function') showBetaWelcome();
         }, 800);
@@ -379,36 +345,8 @@ window.onload = function () {
     });
   }
 
-  // Try to read beta flag from Supabase
-  // Fallback to launchGuest (safer than hub) if it takes too long
-  var betaCheckDone = false;
-  var betaTimeout = setTimeout(function() {
-    if (!betaCheckDone) {
-      betaCheckDone = true;
-      // Default to guest mode if flag check times out
-      launchGuest();
-    }
-  }, 3000);
-
-  try {
-    supabaseClient.from('app_settings')
-      .select('value')
-      .eq('key', 'skip_hub_on_load')
-      .limit(1)
-      .then(function(res) {
-        if (betaCheckDone) return;
-        betaCheckDone = true;
-        clearTimeout(betaTimeout);
-        var skipHub = res.data && res.data[0] && (res.data[0].value === 'true' || res.data[0].value === true);
-        if (skipHub) { launchGuest(); } else { launchHub(); }
-      })
-      .catch(function() {
-        if (!betaCheckDone) { betaCheckDone = true; clearTimeout(betaTimeout); launchGuest(); }
-      });
-  } catch(e) {
-    clearTimeout(betaTimeout);
-    launchGuest();
-  }
+  // Hub dev — always launch hub map directly
+  launchHub();
 };
 
 function startSessionRestore() {
@@ -474,6 +412,7 @@ async function requireAuthForDTSLO() {
 
 // The ONE function that shows the DTSLO app — called from everywhere
 function goToDTSLO() {
+  if (typeof trackHubVisit === 'function') trackHubVisit('dtslo');
   window._pendingDTSLOEntry = false;
 
   // Hide hub screen
@@ -505,11 +444,11 @@ function goToDTSLO() {
     }
   }
 
-  // Load data if we have a user
+  // Load data — always load reports, user-specific data only if logged in
+  try { loadReports(); } catch(e) {}
   if (currentUser) {
     try { renderAvatar(); }      catch(e) {}
     try { updateUsernameBar(); } catch(e) {}
-    try { loadReports(); }       catch(e) {}
     try { loadUserStats(); }     catch(e) {}
   }
 }

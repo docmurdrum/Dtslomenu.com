@@ -1210,3 +1210,78 @@ function itinToggleShareOrder(el) {
   if (label) label.textContent = on ? 'Shared' : 'Private';
 }
 window.itinToggleShareOrder = itinToggleShareOrder;
+
+// ══════════════════════════════════════════════
+// ITINERARY ↔ BUDGET INTEGRATION
+// ══════════════════════════════════════════════
+
+// Returns a summary object budget.js can read
+function itinGetBudgetSummary() {
+  var it = itin && itin.current;
+  if (!it || !it.stops || !it.stops.length) return null;
+  var costPP = itinCalcCostPerPerson(it);
+  var total  = itinCalcTotalCost(it);
+  return {
+    name:        it.name || 'My Plan',
+    stops:       it.stops.length,
+    costPerPerson: costPP,
+    totalCost:   total,
+    groupSize:   it.group_size || 1,
+    usingRide:   it.using_rideshare || false,
+    stopDetails: it.stops.map(function(s) {
+      return { name: s.name, cost: s.cost, type: s.type || 'stop' };
+    }),
+  };
+}
+window.itinGetBudgetSummary = itinGetBudgetSummary;
+
+// Push each itinerary stop as an expense into budgetData
+function itinLogToBudget() {
+  var it = itin && itin.current;
+  if (!it || !it.stops || !it.stops.length) return false;
+  if (typeof budgetData === 'undefined') return false;
+
+  function parseMid(costStr) {
+    if (!costStr) return 0;
+    var nums = costStr.match(/\d+/g);
+    if (!nums) return 0;
+    if (nums.length >= 2) return Math.round((parseInt(nums[0]) + parseInt(nums[1])) / 2);
+    return parseInt(nums[0]);
+  }
+
+  var today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  var logged = 0;
+
+  it.stops.forEach(function(s) {
+    var amount = parseMid(s.cost);
+    if (!s.name) return;
+    // Map stop type to budget category
+    var cat = 'entertainment';
+    if (s.type === 'food' || s.type === 'restaurant' || s.type === 'dining') cat = 'food';
+    else if (s.type === 'transport' || s.type === 'ride') cat = 'transport';
+    else if (s.type === 'shopping') cat = 'shopping';
+
+    budgetData.expenses.unshift({
+      id:       Date.now() + logged,
+      desc:     s.name + ' (itinerary)',
+      amount:   amount,
+      category: cat,
+      date:     today,
+    });
+    logged++;
+  });
+
+  // Add rideshare cost if used
+  if (it.using_rideshare) {
+    budgetData.expenses.unshift({
+      id:       Date.now() + logged,
+      desc:     'Rideshare — ' + (it.name || 'itinerary'),
+      amount:   Math.round(it.stops.length * 4),
+      category: 'transport',
+      date:     today,
+    });
+  }
+
+  return logged;
+}
+window.itinLogToBudget = itinLogToBudget;

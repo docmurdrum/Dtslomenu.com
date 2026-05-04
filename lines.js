@@ -33,7 +33,8 @@ async function loadBarsFromDB() {
       .from('businesses')
       .select('*')
       .eq('type', 'bar')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
     if (res.error) throw res.error;
     if (!res.data || !res.data.length) return;
 
@@ -93,6 +94,7 @@ async function loadBarsFromDB() {
       }
     });
     _barsDBLoaded = true; // Mark as loaded — won't re-fetch on report refreshes
+    loadActiveCheckins(); // Re-inject synthetic reports now that bars array is populated
     // Preload all emblem images — store in _emblemCache to prevent GC eviction
     bars.forEach(function(b) {
       if (b.emblem_url && !_emblemCache[b.emblem_url]) {
@@ -134,6 +136,56 @@ function isGPSBypassed() {
   try { return localStorage.getItem('gps_bypass') === 'true'; } catch(e) { return false; }
 }
 
+// Sync GPS bypass setting from Supabase into localStorage on app load
+async function syncGPSBypass() {
+  try {
+    var res = await supabaseClient.from('app_settings').select('value').eq('key','gps_bypass').single();
+    if (res.data && res.data.value !== undefined) {
+      localStorage.setItem('gps_bypass', res.data.value === 'true' ? 'true' : 'false');
+    }
+  } catch(e) {}
+}
+
+// verifyLocation checks Supabase directly so bypass works even before syncGPSBypass completes
+async function verifyLocationAsync(barName) {
+  // Always re-check Supabase for latest bypass value
+  try {
+    var res = await supabaseClient.from('app_settings').select('value').eq('key','gps_bypass').single();
+    if (res.data && res.data.value === 'true') return true;
+  } catch(e) {
+    // Fall back to localStorage if Supabase fails
+    if (isGPSBypassed()) return true;
+  }
+
+  const barCoord = BAR_COORDS[barName];
+  if (!barCoord) return true;
+
+  if (!navigator.geolocation) {
+    showToast('📍 Location not supported on this device');
+    return false;
+  }
+
+  return new Promise(function(resolve) {
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        const dist = haversineDistance(pos.coords.latitude, pos.coords.longitude, barCoord.lat, barCoord.lng);
+        if (dist <= GPS_RADIUS_METERS) {
+          resolve(true);
+        } else {
+          showToast('📍 You need to be at ' + barName + ' to report');
+          resolve(false);
+        }
+      },
+      function(err) {
+        if (err.code === 1) showToast('📍 Location access is required to report');
+        else showToast('📍 Could not get your location — try again');
+        resolve(false);
+      },
+      { timeout: 8000, maximumAge: 30000 }
+    );
+  });
+}
+
 function haversineDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -145,38 +197,7 @@ function haversineDistance(lat1, lng1, lat2, lng2) {
 }
 
 function verifyLocation(barName, callback) {
-  // Location check disabled for beta
-  callback(true); return;
-  if (isGPSBypassed()) { callback(true); return; }
-
-  const barCoord = BAR_COORDS[barName];
-  if (!barCoord) { callback(true); return; } // unknown bar — allow
-
-  if (!navigator.geolocation) {
-    showToast('📍 Location not supported on this device');
-    callback(false); return;
-  }
-
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      const dist = haversineDistance(
-        pos.coords.latitude, pos.coords.longitude,
-        barCoord.lat, barCoord.lng
-      );
-      if (dist <= GPS_RADIUS_METERS) {
-        callback(true);
-      } else {
-        showToast(`📍 You need to be at ${barName} to report`);
-        callback(false);
-      }
-    },
-    (err) => {
-      if (err.code === 1) showToast('📍 Location access is required to report');
-      else showToast('📍 Could not get your location — try again');
-      callback(false);
-    },
-    { timeout: 8000, maximumAge: 30000 }
-  );
+  verifyLocationAsync(barName).then(function(allowed) { callback(allowed); });
 }
 
 // ── LINES STATE ──
@@ -192,7 +213,14 @@ function getStatus(bar) {
   if (!recent.length) return 'No Data';
   const c = {};
   recent.slice(0, 8).forEach(r => { c[r.status] = (c[r.status] || 0) + 1; });
-  return Object.keys(c).reduce((a, b) => c[a] > c[b] ? a : b);
+  const maxCount = Math.max(...Object.values(c));
+  const tied = Object.keys(c).filter(k => c[k] === maxCount);
+  // On a tie — return the most recent report's status
+  if (tied.length > 1) {
+    const mostRecent = recent.slice(0, 8).find(r => tied.includes(r.status));
+    return mostRecent ? mostRecent.status : tied[0];
+  }
+  return tied[0];
 }
 
 function getRecentCount(bar) {
@@ -267,13 +295,14 @@ function renderBarsUpdate() {
   const sorted = [...bars].map((bar, i) => ({ bar, i }))
     .sort((a, b) => (order[getStatus(a.bar)] ?? 3) - (order[getStatus(b.bar)] ?? 3));
 
-  // Check if sort order changed — if so, full rebuild needed
+  // Check if sort order changed — if so, force full rebuild by clearing first
   var cards = Array.from(c.querySelectorAll('.bar-card-v2'));
   var currentOrder = cards.map(function(card) { return card.dataset.barName; });
   var newOrder = sorted.map(function(x) { return x.bar.name; });
   var orderChanged = currentOrder.join(',') !== newOrder.join(',');
   if (orderChanged) {
     c.innerHTML = '';
+    // Now renderBars will see no existing cards and do a clean full rebuild
     renderBars();
     return;
   }
@@ -503,7 +532,10 @@ function renderBars() {
     renderBarsUpdate();
     return;
   }
-  c.innerHTML = '';
+
+  // Build into a fragment first — swap in atomically so there's no blank flash
+  const frag = document.createDocumentFragment();
+  const c_ref = c; // keep reference for appendChild below
 
   const tb = document.getElementById('thursday-banner');
   if (tb) tb.style.display = isThursdayNight() ? 'flex' : 'none';
@@ -683,7 +715,7 @@ function renderBars() {
       ${checkinStripHTML}
     `;
 
-    c.appendChild(el);
+    frag.appendChild(el);
 
     // Apply border glow effect
     if (fx.borderGlow) {
@@ -707,6 +739,10 @@ function renderBars() {
       el.appendChild(pContainer);
     }
   });
+
+  // Atomic swap — clear old cards and insert all new ones in one operation
+  c_ref.innerHTML = '';
+  c_ref.appendChild(frag);
 
   updateSummaryStrip();
   updateTicker();
@@ -985,6 +1021,7 @@ function setView(v) {
 async function loadReports() {
   await loadBarsFromDB();
   if (!document.getElementById('bars')) return;
+  // Don't wipe cards before fetch — keep existing visible to avoid flash to No Data
   try {
     const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabaseClient
@@ -992,38 +1029,14 @@ async function loadReports() {
       .gte('created_at', cutoff)
       .order('created_at', { ascending: false });
     if (error) throw error;
-
-    const fetchTime = Date.now();
-
-    // Preserve any in-memory reports added since last fetch (local optimistic updates)
-    const localReports = {};
-    bars.forEach(b => {
-      const fresh = b.reports.filter(r => r._local && r.time > (b._lastFetch || 0));
-      if (fresh.length) localReports[b.name] = fresh;
-    });
-
-    // Clear and repopulate from Supabase
-    bars.forEach(b => { b.reports = []; b._lastFetch = fetchTime; });
-    (data || []).forEach(r => {
+    bars.forEach(b => b.reports = []);
+    data.forEach(r => {
       const bar = bars.find(b => b.name === r.bar);
       if (bar) bar.reports.push({ status: r.status, time: new Date(r.created_at).getTime(), user_id: r.user_id });
     });
-
-    // Re-inject any local reports not yet in Supabase
-    bars.forEach(b => {
-      if (localReports[b.name]) {
-        localReports[b.name].forEach(lr => {
-          if (!b.reports.find(r => r.user_id === lr.user_id && Math.abs(r.time - lr.time) < 5000)) {
-            b.reports.unshift(lr);
-          }
-        });
-      }
-    });
-
-  } catch (e) {
-    console.error('[loadReports]', e.message || e);
-    // Keep existing reports on screen — don't clear on error
-  }
+    // Re-inject synthetic check-in reports so card status reflects active check-ins
+    loadActiveCheckins();
+  } catch (e) { console.error('[loadReports]', e.message || e); showToast('❌ Could not load reports'); }
   renderBars();
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(loadReports, 60000);
@@ -1040,22 +1053,26 @@ function handleVote(event, i, status) {
 }
 
 async function report(i, status, headcount) {
-
+  if (!currentUser) { if (typeof showGuestPrompt === 'function') showGuestPrompt('report'); return; }
   const bar = bars[i];
   // Verify location before submitting
   verifyLocation(bar.name, async (allowed) => {
     if (!allowed) return;
-    bar.reports = bar.reports.filter(r => !(r.user_id === (currentUser && currentUser.id) && r.time > Date.now() - 30*60*1000));
-    bar.reports.unshift({ status, time: Date.now(), user_id: currentUser ? currentUser.id : 'guest', headcount: headcount || null, _local: true });
+    bar.reports = bar.reports.filter(r => !(r.user_id === currentUser.id && r.time > Date.now() - 30*60*1000));
+    bar.reports.unshift({ status, time: Date.now(), user_id: currentUser.id, headcount: headcount || null });
     renderBars();
   try {
-    await supabaseClient.from('reports').insert([{
-      bar: bar.name, status, user_id: currentUser ? currentUser.id : null,
+    const { error: insertErr } = await supabaseClient.from('reports').insert([{
+      bar: bar.name, status, user_id: currentUser.id,
       headcount: headcount || null
     }]);
+    if (insertErr) throw insertErr;
     gainXP(10); reportCount++;
     showToast(`✅ ${bar.name} — ${status} · +10 XP`);
-  } catch (e) { showToast('❌ Failed to submit'); }
+  } catch (e) {
+    console.error('[report insert]', e.message || e);
+    showToast('❌ Report failed to save — ' + (e.message || 'unknown error'));
+  }
   }); // end verifyLocation
 }
 
@@ -1072,7 +1089,33 @@ let checkinDurationInterval = null;
 let activeCheckins = {};
 let waitTimeData = {};
 
+// Persist activeCheckins to localStorage
+function saveActiveCheckins() {
+  try { localStorage.setItem('hub_dev_active_checkins', JSON.stringify(activeCheckins)); } catch(e) {}
+}
+
+// Restore activeCheckins from localStorage on load — discard anything older than 2 hrs
+function loadActiveCheckins() {
+  try {
+    var saved = JSON.parse(localStorage.getItem('hub_dev_active_checkins') || '{}');
+    var cutoff = Date.now() - 2 * 60 * 60 * 1000;
+    Object.keys(saved).forEach(function(k) {
+      if (saved[k].checkedInAt > cutoff) {
+        activeCheckins[k] = saved[k];
+        // Re-inject synthetic report so card status reflects check-in after refresh
+        var bar = bars.find(function(b) { return b.name === k; });
+        if (bar) {
+          var syntheticStatus = saved[k].type === 'inside' ? 'Packed' : 'Busy';
+          bar.reports = bar.reports.filter(function(r) { return !r.synthetic; });
+          bar.reports.unshift({ status: syntheticStatus, time: saved[k].checkedInAt, user_id: 'checkin', synthetic: true });
+        }
+      }
+    });
+  } catch(e) {}
+}
+
 function openCheckinModal(barIndex) {
+  if (!currentUser) { if (typeof showGuestPrompt === 'function') showGuestPrompt('checkin'); return; }
   ciBarIndex  = barIndex;
   ciBarName   = bars[barIndex].name;
   document.getElementById('ci-bar-name').textContent = 'Check In · ' + ciBarName;
@@ -1133,15 +1176,14 @@ async function confirmCheckin(type, status, headcount) {
     type, barName: ciBarName, barIndex: ciBarIndex,
     checkedInAt: now, status
   };
+  saveActiveCheckins();
 
-  // Update checkin count on bar immediately so card reflects it
-  if (bars[ciBarIndex]) {
-    bars[ciBarIndex].checkinCount = (bars[ciBarIndex].checkinCount || 0) + 1;
-  }
-
-  // Also push a report so bar status updates immediately
-  if (bars[ciBarIndex] && status) {
-    bars[ciBarIndex].reports.unshift({ status: status, time: now, user_id: currentUser ? currentUser.id : 'guest', _local: true });
+  // Inject a synthetic report so the card status reflects the check-in immediately
+  // line = Busy, inside = Packed
+  var syntheticStatus = type === 'inside' ? 'Packed' : 'Busy';
+  var bar = bars[ciBarIndex];
+  if (bar) {
+    bar.reports.unshift({ status: syntheticStatus, time: now, user_id: currentUser?.id || 'checkin', synthetic: true });
   }
 
   let xpGained = 15;
@@ -1151,23 +1193,13 @@ async function confirmCheckin(type, status, headcount) {
 
   if (headcount > 0) bars[ciBarIndex].headcountAvg = headcount;
 
-  if (currentUser) {
-    try {
-      await supabaseClient.from('checkins').insert([{
-        user_id: currentUser.id, bar: ciBarName, type,
-        headcount: headcount || null,
-        checked_in_at: new Date(now).toISOString()
-      }]);
-    } catch(e) { console.log('Checkin save failed:', e.message); }
-
-    // Also write to bump_sessions for leaderboard
-    try {
-      await supabaseClient.from('bump_sessions').insert([{
-        user_id: currentUser.id, bar_name: ciBarName,
-        created_at: new Date(now).toISOString()
-      }]);
-    } catch(e) { console.log('Bump session save failed:', e.message); }
-  }
+  try {
+    await supabaseClient.from('checkins').insert([{
+      user_id: currentUser.id, bar: ciBarName, type,
+      headcount: headcount || null,
+      checked_in_at: new Date(now).toISOString()
+    }]);
+  } catch(e) { console.log('Checkin save failed:', e.message); }
 
   showToast(`📍 Checked in at ${ciBarName} · +${xpGained} XP`);
 
@@ -1175,17 +1207,10 @@ async function confirmCheckin(type, status, headcount) {
   try { awardBarStamp(ciBarName, bars[ciBarIndex]); } catch(e) {}
 
   // ── ITINERARY LIVE MODE HOOK ──
+  // Only fires if there's an active itinerary in live mode
   try { itinHandleCheckin(ciBarName); } catch(e) {}
 
   renderBars();
-
-  // If bar page is open for this bar, refresh it too
-  try {
-    var barPageEl = document.getElementById('bar');
-    if (barPageEl && barPageEl.classList.contains('active') && currentBarIndex === ciBarIndex) {
-      if (typeof openBarPage === 'function') openBarPage(ciBarIndex);
-    }
-  } catch(e) {}
 
   if (type === 'line') startNudgeTimer();
   startDurationTicker();
@@ -1234,6 +1259,10 @@ function leaveCheckin(barName) {
   if (!ci) return;
   if (ci.type === 'inside') logWaitTime(barName, Math.round((Date.now() - ci.checkedInAt) / 60000));
   delete activeCheckins[barName];
+  saveActiveCheckins();
+  // Remove synthetic report for this bar
+  var bar = bars.find(function(b) { return b.name === barName; });
+  if (bar) bar.reports = bar.reports.filter(function(r) { return !r.synthetic; });
   clearTimeout(nudgeTimer);
   showToast('👋 Checked out of ' + barName);
   renderBars();
@@ -1275,7 +1304,7 @@ setInterval(() => {
   Object.keys(activeCheckins).forEach(k => {
     if (activeCheckins[k].checkedInAt < cutoff) { delete activeCheckins[k]; changed = true; }
   });
-  if (changed) renderBars();
+  if (changed) { saveActiveCheckins(); renderBars(); }
 }, 60000);
 
 // ── BAR STAMP COLLECTIBLES ──

@@ -280,7 +280,6 @@ function bgFinish() {
   // Award XP and materials
   var xp = total <= par ? 50 : 25;
   if (typeof addXP === 'function') addXP(xp);
-  if (typeof awardGameWin === 'function' && total <= par) awardGameWin();
   if (typeof showToast === 'function') showToast('⛳ Round saved! +' + xp + ' XP');
 
   bgState.active = false;

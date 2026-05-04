@@ -1,61 +1,49 @@
 // ══════════════════════════════════════════════
-// CALPOLY_HUB.JS — Cal Poly Student Life Hub
-// Campus essentials · Local favorites · Events
+// CALPOLY_HUB.JS — Cal Poly Student Hub v2
+// Supabase-driven · Links · Campus Map · Resources
 // ══════════════════════════════════════════════
 
-var CALPOLY_SECTIONS = [
-  {
-    id: 'student_bars',
-    label: 'Student Bars',
-    emoji: '🍺',
-    items: [
-      { name: "Bull's Tavern", desc: 'Est. 1935. SLO institution — every Cal Poly class since WWII has called this home. Cheap beer, no pretense, classic starting point.', tag: 'Classic', coords: [-120.6662, 35.2816] },
-      { name: 'Black Sheep Bar & Grill', desc: 'Lively downtown bar with an outdoor patio. Popular with students for its energy and proximity to everything else.', tag: 'Lively', coords: [-120.6639, 35.2793] },
-      { name: 'BA Start Arcade Bar', desc: 'Retro arcade games + craft cocktails. Perfect for a group that wants something different than the usual bar scene.', tag: 'Unique', coords: [-120.6640, 35.2800] },
-      { name: 'Frog & Peach Pub', desc: 'Live music almost every night. Irish pub vibe, great patio along the creek. The move if you want bands.', tag: 'Live Music', coords: [-120.6661, 35.2815] },
-      { name: 'SLO Brew Rock', desc: 'Best live music venue in SLO. Local and national touring acts. Show up early — it fills up fast.', tag: 'Shows', coords: [-120.6659, 35.2815] },
-    ]
-  },
-  {
-    id: 'eats',
-    label: 'Student Eats',
-    emoji: '🌮',
-    items: [
-      { name: 'Firestone Grill', desc: 'The Cal Poly classic. Tri-tip sandwiches that students have been eating since 1981. Long lines, worth every minute.', tag: 'Must Try', coords: [-120.6651, 35.2802] },
-      { name: "Woodstock's Pizza", desc: 'Poly students\' go-to pizza spot. Late-night slices, student deals, always a good time. Groups love the booths.', tag: 'Late Night', coords: [-120.6648, 35.2800] },
-      { name: 'Taqueria Santa Cruz', desc: 'Best Mexican in SLO. No-frills tacos and all-you-can-eat chips and salsa. Budget friendly and absolutely delicious.', tag: 'Budget', coords: [-120.6620, 35.2785] },
-      { name: 'Scout Coffee Co.', desc: 'The student coffee spot. Great for study sessions, freelance work, and meeting people. Multiple locations downtown.', tag: 'Study Spot', coords: [-120.6645, 35.2800] },
-      { name: "Louisa's Place", desc: 'Vintage diner vibes. The classic big breakfast after a late night. Waffles, eggs, all of it. Cash preferred.', tag: 'Breakfast', coords: [-120.6632, 35.2780] },
-    ]
-  },
-  {
-    id: 'campus',
-    label: 'Campus Life',
-    emoji: '🎓',
-    items: [
-      { name: 'Thursday Farmers Market', desc: 'The weekly SLO ritual. Five blocks of Higuera shut down — BBQ, live music, the whole city shows up. Every Thursday 6–9pm.', tag: 'Free Weekly', coords: [-120.6650, 35.2800] },
-      { name: 'Serenity Swing', desc: 'Hidden viewpoint on Cal Poly campus. A swing at the top of a hill with one of the best views of SLO. Worth the hike.', tag: 'Hidden Gem', coords: [-120.6587, 35.3010] },
-      { name: 'Poly Canyon Village', desc: 'On-campus student housing and gathering spot. Lots of events, markets, and student life activity centered here.', tag: 'On Campus', coords: [-120.6560, 35.3020] },
-      { name: 'SLO Transit (Free with ID)', desc: 'Free bus system with valid Cal Poly student ID. Connects campus to downtown, Pismo Beach, and the rest of SLO.', tag: 'Free Transit', coords: [-120.6590, 35.2990] },
-      { name: 'Performing Arts Center', desc: 'World-class venue on campus. Student rush tickets 30min before showtime — sometimes 50% off Broadway shows.', tag: 'Student Deals', coords: [-120.6587, 35.2994] },
-    ]
-  },
-  {
-    id: 'study',
-    label: 'Study Spots',
-    emoji: '📚',
-    items: [
-      { name: 'SLO City Library', desc: 'Beautiful downtown library with study rooms, printing, and archives. Free to use. Open late on weekdays.', tag: 'Free', coords: [-120.6648, 35.2795] },
-      { name: 'Scout Coffee Co.', desc: 'Best coffee shop atmosphere for studying. Good wifi, lots of seating, and they won\'t kick you out after one drink.', tag: 'WiFi + Coffee', coords: [-120.6645, 35.2800] },
-      { name: 'Kennedy Library (Cal Poly)', desc: 'The main Cal Poly library. 24/7 access with ID. Quiet floors, group study rooms, and panoramic campus views.', tag: 'On Campus', coords: [-120.6590, 35.3010] },
-      { name: 'Active Coffee Co.', desc: 'Cozy downtown coffee shop popular with students. Good food menu alongside great espresso drinks.', tag: 'Local Fave', coords: [-120.6640, 35.2795] },
-    ]
-  },
+var CALPOLY_DATA = [];
+
+var CP_SECTIONS = [
+  { id: 'all',       label: 'All',         emoji: '🎓' },
+  { id: 'portal',   label: 'Portal',       emoji: '💻' },
+  { id: 'campus',   label: 'Campus Life',  emoji: '🏫' },
+  { id: 'health',   label: 'Health',       emoji: '🏥' },
+  { id: 'transit',  label: 'Getting Around', emoji: '🚌' },
+  { id: 'resources',label: 'Resources',    emoji: '💰' },
+  { id: 'services', label: 'Services',     emoji: '🛒' },
 ];
 
-var _cpSection = 'student_bars';
+async function loadCalPolyItems(catId) {
+  try {
+    var sb = window.supabaseClient;
+    if (!sb) throw new Error('No Supabase client');
+    var q = sb.from('landmarks')
+      .select('id, name, category, description, short_desc, emoji, website_url, tip, tags, address')
+      .eq('hub_id', 'calpoly')
+      .eq('city_id', 'slo')
+      .eq('active', true)
+      .order('sort_order', { ascending: true });
+    if (catId && catId !== 'all') q = q.eq('category', catId);
+    var res = await q;
+    if (res.error) throw res.error;
+    return res.data || [];
+  } catch(e) {
+    console.warn('[CalPolyHub] load failed:', e);
+    throw e;
+  }
+}
+
+function cpRenderLoading() {
+  return '<div style="display:flex;flex-direction:column;gap:8px;padding-top:4px">' +
+    [1,2,3,4].map(function() {
+      return '<div style="height:80px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)"></div>';
+    }).join('') + '</div>';
+}
 
 function openCalPolyHub() {
+  if (typeof trackHubVisit === 'function') trackHubVisit('calpoly');
   var existing = document.getElementById('mh-calpoly-hub');
   if (existing) existing.remove();
 
@@ -63,11 +51,12 @@ function openCalPolyHub() {
     var s = document.createElement('style');
     s.id = 'calpoly-css';
     s.textContent = [
-      '.cp-tab{padding:8px 14px;border-radius:20px;border:1px solid rgba(99,102,241,0.2);background:rgba(99,102,241,0.05);color:rgba(255,255,255,0.45);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:Helvetica Neue,sans-serif;flex-shrink:0;transition:all 0.15s}',
+      '.cp-tab{padding:7px 13px;border-radius:20px;border:1px solid rgba(99,102,241,0.2);background:rgba(99,102,241,0.05);color:rgba(255,255,255,0.45);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:Helvetica Neue,sans-serif;flex-shrink:0;transition:all 0.15s}',
       '.cp-tab.active{background:rgba(99,102,241,0.15);border-color:#6366f1;color:#a5b4fc}',
-      '.cp-item{padding:12px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:8px;cursor:pointer;transition:all 0.15s}',
-      '.cp-item:active{background:rgba(99,102,241,0.08);transform:scale(0.98)}',
+      '.cp-card{padding:13px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:8px;transition:all 0.15s}',
+      '.cp-card:active{background:rgba(99,102,241,0.08);transform:scale(0.98)}',
       '.cp-tag{padding:2px 8px;border-radius:20px;font-size:9px;font-weight:800;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);color:#a5b4fc}',
+      '.cp-link-btn{display:block;width:100%;padding:10px;border-radius:10px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:#a5b4fc;text-decoration:none;font-size:12px;font-weight:800;text-align:center;margin-top:8px;cursor:pointer}',
     ].join('');
     document.head.appendChild(s);
   }
@@ -81,59 +70,135 @@ function openCalPolyHub() {
       '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">' +
         '<button onclick="menuHomeCloseCalPolyHub()" style="background:rgba(255,255,255,0.08);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer;flex-shrink:0">←</button>' +
         '<div style="flex:1">' +
-          '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif">🎓 Cal Poly Hub</div>' +
-          '<div style="font-size:11px;color:rgba(255,255,255,0.4)">Student life · Bars · Eats · Campus</div>' +
+          '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif">🎓 Cal Poly</div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,0.4)">Campus · Resources · Student Life</div>' +
         '</div>' +
         '<button onclick="menuHomeCloseCalPolyHub()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer">✕</button>' +
       '</div>' +
+
+      // Campus Map Button
+      '<a href="https://experience.arcgis.com/experience/5d3c7ce97866487eac63664dff9fb946" target="_blank" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(99,102,241,0.05));border:1px solid rgba(99,102,241,0.3);text-decoration:none;margin-bottom:12px">' +
+        '<div style="font-size:24px">🗺</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:13px;font-weight:800;color:#a5b4fc">Campus Map</div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,0.4)">Interactive map of all campus buildings</div>' +
+        '</div>' +
+        '<div style="font-size:12px;color:#a5b4fc;font-weight:700">Open ↗</div>' +
+      '</a>' +
+
       '<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:12px">' +
-        CALPOLY_SECTIONS.map(function(s) {
-          return '<button class="cp-tab' + (s.id === _cpSection ? ' active' : '') + '" onclick="cpTab(this,\'' + s.id + '\')">' + s.emoji + ' ' + s.label + '</button>';
+        CP_SECTIONS.map(function(f, i) {
+          return '<button class="cp-tab' + (i===0?' active':'') + '" data-id="' + f.id + '" onclick="cpFilter(this,this.dataset.id)">' + f.emoji + ' ' + f.label + '</button>';
         }).join('') +
       '</div>' +
     '</div>' +
     '<div id="cp-content" style="flex:1;overflow-y:auto;padding:0 20px 48px">' +
-      cpRenderSection(_cpSection) +
+      cpRenderLoading() +
     '</div>';
 
   getHubParent().appendChild(hub);
   setTimeout(function() { hub.style.opacity = '1'; }, 30);
+  tipsInjectButton('calpoly');
+
+  loadCalPolyItems('all').then(function(items) {
+    CALPOLY_DATA = items;
+    var content = document.getElementById('cp-content');
+    if (content) content.innerHTML = cpRenderList(items);
+  }).catch(function(err) {
+    var content = document.getElementById('cp-content');
+    if (content) content.innerHTML =
+      '<div style="padding:20px;background:rgba(255,45,120,0.1);border:1px solid rgba(255,45,120,0.3);border-radius:12px;font-size:12px;color:rgba(255,255,255,0.7)">' +
+        '<div style="font-weight:800;color:#ff2d78;margin-bottom:8px">Error loading resources</div>' +
+        '<div>' + (err && err.message ? err.message : String(err)) + '</div>' +
+      '</div>';
+  });
 }
 window.menuHomeOpenCalPolyHub = openCalPolyHub;
 
 function closeCalPolyHub() {
   hubDeactivateMapMode();
+  tipsRemoveButton('calpoly');
   var h = document.getElementById('mh-calpoly-hub');
-  if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
+  if (h) { h.style.opacity = '0'; h.style.pointerEvents = 'none'; setTimeout(function() { h.remove(); }, 300); }
 }
 window.menuHomeCloseCalPolyHub = closeCalPolyHub;
 
-function cpTab(el, sectionId) {
+function cpFilter(el, catId) {
   document.querySelectorAll('.cp-tab').forEach(function(b) { b.classList.remove('active'); });
   el.classList.add('active');
-  _cpSection = sectionId;
-  document.getElementById('cp-content').innerHTML = cpRenderSection(sectionId);
+  var content = document.getElementById('cp-content');
+  if (content) content.innerHTML = cpRenderLoading();
+  loadCalPolyItems(catId).then(function(items) {
+    CALPOLY_DATA = items;
+    if (content) content.innerHTML = cpRenderList(items);
+  }).catch(function(err) {
+    if (content) content.innerHTML =
+      '<div style="padding:20px;background:rgba(255,45,120,0.1);border:1px solid rgba(255,45,120,0.3);border-radius:12px;font-size:12px;color:rgba(255,255,255,0.7)">' +
+        '<div style="font-weight:800;color:#ff2d78;margin-bottom:8px">Error</div>' +
+        '<div>' + (err && err.message ? err.message : String(err)) + '</div>' +
+      '</div>';
+  });
 }
-window.cpTab = cpTab;
+window.cpFilter = cpFilter;
 
-function cpRenderSection(sectionId) {
-  var section = CALPOLY_SECTIONS.find(function(s) { return s.id === sectionId; });
-  if (!section) return '';
-  return section.items.map(function(item) {
-    return '<div class="cp-item" onclick="cpOpenMaps(\'' + encodeURIComponent(item.name) + '\')">' +
-      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
-        '<div style="flex:1">' +
-          '<div style="font-size:14px;font-weight:800">' + item.name + '</div>' +
+function cpRenderList(items) {
+  if (!items.length) return '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.3);font-size:13px">No resources found</div>';
+  return items.map(function(r) {
+    return '<div class="cp-card" data-id="' + r.id + '" onclick="cpOpenDetail(this.dataset.id)">' +
+      '<div style="display:flex;align-items:center;gap:10px">' +
+        '<div style="font-size:26px;flex-shrink:0">' + (r.emoji || '📌') + '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:14px;font-weight:800;margin-bottom:2px">' + (r.name || '') + '</div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,0.45);line-height:1.4">' + (r.short_desc || '') + '</div>' +
         '</div>' +
-        '<span class="cp-tag">' + item.tag + '</span>' +
+        (r.website_url ? '<div style="font-size:10px;color:#a5b4fc;font-weight:700;flex-shrink:0">↗</div>' : '') +
       '</div>' +
-      '<div style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.5">' + item.desc + '</div>' +
     '</div>';
   }).join('');
 }
 
-function cpOpenMaps(name) {
-  var decoded = decodeURIComponent(name);
-  window.open('https://www.google.com/maps/search/' + encodeURIComponent(decoded + ' San Luis Obispo CA'), '_blank');
+function cpOpenDetail(id) {
+  var r = CALPOLY_DATA.find(function(x) { return String(x.id) === String(id); });
+  if (!r) return;
+
+  var existing = document.getElementById('mh-cp-detail');
+  if (existing) existing.remove();
+
+  var sheet = document.createElement('div');
+  sheet.id = 'mh-cp-detail';
+  sheet.style.cssText = 'position:fixed;inset:0;z-index:11000;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;transition:opacity 0.3s';
+
+  var inner = document.createElement('div');
+  inner.id = 'mh-cp-inner';
+  inner.style.cssText = 'width:100%;background:rgba(8,8,20,0.99);border-radius:24px 24px 0 0;border-top:2px solid rgba(99,102,241,0.3);padding:14px 20px 48px;max-height:85vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1)';
+
+  inner.innerHTML =
+    '<div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 16px;cursor:pointer" onclick="cpCloseDetail()"></div>' +
+    '<div style="font-size:36px;margin-bottom:8px">' + (r.emoji || '📌') + '</div>' +
+    '<div style="font-size:20px;font-weight:800;font-family:Georgia,serif;margin-bottom:4px">' + (r.name || '') + '</div>' +
+    (r.tags && r.tags.length ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">' + r.tags.map(function(t){ return '<span class="cp-tag">' + t + '</span>'; }).join('') + '</div>' : '') +
+    (r.description ? '<div style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.6;margin-bottom:14px">' + r.description + '</div>' : '') +
+    (r.tip ? '<div style="padding:10px 12px;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15);border-radius:12px;margin-bottom:14px">' +
+      '<div style="font-size:10px;font-weight:700;color:#a5b4fc;margin-bottom:3px">💡 TIP</div>' +
+      '<div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">' + r.tip + '</div>' +
+    '</div>' : '') +
+    (r.website_url ? '<a href="' + r.website_url + '" target="_blank" class="cp-link-btn">Open Website ↗</a>' : '') +
+    '<button onclick="cpCloseDetail()" style="display:block;width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.3);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:8px">Close</button>';
+
+  sheet.appendChild(inner);
+  getHubParent().appendChild(sheet);
+
+  setTimeout(function() {
+    sheet.style.opacity = '1';
+    inner.style.transform = 'translateY(0)';
+  }, 30);
+
+  sheet.addEventListener('click', function(e) { if (e.target === sheet) cpCloseDetail(); });
 }
-window.cpOpenMaps = cpOpenMaps;
+window.cpOpenDetail = cpOpenDetail;
+
+function cpCloseDetail() {
+  var s = document.getElementById('mh-cp-detail');
+  if (s) { s.style.opacity = '0'; setTimeout(function() { s.remove(); }, 300); }
+}
+window.cpCloseDetail = cpCloseDetail;

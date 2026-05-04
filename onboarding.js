@@ -209,7 +209,7 @@ var obSteps  = OB_STEPS; // active steps — may include beta screen
 // ── LOAD ACTIVE STEPS (checks beta flag) ──
 async function obLoadSteps() {
   try {
-    var res = await supabaseClient.from('app_settings').select('value').eq('key', 'show_beta_screen').limit(1);
+    var res = await supabaseClient.from('app_settings').select('value').eq('key', 'hub_dev_show_beta_screen').limit(1);
     var showBeta = res.data && res.data[0] && res.data[0].value === 'true';
     obSteps = showBeta ? [OB_BETA_STEP].concat(OB_STEPS) : OB_STEPS;
   } catch(e) {
@@ -380,8 +380,14 @@ function obFinish() {
   var bubble  = document.getElementById('ob-bubble');
   if (overlay) { overlay.style.opacity = '0'; setTimeout(function() { overlay.remove(); }, 350); }
   if (bubble)  { bubble.style.opacity  = '0'; setTimeout(function() { bubble.remove(); }, 350); }
-  // Go to Lines after finish
-  if (typeof showPage === 'function') showPage('line');
+  // Return to hub map
+  var hubEl = document.getElementById('menu-home');
+  if (hubEl) {
+    hubEl.style.display = 'block';
+    hubEl.style.pointerEvents = 'auto';
+    var appEl = document.getElementById('app');
+    if (appEl) appEl.style.display = 'none';
+  }
 }
 window.obFinish = obFinish;
 

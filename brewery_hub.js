@@ -1,126 +1,79 @@
 // ══════════════════════════════════════════════
 // BREWERY_HUB.JS — SLO Craft Beer Hub
+// Data sourced from Supabase venues table
 // ══════════════════════════════════════════════
 
-var SLO_BREWERIES = [
-  {
-    id: 'central_coast', name: 'Central Coast Brewing', emoji: '🍺',
-    style: ['IPA','Stout','Lager','Belgian'],
-    vibe: 'OG SLO brewery since 1998 — two locations',
-    address: '1701 Monterey St', hood: 'downtown',
-    hours: 'Thu-Sat 11:30am-10pm · Wed-Sun 4:30pm-8pm (taproom)',
-    happy_hour: false,
-    dogs: true, patio: true, food: true, live_music: false,
-    coords: [-120.6580, 35.2820],
-    tip: 'Chai Ale is a SLO institution. Monterey Street Pale Ale is the go-to.',
-    must_try: 'Chai Ale, P-Nut Butter Breakdown Stout',
-    walkable: true,
-  },
-  {
-    id: 'slo_brew_rock', name: 'SLO Brew Rock', emoji: '🎸',
-    style: ['IPA','Hazy','Lager','Pale Ale'],
-    vibe: 'SLO since 1988 — 30-barrel brewhouse, firepits, live music',
-    address: '855 Aerovista Pl', hood: 'airport',
-    hours: 'Mon-Thu 3pm-9pm · Fri-Sun 11am-9pm',
-    happy_hour: false,
-    dogs: true, patio: true, food: true, live_music: true,
-    coords: [-120.6400, 35.2367],
-    tip: 'Best for live music nights. Reggae Red and Mustang IPA are classics.',
-    must_try: 'Mustang IPA, Reggae Red, A-SLO-Ha Hazy IPA',
-    walkable: false,
-  },
-  {
-    id: 'libertine', name: 'Libertine Brewing', emoji: '🍋',
-    style: ['Sour','Farmhouse','Wild Ale','Saison'],
-    vibe: 'Sour beer specialists — funky, wild, and complex',
-    address: '1234 Broad St', hood: 'downtown',
-    hours: 'Wed-Thu 4pm-9pm · Fri-Sun 12pm-9pm',
-    happy_hour: true, hh_details: 'Weekdays 4-6pm',
-    dogs: true, patio: true, food: false, live_music: false,
-    coords: [-120.6600, 35.2790],
-    tip: 'If you like sours this is your spot. Rotating taps, never boring.',
-    must_try: 'Whatever sour is on — always different',
-    walkable: true,
-  },
-  {
-    id: 'liquid_gravity', name: 'Liquid Gravity Brewing', emoji: '🌌',
-    style: ['Hazy IPA','Double IPA','Stout','Lager'],
-    vibe: 'Space-themed taproom, hop-forward beers',
-    address: '3765 S Higuera St', hood: 'south slo',
-    hours: 'Mon-Thu 3pm-9pm · Fri-Sun 12pm-9pm',
-    happy_hour: false,
-    dogs: false, patio: true, food: false, live_music: false,
-    coords: [-120.6630, 35.2650],
-    tip: 'Hazies are outstanding. Worth the short drive from downtown.',
-    must_try: 'Supermassive Hazy IPA, Cosmic Dust Double IPA',
-    walkable: false,
-  },
-  {
-    id: 'oak_otter', name: 'Oak & Otter Brewing', emoji: '🦦',
-    style: ['IPA','Pale Ale','Lager','Wheat'],
-    vibe: 'Neighborhood taproom feel, approachable beers',
-    address: '1376 Santa Rosa St', hood: 'midtown',
-    hours: 'Tue-Thu 4pm-9pm · Fri 3pm-10pm · Sat-Sun 12pm-9pm',
-    happy_hour: false,
-    dogs: true, patio: false, food: false, live_music: false,
-    coords: [-120.6560, 35.2830],
-    tip: 'Chill local spot. Good place to settle in with a pint.',
-    must_try: 'Otter IPA, Honey Wheat',
-    walkable: false,
-  },
-  {
-    id: 'there_does_not_exist', name: 'There Does Not Exist', emoji: '🌀',
-    style: ['Hazy','Sour','Experimental','IPA'],
-    vibe: 'Experimental small-batch — always something weird and good',
-    address: 'Downtown SLO', hood: 'downtown',
-    hours: 'Fri-Sun 12pm-8pm',
-    happy_hour: false,
-    dogs: false, patio: false, food: false, live_music: false,
-    coords: [-120.6640, 35.2800],
-    tip: 'Limited hours but worth it if you catch it open. Truly unique beers.',
-    must_try: 'Whatever is on tap — changes constantly',
-    walkable: true,
-  },
-  {
-    id: 'humdinger', name: 'Humdinger Brewing', emoji: '🐝',
-    style: ['IPA','Pale Ale','Blonde','Stout'],
-    vibe: 'Local favorite, relaxed taproom with board games',
-    address: 'SLO area', hood: 'downtown',
-    hours: 'Wed-Thu 4pm-9pm · Fri-Sun 12pm-9pm',
-    happy_hour: false,
-    dogs: true, patio: false, food: false, live_music: false,
-    coords: [-120.6590, 35.2810],
-    tip: 'Buzzy Blonde is light and crushable on a hot day.',
-    must_try: 'Buzzy Blonde, Stinger IPA',
-    walkable: true,
-  },
-  {
-    id: 'ancient_owl', name: 'Ancient Owl Beer Garden', emoji: '🦉',
-    style: ['Rotating Guest Taps','Craft Cans','Bottle Shop'],
-    vibe: 'Bottle shop + beer garden — curated taps from across CA',
-    address: 'Downtown SLO', hood: 'downtown',
-    hours: 'Mon-Sun 12pm-10pm',
-    happy_hour: false,
-    dogs: true, patio: true, food: false, live_music: false,
-    coords: [-120.6645, 35.2795],
-    tip: 'Not a production brewery but the best curated tap list in SLO. Great outdoor space.',
-    must_try: 'Rotating — ask the bartender',
-    walkable: true,
-  },
-  {
-    id: 'barrelhouse', name: 'BarrelHouse Brewing', emoji: '🛢',
-    style: ['IPA','Lager','Barrel-Aged','Sour'],
-    vibe: 'Paso Robles institution — huge outdoor space',
-    address: '3055 Limestone Way, Paso Robles', hood: 'paso robles',
-    hours: 'Mon-Thu 11am-8pm · Fri-Sat 11am-9pm · Sun 11am-7pm',
-    happy_hour: false,
-    dogs: true, patio: true, food: true, live_music: true,
-    coords: [-120.6920, 35.6200],
-    tip: 'Make the 45 min drive. Massive beer garden, often live music weekends.',
-    must_try: 'Cali Squeeze Blood Orange, Sinister Black Lager',
-    walkable: false,
-  },
-];
+var SLO_BREWERIES = []; // populated from Supabase on open
+
+async function loadBreweries(filterId) {
+  try {
+    var sb = window.supabaseClient;
+    if (!sb) throw new Error('No Supabase client');
+    var q = sb.from('venues')
+      .select('*')
+      .eq('hub_id', 'beer')
+      .eq('city_id', 'slo')
+      .eq('active', true)
+      .order('name', { ascending: true });
+    var res = await q;
+    if (res.error) throw res.error;
+    var data = res.data || [];
+    // Client-side tag filtering
+    if (filterId && filterId !== 'all' && filterId !== 'crawl') {
+      var tagMap = {
+        hazy:       ['Hazy', 'IPA', 'Hazy IPA', 'Double IPA'],
+        sour:       ['Sour', 'Wild Ales', 'Farmhouse'],
+        lager:      ['Lager'],
+        stout:      ['Stout', 'Dark'],
+        patio:      ['Patio', 'Beer Garden', 'Outdoor'],
+        food:       ['Food'],
+        live_music: ['Live Music'],
+        dogs:       ['Dog Friendly'],
+      };
+      var tags = tagMap[filterId] || [];
+      if (tags.length) {
+        data = data.filter(function(b) {
+          return (b.tags || []).some(function(t) {
+            return tags.some(function(ft) { return t.toLowerCase().indexOf(ft.toLowerCase()) >= 0; });
+          });
+        });
+      }
+    }
+    return data.map(function(r) {
+      return {
+        id:        String(r.id),
+        name:      r.name,
+        emoji:     '🍺',
+        style:     r.tags ? r.tags.filter(function(t){ return ['IPA','Hazy','Sour','Lager','Stout','Pale Ale','Wheat','Farmhouse'].some(function(s){return t.indexOf(s)>=0;}); }) : [],
+        vibe:      r.description ? r.description.substring(0, 80) : '',
+        address:   r.address || '',
+        hood:      r.category || 'slo',
+        hours:     '',
+        happy_hour:false,
+        dogs:      (r.tags || []).some(function(t){ return t.toLowerCase().indexOf('dog') >= 0; }),
+        patio:     (r.tags || []).some(function(t){ return t.toLowerCase().indexOf('patio') >= 0 || t.toLowerCase().indexOf('garden') >= 0 || t.toLowerCase().indexOf('outdoor') >= 0; }),
+        food:      (r.tags || []).some(function(t){ return t.toLowerCase().indexOf('food') >= 0; }),
+        live_music:(r.tags || []).some(function(t){ return t.toLowerCase().indexOf('music') >= 0; }),
+        coords:    (r.lng && r.lat) ? [r.lng, r.lat] : null,
+        tip:       '',
+        must_try:  '',
+        walkable:  r.category === 'downtown',
+        tags:      r.tags || [],
+        rating:    r.rating || null,
+      };
+    });
+  } catch(e) {
+    console.warn('[BreweryHub] Supabase load failed:', e);
+    return [];
+  }
+}
+
+function brewRenderLoading() {
+  return '<div style="display:flex;flex-direction:column;gap:8px;padding-top:4px">' +
+    [1,2,3,4].map(function() {
+      return '<div style="height:80px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);animation:brew-shimmer 1.4s infinite"><style>@keyframes brew-shimmer{0%,100%{opacity:0.5}50%{opacity:1}}</style></div>';
+    }).join('') + '</div>';
+}
 
 var BEER_STYLES = [
   { id:'all',          label:'All',       emoji:'🍺' },
@@ -138,6 +91,7 @@ var BEER_STYLES = [
 var brewCrawlList = [];
 
 function openBreweryHub() {
+  if (typeof trackHubVisit === 'function') trackHubVisit('beer');
   var existing = document.getElementById('mh-brewery-hub');
   if (existing) existing.remove();
 
@@ -179,18 +133,26 @@ if (!document.getElementById('brew-hub-css')) {
       '</div>' +
     '</div>' +
     '<div id="brew-content" style="flex:1;overflow-y:auto;padding:0 20px 48px">' +
-      brewRenderList(SLO_BREWERIES) +
+      brewRenderLoading() +
     '</div>';
 
   getHubParent().appendChild(hub);
   setTimeout(function() { hub.style.opacity = '1'; }, 30);
+  tipsInjectButton('beer');
+
+  loadBreweries('all').then(function(breweries) {
+    SLO_BREWERIES = breweries;
+    var content = document.getElementById('brew-content');
+    if (content) content.innerHTML = brewRenderList(breweries);
+  });
 }
 window.menuHomeOpenBreweryHub = openBreweryHub;
 
 function closeBreweryHub() {
   hubDeactivateMapMode();
+  tipsRemoveButton('beer');
   var h = document.getElementById('mh-brewery-hub');
-  if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
+  if (h) { h.style.opacity = '0'; h.style.pointerEvents = 'none'; setTimeout(function() { h.remove(); }, 300); }
 }
 window.menuHomeCloseBreweryHub = closeBreweryHub;
 
@@ -198,6 +160,16 @@ function brewFilter(el, filterId) {
   document.querySelectorAll('.brew-filter').forEach(function(b) { b.classList.remove('active'); });
   el.classList.add('active');
   var content = document.getElementById('brew-content');
+  if (filterId === 'crawl') {
+    if (content) content.innerHTML = brewRenderCrawlBuilder();
+    return;
+  }
+  if (content) content.innerHTML = brewRenderLoading();
+  loadBreweries(filterId).then(function(breweries) {
+    SLO_BREWERIES = breweries;
+    if (content) content.innerHTML = brewRenderList(breweries);
+  });
+  return; // prevent fall-through
   if (!content) return;
 
   if (filterId === 'crawl') {
@@ -259,7 +231,7 @@ function brewRenderList(breweries) {
 
 function brewOpenDetail(id) {
   var b = SLO_BREWERIES.find(function(x) { return x.id === id; });
-  if (!b) return;
+  if (!b) return; // cache miss
 
   var existing = document.getElementById('mh-brew-detail');
   if (existing) existing.remove();

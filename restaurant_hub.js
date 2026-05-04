@@ -52,6 +52,7 @@ var restaurantMarkersActive = [];
 var rhCurrentFilter = 'all';
 
 function openRestaurantHub() {
+  if (typeof trackHubVisit === 'function') trackHubVisit('restaurant');
   var existing = document.getElementById('mh-restaurant-hub');
   if (existing) existing.remove();
 
@@ -129,7 +130,7 @@ window.menuHomeOpenRestaurantHub = openRestaurantHub;
 function closeRestaurantHub() {
   hubDeactivateMapMode();
   var h = document.getElementById('mh-restaurant-hub');
-  if (h) { h.style.opacity = '0'; setTimeout(function() { h.remove(); }, 300); }
+  if (h) { h.style.opacity = '0'; h.style.pointerEvents = 'none'; setTimeout(function() { h.remove(); }, 300); }
   restaurantMarkersActive.forEach(function(m) { try { m.remove(); } catch(e) {} });
   restaurantMarkersActive = [];
 }
